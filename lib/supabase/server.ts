@@ -1,6 +1,7 @@
+cat > lib/supabase/server.ts << 'EOF'
 // Cliente Supabase para uso em Server Components / Server Actions.
 // Ainda usa a chave anônima + RLS (respeita a sessão do usuário logado).
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 export async function createClient() {
@@ -11,7 +12,7 @@ export async function createClient() {
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
+        setAll: (cookiesToSet: { name: string; value: string; options: CookieOptions }[]) => {
           cookiesToSet.forEach(({ name, value, options }) =>
             cookieStore.set(name, value, options)
           );
@@ -20,3 +21,4 @@ export async function createClient() {
     }
   );
 }
+EOF
