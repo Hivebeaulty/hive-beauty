@@ -1,4 +1,3 @@
-cat > middleware.ts << 'EOF'
 // Protege rotas autenticadas e mantém a sessão do Supabase sincronizada
 // entre requisições (necessário com @supabase/ssr no App Router).
 import { NextResponse, type NextRequest } from "next/server";
@@ -39,4 +38,3 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
 };
-EOF
