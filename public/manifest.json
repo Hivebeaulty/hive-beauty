@@ -1,0 +1,9 @@
+{
+  "name": "Hive Beauty",
+  "short_name": "Hive Beauty",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5DDCF",
+  "theme_color": "#885563",
+  "icons": []
+}
