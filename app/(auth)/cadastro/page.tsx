@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export default function CadastroPage() {
   const [email, setEmail] = useState("");
@@ -25,49 +28,44 @@ export default function CadastroPage() {
       setError(error.message);
       return;
     }
-    // Etapa 1 concluída (criar conta) -> segue para o onboarding da empresa
+    // Conta criada -> segue para o onboarding da empresa
     window.location.href = "/onboarding";
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-blush-100 px-6">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-2xl font-bold text-plum-500">hive beauty</h1>
-        <p className="mb-6 text-sm text-charcoal-700">Crie sua conta para começar.</p>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-cream px-6">
+      <div className="w-full max-w-sm rounded-lg border border-ink-100 bg-surface p-8">
+        <div className="mb-6 flex flex-col items-center gap-2 text-center">
+          <Image src="/logo-lockup.png" alt="Áurea" width={220} height={138} priority className="h-auto w-[180px]" />
+          <p className="text-sm text-ink-400">Crie sua conta para começar.</p>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
+          <Input
             placeholder="Seu nome"
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full rounded-xl border border-blush-200 bg-blush-50 px-4 py-3 outline-none focus:border-plum-500"
           />
-          <input
+          <Input
             type="email"
             placeholder="E-mail"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-blush-200 bg-blush-50 px-4 py-3 outline-none focus:border-plum-500"
           />
-          <input
+          <Input
             type="password"
             placeholder="Senha"
             required
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-blush-200 bg-blush-50 px-4 py-3 outline-none focus:border-plum-500"
           />
           {error && <p className="text-sm text-danger">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-plum-500 py-3 font-semibold text-white hover:bg-plum-600 disabled:opacity-60"
-          >
+          <Button type="submit" loading={loading} className="w-full">
             {loading ? "Criando..." : "Criar conta"}
-          </button>
+          </Button>
         </form>
       </div>
     </main>

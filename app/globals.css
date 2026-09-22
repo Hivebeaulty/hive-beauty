@@ -2,11 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   Design System — Áurea
+   Tokens espelham tailwind.config.ts. Mantidos como CSS vars para uso fora
+   de classes utilitárias (ex.: manifest/meta theme-color, gráficos).
+   ============================================================================ */
 :root {
-  --color-bg: #FBF1EA;
+  --color-bg: #faf6f1;
+  --color-ink: #3a2a22;
+  --color-gold: #c9a876;
+}
+
+* {
+  border-color: theme("colors.ink.100");
 }
 
 body {
   background-color: var(--color-bg);
-  color: #464248;
+}
+
+/* Foco visível consistente em toda a aplicação — acessibilidade, sem
+   depender de outline azul padrão do navegador (quebraria a identidade). */
+:focus-visible {
+  outline: 2px solid theme("colors.gold.500");
+  outline-offset: 2px;
+}
+
+/* Base para o efeito shimmer do componente Skeleton. */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    theme("colors.ink.50") 25%,
+    theme("colors.ink.100") 50%,
+    theme("colors.ink.50") 75%
+  );
+  background-size: 200% 100%;
+}
+
+/* Respeita usuárias que pediram menos movimento no sistema operacional —
+   toda microinteração deve ser funcional, não decorativa, então é seguro
+   desativá-las aqui sem perder informação. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -1,7 +1,7 @@
 // Protege rotas autenticadas e mantém a sessão do Supabase sincronizada
 // entre requisições (necessário com @supabase/ssr no App Router).
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet: { name: string; value: string; options: CookieOptions }[]) => {
+        setAll: (cookiesToSet) => {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>

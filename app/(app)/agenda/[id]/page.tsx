@@ -3,7 +3,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { STATUS_LABEL, STATUS_COLOR } from "@/lib/hive/status";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatMoney } from "@/lib/hive/format";
+import { ChevronLeft, Phone, StickyNote } from "lucide-react";
 
 type AppointmentDetail = {
   id: string;
@@ -19,18 +26,18 @@ type AppointmentDetail = {
 // "Iniciar atendimento" fica disponível tanto em agendado quanto em
 // confirmado — a confirmação é útil pra organização, mas não pode ser um
 // passo obrigatório que atrapalhe um início rápido no dia a dia.
-const NEXT_ACTIONS: Record<string, { status: string; label: string }[]> = {
+const NEXT_ACTIONS: Record<string, { status: string; label: string; variant: "secondary" | "danger" }[]> = {
   agendado: [
-    { status: "confirmado", label: "Confirmar" },
-    { status: "em_atendimento", label: "Iniciar atendimento" },
-    { status: "cancelado", label: "Cancelar" },
+    { status: "confirmado", label: "Confirmar", variant: "secondary" },
+    { status: "em_atendimento", label: "Iniciar atendimento", variant: "secondary" },
+    { status: "cancelado", label: "Cancelar", variant: "danger" },
   ],
   confirmado: [
-    { status: "em_atendimento", label: "Iniciar atendimento" },
-    { status: "nao_compareceu", label: "Não compareceu" },
-    { status: "cancelado", label: "Cancelar" },
+    { status: "em_atendimento", label: "Iniciar atendimento", variant: "secondary" },
+    { status: "nao_compareceu", label: "Não compareceu", variant: "danger" },
+    { status: "cancelado", label: "Cancelar", variant: "danger" },
   ],
-  em_atendimento: [], // conclusão tem fluxo próprio (registra pagamento)
+  em_atendimento: [], // conclusão tem fluxo próprio (registra pagamento) abaixo
 };
 
 export default function AgendamentoDetalhePage() {
@@ -97,148 +104,145 @@ export default function AgendamentoDetalhePage() {
     load();
   }
 
-  if (loading) return <p className="text-center text-sm text-charcoal-500">Carregando...</p>;
-  if (!appt) return <p className="text-center text-sm text-charcoal-500">Agendamento não encontrado.</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-24" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  }
+  if (!appt) return <p className="text-center text-sm text-ink-400">Agendamento não encontrado.</p>;
 
   const actions = NEXT_ACTIONS[appt.status] ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 pb-4">
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-800"
+      >
+        <ChevronLeft className="size-4" />
+        Voltar
+      </button>
+
       <div>
-        <button onClick={() => router.back()} className="mb-2 text-sm text-plum-500">‹ Voltar</button>
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-charcoal-900">{appt.clients?.name}</h1>
-          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_COLOR[appt.status]}`}>
-            {STATUS_LABEL[appt.status]}
-          </span>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">{appt.clients?.name}</h1>
+          <StatusBadge status={appt.status} />
         </div>
-        <p className="text-sm text-charcoal-700">{appt.services?.name}</p>
+        <p className="text-sm text-ink-400">{appt.services?.name}</p>
       </div>
 
-      <section className="space-y-2 rounded-2xl bg-white p-5 shadow-sm">
-        <p className="text-sm text-charcoal-700">
-          <span className="font-semibold text-charcoal-900">Data: </span>
-          {new Date(appt.scheduled_start).toLocaleString("pt-BR", {
-            day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
-          })}
-        </p>
-        <p className="text-sm text-charcoal-700">
-          <span className="font-semibold text-charcoal-900">Valor: </span>
-          R$ {Number(appt.price).toFixed(2)}
-        </p>
+      <Card className="space-y-3">
+        <div className="flex justify-between text-sm">
+          <span className="text-ink-400">Data</span>
+          <span className="font-medium text-ink-800">
+            {new Date(appt.scheduled_start).toLocaleString("pt-BR", {
+              day: "2-digit",
+              month: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-ink-400">Valor</span>
+          <span className="font-medium text-ink-800">{formatMoney(appt.price)}</span>
+        </div>
         {appt.clients?.phone && (
-          <p className="text-sm text-charcoal-700">
-            <span className="font-semibold text-charcoal-900">Telefone: </span>
-            {appt.clients.phone}
-          </p>
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-1.5 text-ink-400">
+              <Phone className="size-3.5" />
+              Telefone
+            </span>
+            <span className="font-medium text-ink-800">{appt.clients.phone}</span>
+          </div>
         )}
         {appt.notes && (
-          <p className="text-sm text-charcoal-700">
-            <span className="font-semibold text-charcoal-900">Observação: </span>
-            {appt.notes}
-          </p>
+          <div className="border-t border-ink-100 pt-3 text-sm">
+            <p className="mb-1 flex items-center gap-1.5 text-ink-400">
+              <StickyNote className="size-3.5" />
+              Observação
+            </p>
+            <p className="text-ink-700">{appt.notes}</p>
+          </div>
         )}
-      </section>
+      </Card>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {!showConclude && (
         <div className="space-y-2">
           {appt.status === "em_atendimento" && (
-            <button
+            <Button
               onClick={() => {
                 setPaidAmount(finalPrice);
                 setShowConclude(true);
               }}
-              className="w-full rounded-xl bg-success py-3 font-semibold text-white"
+              className="w-full !bg-success hover:!bg-success"
             >
               Concluir atendimento
-            </button>
+            </Button>
           )}
           {actions.map((a) => (
-            <button
+            <Button
               key={a.status}
+              variant={a.variant}
               disabled={busy}
               onClick={() => changeStatus(a.status)}
-              className="w-full rounded-xl border border-blush-200 bg-white py-3 font-semibold text-charcoal-900 disabled:opacity-60"
+              className="w-full"
             >
               {a.label}
-            </button>
+            </Button>
           ))}
         </div>
       )}
 
       {showConclude && (
-        <form onSubmit={handleConclude} className="space-y-4 rounded-2xl bg-white p-5 shadow-sm">
-          <h2 className="font-semibold text-charcoal-900">Concluir atendimento</h2>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-charcoal-700">Valor final (R$)</label>
-            <input
-              type="number"
-              required
-              min={0}
-              step={0.01}
-              value={finalPrice}
-              onChange={(e) => setFinalPrice(Number(e.target.value))}
-              className="w-full rounded-xl border border-blush-200 bg-blush-50 px-4 py-3 outline-none focus:border-plum-500"
-            />
-          </div>
+        <form onSubmit={handleConclude} className="space-y-4 rounded-lg border border-ink-100 bg-surface p-5">
+          <h2 className="font-semibold text-ink-800">Concluir atendimento</h2>
+          <Input
+            type="number"
+            label="Valor final (R$)"
+            required
+            min={0}
+            step={0.01}
+            value={finalPrice}
+            onChange={(e) => setFinalPrice(Number(e.target.value))}
+          />
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-charcoal-700">Pagamento</label>
-              <select
-                value={method}
-                onChange={(e) => setMethod(e.target.value as typeof method)}
-                className="w-full rounded-xl border border-blush-200 bg-blush-50 px-4 py-3 outline-none focus:border-plum-500"
-              >
-                <option value="pix">Pix</option>
-                <option value="dinheiro">Dinheiro</option>
-                <option value="cartao">Cartão</option>
-                <option value="outro">Outro</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-charcoal-700">Status</label>
-              <select
-                value={payStatus}
-                onChange={(e) => setPayStatus(e.target.value as typeof payStatus)}
-                className="w-full rounded-xl border border-blush-200 bg-blush-50 px-4 py-3 outline-none focus:border-plum-500"
-              >
-                <option value="pago">Pago</option>
-                <option value="pendente">Pendente</option>
-                <option value="parcial">Parcial</option>
-              </select>
-            </div>
+            <Select label="Pagamento" value={method} onChange={(e) => setMethod(e.target.value as typeof method)}>
+              <option value="pix">Pix</option>
+              <option value="dinheiro">Dinheiro</option>
+              <option value="cartao">Cartão</option>
+              <option value="outro">Outro</option>
+            </Select>
+            <Select label="Status" value={payStatus} onChange={(e) => setPayStatus(e.target.value as typeof payStatus)}>
+              <option value="pago">Pago</option>
+              <option value="pendente">Pendente</option>
+              <option value="parcial">Parcial</option>
+            </Select>
           </div>
           {payStatus === "parcial" && (
-            <div>
-              <label className="mb-1 block text-sm font-medium text-charcoal-700">Quanto já foi pago (R$)</label>
-              <input
-                type="number"
-                min={0}
-                max={finalPrice}
-                step={0.01}
-                value={paidAmount}
-                onChange={(e) => setPaidAmount(Number(e.target.value))}
-                className="w-full rounded-xl border border-blush-200 bg-blush-50 px-4 py-3 outline-none focus:border-plum-500"
-              />
-            </div>
+            <Input
+              type="number"
+              label="Quanto já foi pago (R$)"
+              min={0}
+              max={finalPrice}
+              step={0.01}
+              value={paidAmount}
+              onChange={(e) => setPaidAmount(Number(e.target.value))}
+            />
           )}
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setShowConclude(false)}
-              className="flex-1 rounded-xl border border-blush-200 py-3 font-semibold text-charcoal-700"
-            >
+            <Button type="button" variant="secondary" onClick={() => setShowConclude(false)} className="flex-1">
               Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={busy}
-              className="flex-1 rounded-xl bg-plum-500 py-3 font-semibold text-white disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" loading={busy} className="flex-1">
               {busy ? "Salvando..." : "Confirmar"}
-            </button>
+            </Button>
           </div>
         </form>
       )}

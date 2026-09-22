@@ -1,124 +1,252 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { addDays, addWeeks, addMonths, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
-import { STATUS_LABEL, STATUS_COLOR } from "@/lib/hive/status";
+import {
+  getActiveProfessionals,
+  getWeekDays,
+  getMonthGrid,
+  isSameDay,
+  type Professional,
+} from "@/lib/hive/schedule";
+import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DayTimeline, type TimelineAppointment } from "@/components/agenda/day-timeline";
+import { WeekStrip, type WeekAppointment } from "@/components/agenda/week-strip";
+import { MonthGrid } from "@/components/agenda/month-grid";
+import { CalendarPlus, ChevronLeft, ChevronRight, ChevronDown, CalendarX } from "lucide-react";
 
-type Appointment = {
-  id: string;
-  scheduled_start: string;
-  scheduled_end: string;
-  status: string;
-  price: number;
-  clients: { name: string } | null;
-  services: { name: string } | null;
-};
+type View = "dia" | "semana" | "mes";
 
 function startOfDay(d: Date) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
   return x;
 }
-function addDays(d: Date, n: number) {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-}
-function fmtDayLabel(d: Date) {
-  const today = startOfDay(new Date());
-  const target = startOfDay(d);
-  if (target.getTime() === today.getTime()) return "Hoje";
-  if (target.getTime() === addDays(today, 1).getTime()) return "Amanhã";
-  if (target.getTime() === addDays(today, -1).getTime()) return "Ontem";
-  return d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
+function weekRangeLabel(start: Date, end: Date) {
+  if (start.getMonth() === end.getMonth()) {
+    return `${format(start, "d")}–${format(end, "d 'de' MMMM", { locale: ptBR })}`;
+  }
+  return `${format(start, "d 'de' MMM", { locale: ptBR })} – ${format(end, "d 'de' MMM", { locale: ptBR })}`;
 }
 
 export default function AgendaPage() {
   const { companyId } = useCompany();
-  const [date, setDate] = useState(() => startOfDay(new Date()));
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  const [view, setView] = useState<View>("dia");
+  const [refDate, setRefDate] = useState(() => startOfDay(new Date()));
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [selectedProfessional, setSelectedProfessional] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+
+  const [dayAppointments, setDayAppointments] = useState<TimelineAppointment[]>([]);
+  const [weekByDay, setWeekByDay] = useState<Map<string, WeekAppointment[]>>(new Map());
+  const [monthByDay, setMonthByDay] = useState<Map<string, { total: number; hasPending: boolean }>>(new Map());
+
+  // Profissionais ativas — carregado uma vez. Se só houver uma, o filtro
+  // nem aparece (não cria complexidade desnecessária pra quem trabalha sozinha).
+  useEffect(() => {
+    getActiveProfessionals(createClient(), companyId).then(setProfessionals);
+  }, [companyId]);
 
   const load = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
-    const dayStart = startOfDay(date);
-    const dayEnd = addDays(dayStart, 1);
 
-    const { data } = await supabase
-      .from("appointments")
-      .select("id, scheduled_start, scheduled_end, status, price, clients(name), services(name)")
-      .eq("company_id", companyId)
-      .gte("scheduled_start", dayStart.toISOString())
-      .lt("scheduled_start", dayEnd.toISOString())
-      .order("scheduled_start");
+    if (view === "dia") {
+      let query = supabase
+        .from("appointments")
+        .select("id, scheduled_start, scheduled_end, status, professional_member_id, clients(name), services(name)")
+        .eq("company_id", companyId)
+        .gte("scheduled_start", refDate.toISOString())
+        .lt("scheduled_start", addDays(refDate, 1).toISOString());
+      if (selectedProfessional !== "all") query = query.eq("professional_member_id", selectedProfessional);
+      const { data } = await query;
+      setDayAppointments((data as unknown as TimelineAppointment[]) ?? []);
+    }
 
-    setAppointments((data as unknown as Appointment[]) ?? []);
+    if (view === "semana") {
+      const days = getWeekDays(refDate);
+      let query = supabase
+        .from("appointments")
+        .select("id, scheduled_start, status, clients(name)")
+        .eq("company_id", companyId)
+        .gte("scheduled_start", days[0].toISOString())
+        .lt("scheduled_start", addDays(days[6], 1).toISOString())
+        .order("scheduled_start");
+      if (selectedProfessional !== "all") query = query.eq("professional_member_id", selectedProfessional);
+      const { data } = await query;
+      const map = new Map<string, WeekAppointment[]>();
+      for (const a of (data as unknown as (WeekAppointment & { scheduled_start: string })[]) ?? []) {
+        const key = a.scheduled_start.slice(0, 10);
+        map.set(key, [...(map.get(key) ?? []), a]);
+      }
+      setWeekByDay(map);
+    }
+
+    if (view === "mes") {
+      const days = getMonthGrid(refDate);
+      let query = supabase
+        .from("appointments")
+        .select("id, scheduled_start, status")
+        .eq("company_id", companyId)
+        .gte("scheduled_start", days[0].toISOString())
+        .lt("scheduled_start", addDays(days[41], 1).toISOString());
+      if (selectedProfessional !== "all") query = query.eq("professional_member_id", selectedProfessional);
+      const { data } = await query;
+      const map = new Map<string, { total: number; hasPending: boolean }>();
+      for (const a of (data as { scheduled_start: string; status: string }[]) ?? []) {
+        if (a.status === "cancelado" || a.status === "nao_compareceu") continue;
+        const key = a.scheduled_start.slice(0, 10);
+        const cur = map.get(key) ?? { total: 0, hasPending: false };
+        cur.total += 1;
+        if (a.status === "agendado") cur.hasPending = true;
+        map.set(key, cur);
+      }
+      setMonthByDay(map);
+    }
+
     setLoading(false);
-  }, [companyId, date]);
+  }, [companyId, view, refDate, selectedProfessional]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  const weekDays = useMemo(() => getWeekDays(refDate), [refDate]);
+  const monthDays = useMemo(() => getMonthGrid(refDate), [refDate]);
+  const activeDayAppointments = dayAppointments.filter((a) => a.status !== "cancelado" && a.status !== "nao_compareceu");
+
+  function goPrev() {
+    setRefDate((d) => (view === "dia" ? addDays(d, -1) : view === "semana" ? addWeeks(d, -1) : addMonths(d, -1)));
+  }
+  function goNext() {
+    setRefDate((d) => (view === "dia" ? addDays(d, 1) : view === "semana" ? addWeeks(d, 1) : addMonths(d, 1)));
+  }
+  function goToday() {
+    setRefDate(startOfDay(new Date()));
+  }
+  function selectDay(d: Date) {
+    setRefDate(startOfDay(d));
+    setView("dia");
+  }
+
+  const label =
+    view === "dia"
+      ? refDate.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })
+      : view === "semana"
+        ? weekRangeLabel(weekDays[0], weekDays[6])
+        : refDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-charcoal-900">Agenda</h1>
-        <Link href="/agenda/novo" className="rounded-xl bg-plum-500 px-4 py-2 text-sm font-semibold text-white">
-          + Novo
+    <div className="space-y-4 pb-4">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Agenda</h1>
+        <Link href={`/agenda/novo?data=${format(refDate, "yyyy-MM-dd")}`}>
+          <Button size="sm">
+            <CalendarPlus className="size-4" />
+            <span className="hidden sm:inline">Novo atendimento</span>
+            <span className="sm:hidden">Novo</span>
+          </Button>
         </Link>
       </div>
 
-      <div className="flex items-center justify-between rounded-2xl bg-white p-2 shadow-sm">
-        <button
-          onClick={() => setDate((d) => addDays(d, -1))}
-          className="rounded-xl px-3 py-2 text-charcoal-700 hover:bg-blush-50"
-          aria-label="Dia anterior"
-        >
-          ‹
-        </button>
-        <button onClick={() => setDate(startOfDay(new Date()))} className="text-sm font-semibold text-charcoal-900">
-          {fmtDayLabel(date)}
-        </button>
-        <button
-          onClick={() => setDate((d) => addDays(d, 1))}
-          className="rounded-xl px-3 py-2 text-charcoal-700 hover:bg-blush-50"
-          aria-label="Próximo dia"
-        >
-          ›
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SegmentedControl
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "dia", label: "Dia" },
+            { value: "semana", label: "Semana" },
+            { value: "mes", label: "Mês" },
+          ]}
+        />
+        {professionals.length > 1 && (
+          <div className="relative">
+            <select
+              value={selectedProfessional}
+              onChange={(e) => setSelectedProfessional(e.target.value)}
+              className="appearance-none rounded-md border border-ink-200 bg-surface py-1.5 pl-3 pr-8 text-sm font-medium text-ink-700 outline-none focus:border-ink-800"
+            >
+              <option value="all">Todas</option>
+              {professionals.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-400" />
+          </div>
+        )}
       </div>
 
-      {loading && <p className="text-center text-sm text-charcoal-500">Carregando...</p>}
-
-      {!loading && appointments.length === 0 && (
-        <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
-          <p className="mb-4 text-charcoal-700">Nenhum atendimento neste dia.</p>
-          <Link href="/agenda/novo" className="font-semibold text-plum-500">
-            Criar agendamento
-          </Link>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={goPrev}
+            aria-label="Anterior"
+            className="rounded-md p-1.5 text-ink-500 transition-colors hover:bg-ink-50 hover:text-ink-800"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <button
+            onClick={goNext}
+            aria-label="Próximo"
+            className="rounded-md p-1.5 text-ink-500 transition-colors hover:bg-ink-50 hover:text-ink-800"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+          <span className="ml-1 text-sm font-medium capitalize text-ink-700">{label}</span>
         </div>
-      )}
-
-      <div className="space-y-2">
-        {appointments.map((a) => (
-          <Link key={a.id} href={`/agenda/${a.id}`} className="flex gap-3 rounded-2xl bg-white p-4 shadow-sm">
-            <div className="w-14 shrink-0 text-sm font-semibold text-plum-500">
-              {new Date(a.scheduled_start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-charcoal-900">{a.clients?.name}</p>
-              <p className="text-xs text-charcoal-500">{a.services?.name}</p>
-            </div>
-            <span className={`h-fit self-center rounded-full px-2 py-1 text-[10px] font-semibold ${STATUS_COLOR[a.status]}`}>
-              {STATUS_LABEL[a.status]}
-            </span>
-          </Link>
-        ))}
+        {!isSameDay(refDate, new Date()) && (
+          <button onClick={goToday} className="text-xs font-semibold text-ink-500 hover:text-ink-800">
+            Hoje
+          </button>
+        )}
       </div>
+
+      <Card>
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-2/3" />
+          </div>
+        ) : view === "dia" ? (
+          activeDayAppointments.length === 0 ? (
+            <EmptyState
+              icon={CalendarX}
+              title="Nenhum atendimento neste dia"
+              description="Que tal aproveitar para organizar a agenda da semana?"
+              action={
+                <Link href={`/agenda/novo?data=${format(refDate, "yyyy-MM-dd")}`}>
+                  <Button variant="secondary" size="sm">
+                    Criar agendamento
+                  </Button>
+                </Link>
+              }
+            />
+          ) : (
+            <DayTimeline
+              date={refDate}
+              appointments={dayAppointments}
+              professionals={professionals}
+              laneFilter={selectedProfessional}
+            />
+          )
+        ) : view === "semana" ? (
+          <WeekStrip days={weekDays} appointmentsByDay={weekByDay} onSelectDay={selectDay} />
+        ) : (
+          <MonthGrid days={monthDays} reference={refDate} countByDay={monthByDay} onSelectDay={selectDay} />
+        )}
+      </Card>
     </div>
   );
 }

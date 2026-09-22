@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const NICHOS = [
   { slug: "nail_designer", label: "Nail Designer" },
@@ -35,52 +38,44 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col justify-center bg-blush-100 px-6 py-10">
-      <div className="mx-auto w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
+    <main className="flex min-h-screen flex-col justify-center bg-cream px-6 py-10">
+      <div className="mx-auto w-full max-w-sm rounded-lg border border-ink-100 bg-surface p-8">
         {step === 1 && (
           <>
-            <h2 className="mb-4 text-xl font-bold text-charcoal-900">Qual o nome da sua empresa?</h2>
-            <input
+            <h2 className="mb-4 text-xl font-semibold text-ink-800">Qual o nome da sua empresa?</h2>
+            <Input
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               placeholder="Ex: Studio Bella"
-              className="w-full rounded-xl border border-blush-200 bg-blush-50 px-4 py-3 outline-none focus:border-plum-500"
             />
-            <button
-              disabled={!companyName}
-              onClick={() => setStep(2)}
-              className="mt-6 w-full rounded-xl bg-plum-500 py-3 font-semibold text-white disabled:opacity-40"
-            >
+            <Button disabled={!companyName} onClick={() => setStep(2)} className="mt-6 w-full">
               Continuar
-            </button>
+            </Button>
           </>
         )}
 
         {step === 2 && (
           <>
-            <h2 className="mb-4 text-xl font-bold text-charcoal-900">Qual é o seu negócio?</h2>
+            <h2 className="mb-4 text-xl font-semibold text-ink-800">Qual é o seu negócio?</h2>
             <div className="grid grid-cols-2 gap-2">
               {NICHOS.map((n) => (
                 <button
                   key={n.slug}
                   onClick={() => setNiche(n.slug)}
-                  className={`rounded-xl border px-3 py-3 text-sm font-medium transition ${
+                  className={cn(
+                    "rounded border px-3 py-3 text-sm font-medium transition-colors",
                     niche === n.slug
-                      ? "border-plum-500 bg-plum-500 text-white"
-                      : "border-blush-200 bg-blush-50 text-charcoal-900"
-                  }`}
+                      ? "border-ink-800 bg-ink-800 text-cream"
+                      : "border-ink-200 bg-surface text-ink-700 hover:bg-ink-50"
+                  )}
                 >
                   {n.label}
                 </button>
               ))}
             </div>
-            <button
-              disabled={!niche || loading}
-              onClick={finish}
-              className="mt-6 w-full rounded-xl bg-plum-500 py-3 font-semibold text-white disabled:opacity-40"
-            >
-              {loading ? "Criando empresa..." : "Entrar no Hive Beauty"}
-            </button>
+            <Button disabled={!niche} loading={loading} onClick={finish} className="mt-6 w-full">
+              {loading ? "Criando empresa..." : "Entrar na Áurea"}
+            </Button>
           </>
         )}
       </div>

@@ -1,4 +1,8 @@
-# Hive Beauty — Fase 1 (Fundação) + Fase 2 (Core) + Fase 3 (Financeiro e indicadores)
+# Áurea — Fase 1 (Fundação) + Fase 2 (Core) + Fase 3 (Financeiro e indicadores) + Fase 4 (Produto/UX)
+
+> O projeto era chamado "Hive Beauty" até a Fase 3. A partir da Fase 4 a marca
+> é exclusivamente **Áurea** — sem referências a colmeia/favos. O histórico
+> abaixo foi mantido por precisão, só com o nome atualizado.
 
 **Fase 2 adicionou**: `supabase/migrations/0002_appointment_flow.sql`, e as
 telas de Serviços, Clientes e Agenda/Agendamento.
@@ -19,7 +23,7 @@ banco; e os indicadores separam **faturado** (gerado) de **recebido**
 (caixa) — veja a auditoria na conversa.
 
 
-Este é o esqueleto inicial do Hive Beauty: schema completo do banco (com RLS
+Este é o esqueleto inicial da Áurea: schema completo do banco (com RLS
 multi-tenant) e a estrutura base do app Next.js (auth, onboarding, shell
 autenticado, painel SuperAdmin). As Fases 2-5 (agenda, clientes, financeiro,
 relatórios, PWA, etc.) constroem em cima desta base, módulo por módulo.

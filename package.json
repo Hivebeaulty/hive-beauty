@@ -1,6 +1,6 @@
 {
-  "name": "hive-beauty",
-  "version": "0.1.0",
+  "name": "aurea",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -16,6 +16,7 @@
     "@supabase/ssr": "^0.5.0",
     "date-fns": "^3.6.0",
     "clsx": "^2.1.1",
+    "lucide-react": "^0.462.0",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
