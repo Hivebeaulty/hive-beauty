@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveMembership } from "@/lib/hive/membership";
 import { CompanyProvider } from "@/components/company-provider";
@@ -31,6 +32,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <AppNav items={navItems} companyName={membership.companyName} />
 
         <div className="flex-1 pb-20 md:pb-0">
+          {/* Presença discreta da marca no mobile — no desktop a sidebar já
+              cumpre esse papel, então isso não aparece lá (md:hidden). */}
+          <header className="flex items-center gap-1.5 border-b border-ink-100 px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))] md:hidden">
+            <Image src="/logo-icon.png" alt="" width={16} height={16} />
+            <Image src="/logo-wordmark.png" alt="Áurea" width={48} height={11} />
+          </header>
           <main className="mx-auto max-w-3xl px-4 py-6 md:px-8">{children}</main>
         </div>
       </div>

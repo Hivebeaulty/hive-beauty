@@ -42,6 +42,19 @@ function minutesToTime(min: number) {
   return `${h}:${m}`;
 }
 
+// A causa mais provável de "nenhum horário aparece" não é um bug na conta
+// de horários — é a empresa não ter nenhuma linha em business_hours ainda
+// (não existe, hoje, nenhuma tela que grave essa tabela). Esse helper deixa
+// a UI dizer a verdade ("empresa sem horário configurado") em vez de
+// confundir com "esse dia está lotado".
+export async function hasAnyBusinessHours(supabase: SupabaseClient, companyId: string): Promise<boolean> {
+  const { count } = await supabase
+    .from("business_hours")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId);
+  return (count ?? 0) > 0;
+}
+
 export async function getAvailableSlots(params: {
   supabase: SupabaseClient;
   companyId: string;

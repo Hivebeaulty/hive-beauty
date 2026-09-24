@@ -5,13 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
-import { getActiveProfessionals, getAvailableSlots, type Professional } from "@/lib/hive/schedule";
+import { getActiveProfessionals, getAvailableSlots, hasAnyBusinessHours, type Professional } from "@/lib/hive/schedule";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Clock } from "lucide-react";
+import { Clock, AlertTriangle } from "lucide-react";
 
 type ClientOption = { id: string; name: string };
 type ServiceOption = { id: string; name: string; duration_minutes: number; price: number };
@@ -36,6 +36,7 @@ export default function NovoAgendamentoPage() {
 
   const [slots, setSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [hoursConfigured, setHoursConfigured] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +59,7 @@ export default function NovoAgendamentoPage() {
       if (list.length === 1) setProfessionalId(list[0].id);
       else if (list.some((p) => p.id === memberId)) setProfessionalId(memberId);
     });
+    hasAnyBusinessHours(supabase, companyId).then(setHoursConfigured);
   }, [companyId, memberId]);
 
   function handleServiceChange(id: string) {
@@ -139,6 +141,16 @@ export default function NovoAgendamentoPage() {
   return (
     <div className="space-y-5 pb-4">
       <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Novo atendimento</h1>
+
+      {hoursConfigured === false && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-ink-700">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+          <span>
+            Esta empresa ainda não tem horário de funcionamento cadastrado, então nenhum horário aparecerá como
+            disponível. Peça para configurar o horário de funcionamento (ainda não temos uma tela para isso).
+          </span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Select label="Cliente" required value={clientId} onChange={(e) => setClientId(e.target.value)}>
@@ -222,7 +234,11 @@ export default function NovoAgendamentoPage() {
           ) : slotsLoading ? (
             <p className="text-sm text-ink-400">Calculando horários livres...</p>
           ) : slots.length === 0 ? (
-            <p className="text-sm text-ink-400">Nenhum horário livre nesse dia. Tente outra data.</p>
+            <p className="text-sm text-ink-400">
+              {hoursConfigured === false
+                ? "Nenhum horário de funcionamento cadastrado (veja o aviso acima)."
+                : "Nenhum horário livre nesse dia. Tente outra data."}
+            </p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {slots.map((s) => (

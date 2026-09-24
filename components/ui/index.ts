@@ -12,3 +12,4 @@ export * from "./empty-state";
 export * from "./skeleton";
 export * from "./page-header";
 export * from "./segmented-control";
+export * from "./switch";

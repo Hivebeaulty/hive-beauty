@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Home, CalendarDays, Users, Wallet, MoreHorizontal, type LucideIcon } from "lucide-react";
+import { LogoutButton } from "@/components/logout-button";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -26,7 +27,7 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
   return (
     <>
       {/* Desktop — sidebar fixa à esquerda */}
-      <aside className="hidden w-60 shrink-0 border-r border-ink-100 bg-surface p-6 md:block">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-ink-100 bg-surface p-6 md:flex">
         <div className="mb-8 flex items-center gap-2">
           <Image src="/logo-icon.png" alt="" width={26} height={26} priority />
           <Image src="/logo-wordmark.png" alt="Áurea" width={72} height={17} priority className="mt-0.5" />
@@ -53,6 +54,11 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
             );
           })}
         </nav>
+
+        {/* Local mais natural pra Sair no desktop: fim da navegação principal. */}
+        <div className="mt-auto border-t border-ink-100 pt-2">
+          <LogoutButton variant="sidebar" />
+        </div>
       </aside>
 
       {/* Mobile — barra inferior */}
