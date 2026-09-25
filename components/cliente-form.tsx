@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
 type ClientFormData = {
   id: string;
@@ -15,6 +18,8 @@ type ClientFormData = {
   notes: string;
 };
 
+// Mesmos campos e mesma lógica de sempre (insert/update na tabela clients,
+// redireciona pro perfil) — só migrado pros componentes do Design System.
 export function ClienteForm({ initial }: { initial?: ClientFormData }) {
   const router = useRouter();
   const { companyId } = useCompany();
@@ -58,77 +63,50 @@ export function ClienteForm({ initial }: { initial?: ClientFormData }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Nome</label>
-        <input
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-        />
-      </div>
+      <Input label="Nome" required value={name} onChange={(e) => setName(e.target.value)} />
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Telefone</label>
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="(11) 99999-0000"
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Instagram</label>
-          <input
-            value={instagram}
-            onChange={(e) => setInstagram(e.target.value)}
-            placeholder="@usuaria"
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Data de nascimento</label>
-        <input
-          type="date"
-          value={birthDate}
-          onChange={(e) => setBirthDate(e.target.value)}
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
+        <Input
+          label="Telefone"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="(11) 99999-0000"
+        />
+        <Input
+          label="Instagram"
+          value={instagram}
+          onChange={(e) => setInstagram(e.target.value)}
+          placeholder="@usuaria"
         />
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Preferências</label>
-        <textarea
-          value={preferences}
-          onChange={(e) => setPreferences(e.target.value)}
-          rows={2}
-          placeholder="Ex: prefere tons neutros, sensível na cutícula..."
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-        />
-      </div>
+      <Input
+        type="date"
+        label="Data de nascimento"
+        value={birthDate}
+        onChange={(e) => setBirthDate(e.target.value)}
+      />
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Observações internas</label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-        />
-      </div>
+      <Textarea
+        label="Preferências"
+        value={preferences}
+        onChange={(e) => setPreferences(e.target.value)}
+        rows={2}
+        placeholder="Ex: prefere tons neutros, sensível na cutícula..."
+      />
+
+      <Textarea
+        label="Observações internas"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        rows={2}
+      />
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="w-full rounded-xl bg-plum-500 py-3 font-semibold text-white disabled:opacity-60"
-      >
+      <Button type="submit" loading={saving} className="w-full">
         {saving ? "Salvando..." : "Salvar cliente"}
-      </button>
+      </Button>
     </form>
   );
 }

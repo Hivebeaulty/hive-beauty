@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
 import { getActiveProfessionals, getAvailableSlots, hasAnyBusinessHours, type Professional } from "@/lib/hive/schedule";
+import { formatDuration } from "@/lib/hive/format";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +26,7 @@ export default function NovoAgendamentoPage() {
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
 
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(searchParams.get("cliente") || "");
   const [serviceId, setServiceId] = useState("");
   const [professionalId, setProfessionalId] = useState("");
   const [date, setDate] = useState(searchParams.get("data") || format(new Date(), "yyyy-MM-dd"));
@@ -179,7 +180,7 @@ export default function NovoAgendamentoPage() {
           </option>
           {services.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.name} · {s.duration_minutes}min
+              {s.name} · {formatDuration(s.duration_minutes)}
             </option>
           ))}
         </Select>

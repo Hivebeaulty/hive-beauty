@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { formatDuration, formatMoney } from "@/lib/hive/format";
 
 type ServiceFormData = {
   id: string;
@@ -14,16 +18,29 @@ type ServiceFormData = {
   active: boolean;
 };
 
+// Mesma lógica de sempre: categoria é texto livre que busca-ou-cria em
+// service_categories (case-insensitive). A <datalist> só ajuda a reaproveitar
+// o nome de uma categoria já existente sem digitar de novo — não é um
+// sistema novo, é o mesmo "resolveCategoryId" de antes com uma sugestão.
 export function ServicoForm({ initial }: { initial?: ServiceFormData }) {
   const router = useRouter();
   const { companyId } = useCompany();
   const [name, setName] = useState(initial?.name ?? "");
   const [categoryName, setCategoryName] = useState(initial?.categoryName ?? "");
+  const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [duration, setDuration] = useState(initial?.duration_minutes ?? 60);
   const [price, setPrice] = useState(initial?.price ?? 0);
   const [active, setActive] = useState(initial?.active ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    createClient()
+      .from("service_categories")
+      .select("name")
+      .eq("company_id", companyId)
+      .then(({ data }) => setExistingCategories((data ?? []).map((c) => c.name)));
+  }, [companyId]);
 
   async function resolveCategoryId(supabase: ReturnType<typeof createClient>) {
     const trimmed = categoryName.trim();
@@ -63,6 +80,10 @@ export function ServicoForm({ initial }: { initial?: ServiceFormData }) {
         active,
       };
 
+      // Importante: isso NUNCA toca em appointments já criados. price e
+      // duração (via scheduled_start/end) ficam gravados no próprio
+      // atendimento na hora da criação — editar o serviço aqui não altera
+      // histórico, só passa a valer para os próximos agendamentos.
       const { error } = initial
         ? await supabase.from("services").update(payload).eq("id", initial.id)
         : await supabase.from("services").insert(payload);
@@ -70,7 +91,7 @@ export function ServicoForm({ initial }: { initial?: ServiceFormData }) {
       if (error) throw error;
       router.push("/mais/servicos");
       router.refresh();
-    } catch (err) {
+    } catch {
       setError("Não foi possível salvar. Tente novamente.");
     } finally {
       setSaving(false);
@@ -79,70 +100,74 @@ export function ServicoForm({ initial }: { initial?: ServiceFormData }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Nome do serviço</label>
-        <input
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Ex: Alongamento em gel"
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-        />
-      </div>
+      <Input
+        label="Nome do serviço"
+        required
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Ex: Alongamento em gel"
+      />
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Categoria (opcional)</label>
-        <input
+        <Input
+          label="Categoria (opcional)"
+          list="categorias-existentes"
           value={categoryName}
           onChange={(e) => setCategoryName(e.target.value)}
           placeholder="Ex: Unhas"
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
         />
+        <datalist id="categorias-existentes">
+          {existingCategories.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Duração (min)</label>
-          <input
-            type="number"
-            required
-            min={5}
-            step={5}
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          />
+        <Input
+          type="number"
+          label="Duração (min)"
+          required
+          min={5}
+          step={5}
+          value={duration}
+          onChange={(e) => setDuration(Number(e.target.value))}
+          hint={formatDuration(duration)}
+        />
+        <Input
+          type="number"
+          label="Preço (R$)"
+          required
+          min={0}
+          step={0.01}
+          value={price}
+          onChange={(e) => setPrice(Number(e.target.value))}
+        />
+      </div>
+
+      {/* Prévia — "informação operacional", não só campos soltos */}
+      {name && (
+        <div className="rounded-lg border border-ink-100 bg-ink-50/50 px-4 py-3 text-sm">
+          <p className="font-semibold text-ink-800">{name}</p>
+          <p className="text-ink-500">
+            {formatMoney(price)} · {formatDuration(duration)}
+          </p>
         </div>
+      )}
+
+      <div className="flex items-center gap-3 rounded-lg border border-ink-100 p-4">
+        <Switch checked={active} onChange={setActive} label="Serviço ativo" />
         <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Preço (R$)</label>
-          <input
-            type="number"
-            required
-            min={0}
-            step={0.01}
-            value={price}
-            onChange={(e) => setPrice(Number(e.target.value))}
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          />
+          <p className="text-sm font-medium text-ink-800">Serviço ativo</p>
+          <p className="text-xs text-ink-400">Desativado, some das opções de novo atendimento — o histórico continua intacto.</p>
         </div>
       </div>
 
-      {initial && (
-        <label className="flex items-center gap-2 text-sm text-charcoal-700">
-          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
-          Serviço ativo (some das opções de agendamento quando desativado)
-        </label>
-      )}
-
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="w-full rounded-xl bg-plum-500 py-3 font-semibold text-white disabled:opacity-60"
-      >
+      <Button type="submit" loading={saving} className="w-full">
         {saving ? "Salvando..." : "Salvar serviço"}
-      </button>
+      </Button>
     </form>
   );
 }

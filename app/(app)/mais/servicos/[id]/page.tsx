@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ServicoForm } from "@/components/servico-form";
+import { ChevronLeft } from "lucide-react";
 
 export default async function EditarServicoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,8 +20,12 @@ export default async function EditarServicoPage({ params }: { params: Promise<{ 
     : (service.service_categories as { name: string } | null)?.name;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-charcoal-900">Editar serviço</h1>
+    <div className="space-y-4 pb-4">
+      <Link href="/mais/servicos" className="flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-800">
+        <ChevronLeft className="size-4" />
+        Serviços
+      </Link>
+      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Editar serviço</h1>
       <ServicoForm
         initial={{
           id: service.id,
