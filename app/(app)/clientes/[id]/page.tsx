@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { formatMoney } from "@/lib/hive/format";
+import { formatMoney, whatsappLink } from "@/lib/hive/format";
+import { computeClientRelationship, daysUntilNextBirthday, birthdayLabel } from "@/lib/hive/relationship";
 import {
   Phone,
   Instagram,
@@ -17,6 +18,10 @@ import {
   Scissors,
   XCircle,
   UserX,
+  MessageCircle,
+  Repeat,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 
 type TimelineEntry = {
@@ -31,18 +36,6 @@ type TimelineEntry = {
   paymentLabel?: string;
   amountLabel?: string;
 };
-
-function isBirthdaySoon(birthDate: string | null) {
-  if (!birthDate) return false;
-  const today = new Date();
-  const bd = new Date(birthDate);
-  const next = new Date(today.getFullYear(), bd.getMonth(), bd.getDate());
-  if (next < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
-    next.setFullYear(next.getFullYear() + 1);
-  }
-  const days = Math.round((next.getTime() - today.getTime()) / 86400000);
-  return days >= 0 && days <= 14;
-}
 
 export default async function ClientePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -85,6 +78,10 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     if (svc) serviceCounts.set(svc, (serviceCounts.get(svc) ?? 0) + 1);
   }
   const topService = [...serviceCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  const relationship = computeClientRelationship(concluded.map((a) => a.scheduled_start));
+  const daysToBirthday = daysUntilNextBirthday(client.birth_date);
+  const waLink = whatsappLink(client.phone);
 
   const timeline: TimelineEntry[] = [
     ...(appointments ?? []).map((a): TimelineEntry => {
@@ -154,9 +151,22 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
         <div className="space-y-5">
           <Card className="space-y-3">
             {client.phone && (
-              <div className="flex items-center gap-2.5 text-sm">
-                <Phone className="size-4 shrink-0 text-ink-300" />
-                <span className="text-ink-700">{client.phone}</span>
+              <div className="flex items-center justify-between gap-2.5 text-sm">
+                <div className="flex items-center gap-2.5">
+                  <Phone className="size-4 shrink-0 text-ink-300" />
+                  <span className="text-ink-700">{client.phone}</span>
+                </div>
+                {waLink && (
+                  <a
+                    href={waLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success hover:bg-success/15"
+                  >
+                    <MessageCircle className="size-3.5" />
+                    WhatsApp
+                  </a>
+                )}
               </div>
             )}
             {client.instagram && (
@@ -171,15 +181,55 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
                 <span className="text-ink-700">
                   {new Date(client.birth_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}
                 </span>
-                {isBirthdaySoon(client.birth_date) && (
+                {daysToBirthday !== null && daysToBirthday <= 30 && (
                   <span className="rounded-full bg-gold-100 px-2 py-0.5 text-[11px] font-semibold text-gold-700">
-                    em breve
+                    {birthdayLabel(daysToBirthday)}
                   </span>
                 )}
               </div>
             )}
             {!client.phone && !client.instagram && !client.birth_date && (
               <p className="text-sm text-ink-300">Nenhum contato cadastrado.</p>
+            )}
+          </Card>
+
+          <Card className="space-y-2.5">
+            <h2 className="text-sm font-semibold text-ink-700">Relacionamento</h2>
+            {relationship.visitCount === 0 ? (
+              <p className="text-sm text-ink-300">Ainda sem atendimentos concluídos.</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-1.5 text-ink-400">
+                    <Clock className="size-3.5" /> Dias desde a última visita
+                  </span>
+                  <span className="font-semibold text-ink-800">{relationship.daysSinceLastVisit}</span>
+                </div>
+                {relationship.hasEnoughHistory ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5 text-ink-400">
+                        <Repeat className="size-3.5" /> Frequência média
+                      </span>
+                      <span className="font-semibold text-ink-800">a cada {relationship.avgIntervalDays} dias</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-ink-400">Próximo retorno (estimado)</span>
+                      <span className="font-semibold text-ink-800">
+                        {relationship.nextEstimatedDate!.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-ink-300">Ainda não há histórico suficiente para estimar a frequência dela.</p>
+                )}
+                {relationship.isOverdue && (
+                  <div className="flex items-center gap-1.5 rounded-md bg-warning/10 px-2.5 py-1.5 text-xs text-warning">
+                    <AlertCircle className="size-3.5 shrink-0" />
+                    Fora do padrão dela — pode ser um bom momento pra retomar contato.
+                  </div>
+                )}
+              </>
             )}
           </Card>
 

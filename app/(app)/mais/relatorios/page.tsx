@@ -1,16 +1,25 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
 import { getPeriodRange, PERIOD_LABEL, type Period } from "@/lib/hive/period";
+import { formatMoney } from "@/lib/hive/format";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { ChevronLeft } from "lucide-react";
 
+// Mesmos nomes de coluna que a RPC de verdade devolve — a versão anterior
+// desta tela usava faturado/resultado_caixa, que não existem no retorno de
+// get_period_indicators (é faturamento/resultado), por isso "Faturado" e
+// "Resultado de caixa" sempre apareciam como "R$ NaN". Corrigido junto com
+// a auditoria do Financeiro.
 type Indicators = {
   atendimentos_realizados: number;
-  faturado: number;
-  recebido: number;
+  faturamento: number;
   despesas: number;
-  resultado_caixa: number;
+  resultado: number;
   pendente: number;
   cancelamentos: number;
   faltas: number;
@@ -18,18 +27,19 @@ type Indicators = {
   clientes_recorrentes: number;
 };
 
-const CARDS: { key: keyof Indicators; label: string; format: (v: number) => string }[] = [
-  { key: "atendimentos_realizados", label: "Atendimentos realizados", format: (v) => String(v) },
-  { key: "faturado", label: "Faturado (gerado)", format: (v) => `R$ ${v.toFixed(2)}` },
-  { key: "recebido", label: "Recebido (caixa)", format: (v) => `R$ ${v.toFixed(2)}` },
-  { key: "despesas", label: "Despesas", format: (v) => `R$ ${v.toFixed(2)}` },
-  { key: "resultado_caixa", label: "Resultado de caixa", format: (v) => `R$ ${v.toFixed(2)}` },
-  { key: "pendente", label: "Valores pendentes", format: (v) => `R$ ${v.toFixed(2)}` },
-  { key: "cancelamentos", label: "Cancelamentos", format: (v) => String(v) },
-  { key: "faltas", label: "Faltas", format: (v) => String(v) },
-  { key: "clientes_novas", label: "Clientes novas", format: (v) => String(v) },
-  { key: "clientes_recorrentes", label: "Clientes recorrentes", format: (v) => String(v) },
+const CARDS: { key: keyof Indicators; label: string; money?: boolean }[] = [
+  { key: "atendimentos_realizados", label: "Atendimentos realizados" },
+  { key: "faturamento", label: "Recebido (caixa)", money: true },
+  { key: "despesas", label: "Despesas", money: true },
+  { key: "resultado", label: "Resultado de caixa", money: true },
+  { key: "pendente", label: "Valores pendentes", money: true },
+  { key: "cancelamentos", label: "Cancelamentos" },
+  { key: "faltas", label: "Faltas" },
+  { key: "clientes_novas", label: "Clientes novas" },
+  { key: "clientes_recorrentes", label: "Clientes recorrentes" },
 ];
+
+const PERIOD_OPTIONS: Period[] = ["hoje", "semana", "mes", "mes_anterior"];
 
 export default function RelatoriosPage() {
   const { companyId } = useCompany();
@@ -55,38 +65,46 @@ export default function RelatoriosPage() {
   }, [load]);
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-charcoal-900">Relatórios</h1>
+    <div className="space-y-5 pb-4">
+      <Link href="/mais" className="flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-800">
+        <ChevronLeft className="size-4" />
+        Mais
+      </Link>
 
-      <div className="flex gap-2 overflow-x-auto">
-        {(["hoje", "semana", "mes"] as Period[]).map((p) => (
+      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Relatórios</h1>
+
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {PERIOD_OPTIONS.map((p) => (
           <button
             key={p}
             onClick={() => setPeriod(p)}
-            className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${
-              period === p ? "bg-plum-500 text-white" : "bg-white text-charcoal-700"
-            }`}
+            className={cn(
+              "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+              period === p ? "bg-ink-800 text-cream" : "bg-ink-50 text-ink-600 hover:bg-ink-100"
+            )}
           >
             {PERIOD_LABEL[p]}
           </button>
         ))}
       </div>
 
-      {loading && <p className="text-center text-sm text-charcoal-500">Carregando...</p>}
-
-      {!loading && data && (
+      {loading ? (
+        <p className="text-center text-sm text-ink-400">Carregando...</p>
+      ) : data ? (
         <div className="grid grid-cols-2 gap-3">
           {CARDS.map((c) => (
-            <div key={c.key} className="rounded-2xl bg-white p-4 shadow-sm">
-              <p className="text-xs text-charcoal-500">{c.label}</p>
-              <p className="text-lg font-bold text-charcoal-900">{c.format(Number(data[c.key]))}</p>
-            </div>
+            <Card key={c.key} padding="sm">
+              <p className="text-xs text-ink-400">{c.label}</p>
+              <p className="text-lg font-semibold text-ink-800">
+                {c.money ? formatMoney(Number(data[c.key])) : Number(data[c.key])}
+              </p>
+            </Card>
           ))}
         </div>
-      )}
+      ) : null}
 
-      <p className="text-center text-xs text-charcoal-500">
-        Estes indicadores entram no Início (visão geral) na próxima fase.
+      <p className="text-center text-xs text-ink-300">
+        Uma visão mais completa (por serviço, por profissional) já está em Financeiro.
       </p>
     </div>
   );

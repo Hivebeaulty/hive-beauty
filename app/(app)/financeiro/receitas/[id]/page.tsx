@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ReceitaForm } from "@/components/receita-form";
+import { ChevronLeft } from "lucide-react";
 
 export default async function EditarReceitaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -10,10 +12,14 @@ export default async function EditarReceitaPage({ params }: { params: Promise<{ 
   if (!payment) notFound();
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-charcoal-900">Editar recebimento</h1>
+    <div className="space-y-4 pb-4">
+      <Link href="/financeiro/receitas" className="flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-800">
+        <ChevronLeft className="size-4" />
+        Receitas
+      </Link>
+      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Editar recebimento</h1>
       {payment.appointment_id && (
-        <p className="rounded-xl bg-blush-200 p-3 text-xs text-charcoal-700">
+        <p className="rounded-lg bg-gold-50 p-3 text-xs text-gold-700">
           Este recebimento está vinculado a um atendimento na Agenda. Editar aqui não altera o
           agendamento original.
         </p>

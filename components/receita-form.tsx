@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 type ClientOption = { id: string; name: string };
 
@@ -17,6 +20,8 @@ type PaymentFormData = {
   status: "pago" | "pendente" | "parcial";
 };
 
+// Mesma lógica de sempre (mesmos campos, mesmo cálculo de paid_amount por
+// status, mesmo paid_at automático) — só migrado pros componentes novos.
 export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
   const router = useRouter();
   const { companyId } = useCompany();
@@ -94,107 +99,74 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Descrição</label>
-        <input
-          required
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Ex: Venda de produto, sinal de pacote..."
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-        />
-        <p className="mt-1 text-xs text-charcoal-500">
-          Recebimentos de atendimentos são registrados automaticamente ao concluir na Agenda.
-        </p>
-      </div>
+      <Input
+        label="Descrição"
+        required
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Ex: Venda de produto, sinal de pacote..."
+        hint="Recebimentos de atendimentos são registrados automaticamente ao concluir na Agenda."
+      />
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Cliente (opcional)</label>
-        <select
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-        >
-          <option value="">Nenhuma</option>
-          {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
+      <Select label="Cliente (opcional)" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+        <option value="">Nenhuma</option>
+        {clients.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </Select>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Valor (R$)</label>
-          <input
-            type="number"
-            required
-            min={0}
-            step={0.01}
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Forma de pagamento</label>
-          <select
-            value={method}
-            onChange={(e) => setMethod(e.target.value)}
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          >
-            <option value="pix">Pix</option>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="cartao">Cartão</option>
-            <option value="outro">Outro</option>
-          </select>
-        </div>
+        <Input
+          type="number"
+          label="Valor (R$)"
+          required
+          min={0}
+          step={0.01}
+          value={amount}
+          onChange={(e) => setAmount(Number(e.target.value))}
+        />
+        <Select label="Forma de pagamento" value={method} onChange={(e) => setMethod(e.target.value)}>
+          <option value="pix">Pix</option>
+          <option value="dinheiro">Dinheiro</option>
+          <option value="cartao">Cartão</option>
+          <option value="outro">Outro</option>
+        </Select>
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Status do pagamento</label>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value as PaymentFormData["status"])}
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-        >
-          <option value="pago">Pago</option>
-          <option value="pendente">Pendente</option>
-          <option value="parcial">Parcial</option>
-        </select>
-      </div>
+      <Select
+        label="Status do pagamento"
+        value={status}
+        onChange={(e) => setStatus(e.target.value as PaymentFormData["status"])}
+      >
+        <option value="pago">Pago</option>
+        <option value="pendente">Pendente</option>
+        <option value="parcial">Parcial</option>
+      </Select>
 
       {status === "parcial" && (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Quanto já foi pago (R$)</label>
-          <input
-            type="number"
-            min={0}
-            max={amount}
-            step={0.01}
-            value={paidAmount}
-            onChange={(e) => setPaidAmount(Number(e.target.value))}
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          />
-        </div>
+        <Input
+          type="number"
+          label="Quanto já foi pago (R$)"
+          min={0}
+          max={amount}
+          step={0.01}
+          value={paidAmount}
+          onChange={(e) => setPaidAmount(Number(e.target.value))}
+        />
       )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="w-full rounded-xl bg-plum-500 py-3 font-semibold text-white disabled:opacity-60"
-      >
+      <Button type="submit" loading={saving} className="w-full">
         {saving ? "Salvando..." : "Salvar recebimento"}
-      </button>
+      </Button>
 
       {initial && (
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={deleting}
-          className="w-full rounded-xl border border-danger py-3 font-semibold text-danger disabled:opacity-60"
-        >
+        <Button type="button" variant="secondary" onClick={handleDelete} loading={deleting} className="w-full !border-danger !text-danger">
           {deleting ? "Excluindo..." : "Excluir recebimento"}
-        </button>
+        </Button>
       )}
     </form>
   );

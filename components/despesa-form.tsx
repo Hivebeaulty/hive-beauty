@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 type ExpenseFormData = {
   id: string;
@@ -18,6 +21,8 @@ type ExpenseFormData = {
 
 const DEFAULT_CATEGORIES = ["Materiais", "Produtos", "Aluguel", "Equipamentos", "Comissão", "Marketing", "Outros"];
 
+// Mesma lógica de sempre — mesmo resolveCategoryId, mesmos campos, mesmo
+// payload. Só migrado pros componentes do Design System.
 export function DespesaForm({ initial }: { initial?: ExpenseFormData }) {
   const router = useRouter();
   const { companyId } = useCompany();
@@ -100,102 +105,66 @@ export function DespesaForm({ initial }: { initial?: ExpenseFormData }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Descrição</label>
-        <input
-          required
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Ex: Compra de esmaltes"
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-        />
-      </div>
+      <Input
+        label="Descrição"
+        required
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Ex: Compra de esmaltes"
+      />
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-charcoal-700">Categoria</label>
-        <input
+        <Input
+          label="Categoria"
           list="categorias-despesa"
           value={categoryName}
           onChange={(e) => setCategoryName(e.target.value)}
           placeholder="Ex: Materiais"
-          className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
         />
         <datalist id="categorias-despesa">
-          {DEFAULT_CATEGORIES.map((c) => <option key={c} value={c} />)}
+          {DEFAULT_CATEGORIES.map((c) => (
+            <option key={c} value={c} />
+          ))}
         </datalist>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Valor (R$)</label>
-          <input
-            type="number"
-            required
-            min={0}
-            step={0.01}
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Data</label>
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          />
-        </div>
+        <Input
+          type="number"
+          label="Valor (R$)"
+          required
+          min={0}
+          step={0.01}
+          value={amount}
+          onChange={(e) => setAmount(Number(e.target.value))}
+        />
+        <Input type="date" label="Data" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Forma de pagamento</label>
-          <select
-            value={method}
-            onChange={(e) => setMethod(e.target.value)}
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          >
-            <option value="pix">Pix</option>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="cartao">Cartão</option>
-            <option value="outro">Outro</option>
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-charcoal-700">Status</label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as ExpenseFormData["status"])}
-            className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 outline-none focus:border-plum-500"
-          >
-            <option value="pago">Pago</option>
-            <option value="pendente">Pendente</option>
-            <option value="parcial">Parcial</option>
-          </select>
-        </div>
+        <Select label="Forma de pagamento" value={method} onChange={(e) => setMethod(e.target.value)}>
+          <option value="pix">Pix</option>
+          <option value="dinheiro">Dinheiro</option>
+          <option value="cartao">Cartão</option>
+          <option value="outro">Outro</option>
+        </Select>
+        <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as ExpenseFormData["status"])}>
+          <option value="pago">Pago</option>
+          <option value="pendente">Pendente</option>
+          <option value="parcial">Parcial</option>
+        </Select>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="w-full rounded-xl bg-plum-500 py-3 font-semibold text-white disabled:opacity-60"
-      >
+      <Button type="submit" loading={saving} className="w-full">
         {saving ? "Salvando..." : "Salvar despesa"}
-      </button>
+      </Button>
 
       {initial && (
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={deleting}
-          className="w-full rounded-xl border border-danger py-3 font-semibold text-danger disabled:opacity-60"
-        >
+        <Button type="button" variant="secondary" onClick={handleDelete} loading={deleting} className="w-full !border-danger !text-danger">
           {deleting ? "Excluindo..." : "Excluir despesa"}
-        </button>
+        </Button>
       )}
     </form>
   );

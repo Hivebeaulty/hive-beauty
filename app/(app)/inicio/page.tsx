@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
 import { getPeriodRange } from "@/lib/hive/period";
 import { formatMoney, greetingForHour, firstName } from "@/lib/hive/format";
+import { computeClientRelationship, daysUntilNextBirthday } from "@/lib/hive/relationship";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -16,10 +17,9 @@ import { CalendarPlus, UserPlus, CalendarX, Sparkles, ArrowRight } from "lucide-
 
 type PeriodIndicators = {
   atendimentos_realizados: number;
-  faturado: number;
-  recebido: number;
+  faturamento: number;
   despesas: number;
-  resultado_caixa: number;
+  resultado: number;
   pendente: number;
   clientes_novas: number;
   clientes_recorrentes: number;
@@ -65,6 +65,8 @@ export default function InicioPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [pending, setPending] = useState<PendingPayment[]>([]);
   const [activeClients, setActiveClients] = useState<number>(0);
+  const [overdueCount, setOverdueCount] = useState(0);
+  const [birthdaysWeekCount, setBirthdaysWeekCount] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,6 +89,8 @@ export default function InicioPage() {
       { data: appts },
       { data: pend },
       { count: activeCount },
+      { data: clientsForRelationship },
+      { data: apptsForRelationship },
     ] = await Promise.all([
       supabase.auth.getUser(),
       supabase.rpc("get_period_indicators", { p_company_id: companyId, p_start: todayStr, p_end: todayStr }),
@@ -110,6 +114,10 @@ export default function InicioPage() {
         .select("id", { count: "exact", head: true })
         .eq("company_id", companyId)
         .gte("last_visit_at", activeSinceStr),
+      // Relacionamento — mesma lógica pura usada em Clientes (nenhuma regra
+      // nova inventada aqui, só reaproveitada).
+      supabase.from("clients").select("id, birth_date").eq("company_id", companyId),
+      supabase.from("appointments").select("client_id, scheduled_start").eq("company_id", companyId).eq("status", "concluido"),
     ]);
 
     setName(firstName(userData?.user?.user_metadata?.full_name as string | undefined));
@@ -118,6 +126,22 @@ export default function InicioPage() {
     setAppointments((appts as unknown as Appointment[]) ?? []);
     setPending((pend as unknown as PendingPayment[]) ?? []);
     setActiveClients(activeCount ?? 0);
+
+    const visitsByClient = new Map<string, string[]>();
+    for (const a of apptsForRelationship ?? []) {
+      visitsByClient.set(a.client_id, [...(visitsByClient.get(a.client_id) ?? []), a.scheduled_start]);
+    }
+    let overdue = 0;
+    let birthdaysWeek = 0;
+    for (const c of clientsForRelationship ?? []) {
+      const rel = computeClientRelationship(visitsByClient.get(c.id) ?? []);
+      if (rel.isOverdue && rel.visitCount > 0) overdue += 1;
+      const days = daysUntilNextBirthday(c.birth_date);
+      if (days !== null && days <= 7) birthdaysWeek += 1;
+    }
+    setOverdueCount(overdue);
+    setBirthdaysWeekCount(birthdaysWeek);
+
     setLoading(false);
   }, [companyId]);
 
@@ -178,8 +202,8 @@ export default function InicioPage() {
           <div className={`mb-5 grid gap-4 ${canSeeFinance ? "grid-cols-3" : "grid-cols-2"}`}>
             {canSeeFinance && (
               <div>
-                <p className="text-2xl font-semibold text-ink-800">{formatMoney(today?.recebido)}</p>
-                <p className="text-xs text-ink-400">Faturamento</p>
+                <p className="text-2xl font-semibold text-ink-800">{formatMoney(today?.faturamento)}</p>
+                <p className="text-xs text-ink-400">Recebido</p>
               </div>
             )}
             <div>
@@ -260,8 +284,8 @@ export default function InicioPage() {
           <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4">
             {canSeeFinance && (
               <div>
-                <p className="text-lg font-semibold text-ink-800">{formatMoney(month?.faturado)}</p>
-                <p className="text-xs text-ink-400">Faturamento</p>
+                <p className="text-lg font-semibold text-ink-800">{formatMoney(month?.faturamento)}</p>
+                <p className="text-xs text-ink-400">Recebido</p>
               </div>
             )}
             <div>
@@ -302,6 +326,27 @@ export default function InicioPage() {
                 </span>
               </Link>
             ))}
+          </div>
+        </Card>
+      )}
+
+      {/* RELACIONAMENTO ------------------------------------------------- */}
+      {!loading && (overdueCount > 0 || birthdaysWeekCount > 0) && (
+        <Card>
+          <h2 className="mb-4 text-sm font-semibold text-ink-700">Relacionamento</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {overdueCount > 0 && (
+              <Link href="/clientes?segmento=inativas" className="block">
+                <p className="text-lg font-semibold text-warning">{overdueCount}</p>
+                <p className="text-xs text-ink-400">sem retorno recente</p>
+              </Link>
+            )}
+            {birthdaysWeekCount > 0 && (
+              <Link href="/clientes?segmento=aniversariantes" className="block">
+                <p className="text-lg font-semibold text-ink-800">{birthdaysWeekCount}</p>
+                <p className="text-xs text-ink-400">aniversário{birthdaysWeekCount !== 1 ? "s" : ""} esta semana</p>
+              </Link>
+            )}
           </div>
         </Card>
       )}
