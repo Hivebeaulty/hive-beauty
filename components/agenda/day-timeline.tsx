@@ -15,11 +15,11 @@ export type TimelineAppointment = {
 };
 
 const PX_PER_MIN = 1.15;
-const HIDDEN_STATUSES = ["cancelado", "nao_compareceu"];
+export const HIDDEN_STATUSES = ["cancelado", "nao_compareceu"];
 
 // Cor por status — tons discretos, nada de saturação alta. Cada status usa a
 // mesma lógica de tom do StatusBadge, só que como bloco preenchido.
-const BLOCK_TONE: Record<string, string> = {
+export const BLOCK_TONE: Record<string, string> = {
   agendado: "bg-ink-50 border-ink-300 text-ink-700",
   confirmado: "bg-gold-50 border-gold-500 text-gold-700",
   em_atendimento: "bg-warning/10 border-warning text-warning",

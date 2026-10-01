@@ -10,16 +10,17 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
 
-// Mesmos nomes de coluna que a RPC de verdade devolve — a versão anterior
-// desta tela usava faturado/resultado_caixa, que não existem no retorno de
-// get_period_indicators (é faturamento/resultado), por isso "Faturado" e
-// "Resultado de caixa" sempre apareciam como "R$ NaN". Corrigido junto com
-// a auditoria do Financeiro.
+// Nomes de coluna EXATAMENTE como a RPC get_period_indicators devolve
+// (migration 0006): faturado = total cobrado no período; recebido = o que já
+// entrou; resultado_caixa = recebido - despesas. Dashboard, Financeiro e
+// Relatórios leem os mesmos campos da mesma função — é isso que garante que
+// os três mostrem números coerentes.
 type Indicators = {
   atendimentos_realizados: number;
-  faturamento: number;
+  faturado: number;
+  recebido: number;
   despesas: number;
-  resultado: number;
+  resultado_caixa: number;
   pendente: number;
   cancelamentos: number;
   faltas: number;
@@ -29,9 +30,10 @@ type Indicators = {
 
 const CARDS: { key: keyof Indicators; label: string; money?: boolean }[] = [
   { key: "atendimentos_realizados", label: "Atendimentos realizados" },
-  { key: "faturamento", label: "Recebido (caixa)", money: true },
+  { key: "faturado", label: "Faturamento", money: true },
+  { key: "recebido", label: "Recebido", money: true },
   { key: "despesas", label: "Despesas", money: true },
-  { key: "resultado", label: "Resultado de caixa", money: true },
+  { key: "resultado_caixa", label: "Resultado (recebido − despesas)", money: true },
   { key: "pendente", label: "Valores pendentes", money: true },
   { key: "cancelamentos", label: "Cancelamentos" },
   { key: "faltas", label: "Faltas" },

@@ -36,6 +36,7 @@ export default async function EditarDespesaPage({ params }: { params: Promise<{ 
           status: expense.status,
           due_date: expense.due_date ?? "",
           notes: "",
+          paid_at: expense.paid_at,
         }}
       />
     </div>

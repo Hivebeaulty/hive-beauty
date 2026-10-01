@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
-import { getPeriodRange, PERIOD_LABEL, type Period } from "@/lib/hive/period";
+import { getPeriodRange, periodBoundsISO, PERIOD_LABEL, type Period } from "@/lib/hive/period";
 import { PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL } from "@/lib/hive/finance";
 import { formatMoney } from "@/lib/hive/format";
 import { PageHeader } from "@/components/ui/page-header";
@@ -51,13 +51,14 @@ export function ReceitasContent() {
   const load = useCallback(async () => {
     setLoading(true);
     const { start, end } = getPeriodRange(period);
+    const bounds = periodBoundsISO(start, end);
     const supabase = createClient();
     let query = supabase
       .from("payments")
       .select("id, amount, paid_amount, method, status, created_at, clients(name), appointments(services(name))")
       .eq("company_id", companyId)
-      .gte("created_at", start)
-      .lte("created_at", `${end}T23:59:59`)
+      .gte("created_at", bounds.from)
+      .lte("created_at", bounds.to)
       .order("created_at", { ascending: false });
     if (statusFilter !== "todos") query = query.eq("status", statusFilter);
 

@@ -17,9 +17,10 @@ import { CalendarPlus, UserPlus, CalendarX, Sparkles, ArrowRight } from "lucide-
 
 type PeriodIndicators = {
   atendimentos_realizados: number;
-  faturamento: number;
+  faturado: number;
+  recebido: number;
   despesas: number;
-  resultado: number;
+  resultado_caixa: number;
   pendente: number;
   clientes_novas: number;
   clientes_recorrentes: number;
@@ -202,7 +203,7 @@ export default function InicioPage() {
           <div className={`mb-5 grid gap-4 ${canSeeFinance ? "grid-cols-3" : "grid-cols-2"}`}>
             {canSeeFinance && (
               <div>
-                <p className="text-2xl font-semibold text-ink-800">{formatMoney(today?.faturamento)}</p>
+                <p className="text-2xl font-semibold text-ink-800">{formatMoney(today?.recebido)}</p>
                 <p className="text-xs text-ink-400">Recebido</p>
               </div>
             )}
@@ -284,7 +285,7 @@ export default function InicioPage() {
           <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4">
             {canSeeFinance && (
               <div>
-                <p className="text-lg font-semibold text-ink-800">{formatMoney(month?.faturamento)}</p>
+                <p className="text-lg font-semibold text-ink-800">{formatMoney(month?.recebido)}</p>
                 <p className="text-xs text-ink-400">Recebido</p>
               </div>
             )}

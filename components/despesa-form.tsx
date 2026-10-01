@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
@@ -17,6 +18,7 @@ type ExpenseFormData = {
   status: "pago" | "pendente" | "parcial";
   due_date: string;
   notes: string;
+  paid_at?: string | null;
 };
 
 const DEFAULT_CATEGORIES = ["Materiais", "Produtos", "Aluguel", "Equipamentos", "Comissão", "Marketing", "Outros"];
@@ -71,7 +73,18 @@ export function DespesaForm({ initial }: { initial?: ExpenseFormData }) {
         payment_method: method,
         status,
         due_date: dueDate || null,
-        paid_at: status === "pago" ? new Date().toISOString() : null,
+        // A "Data" que a profissional escolhe na tela É a data que conta nos
+        // relatórios (a data efetiva da despesa é paid_at > due_date >
+        // created_at). Antes, paid_at ficava = "agora" e a Data digitada era
+        // ignorada para despesas pagas — uma despesa de setembro lançada em
+        // outubro caia em outubro. Meio-dia em Brasília evita virar de dia por
+        // fuso. Sem Data preenchida, mantém o paid_at original / agora.
+        paid_at:
+          status === "pago"
+            ? dueDate
+              ? `${dueDate}T12:00:00-03:00`
+              : (initial?.paid_at ?? new Date().toISOString())
+            : null,
       };
 
       const { error } = initial
@@ -129,15 +142,7 @@ export function DespesaForm({ initial }: { initial?: ExpenseFormData }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Input
-          type="number"
-          label="Valor (R$)"
-          required
-          min={0}
-          step={0.01}
-          value={amount}
-          onChange={(e) => setAmount(Number(e.target.value))}
-        />
+        <NumberInput label="Valor (R$)" required value={amount} onChange={setAmount} />
         <Input type="date" label="Data" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
       </div>
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
-import { getPeriodRange, PERIOD_LABEL, type Period } from "@/lib/hive/period";
+import { getPeriodRange, periodBoundsISO, PERIOD_LABEL, type Period } from "@/lib/hive/period";
 import { expenseEffectiveDate, isWithinPeriod } from "@/lib/hive/finance";
 import { formatMoney } from "@/lib/hive/format";
 import { getActiveProfessionals, type Professional } from "@/lib/hive/schedule";
@@ -18,9 +18,10 @@ import { Plus, Receipt, TrendingDown, ArrowRight } from "lucide-react";
 
 type Indicators = {
   atendimentos_realizados: number;
-  faturamento: number; // na RPC isso é, na prática, "recebido" (ver nota abaixo)
+  faturado: number;
+  recebido: number;
   despesas: number;
-  resultado: number;
+  resultado_caixa: number;
   pendente: number;
 };
 
@@ -61,7 +62,6 @@ export function FinanceiroContent() {
   const [loading, setLoading] = useState(true);
 
   const [indicators, setIndicators] = useState<Indicators | null>(null);
-  const [faturamentoReal, setFaturamentoReal] = useState(0);
   const [expenseCount, setExpenseCount] = useState(0);
   const [byService, setByService] = useState<{ name: string; count: number; total: number }[]>([]);
   const [byProfessional, setByProfessional] = useState<{ name: string; count: number; total: number }[]>([]);
@@ -74,14 +74,11 @@ export function FinanceiroContent() {
     setLoading(true);
     const supabase = createClient();
     const { start, end } = range;
+    const bounds = periodBoundsISO(start, end);
 
-    const [{ data: ind }, { data: paymentsInPeriod }, { data: expenses }, { data: appts }, profs, { data: pend }] =
+    const [{ data: ind }, { data: expenses }, { data: appts }, profs, { data: pend }] =
       await Promise.all([
         supabase.rpc("get_period_indicators", { p_company_id: companyId, p_start: start, p_end: end }),
-        // "Faturamento" de verdade (valor total cobrado no período, pago ou
-        // não) — a RPC não devolve isso separadamente, então somamos aqui.
-        // Nenhuma migration: é só mais uma leitura da mesma tabela payments.
-        supabase.from("payments").select("amount").eq("company_id", companyId).gte("created_at", start).lte("created_at", `${end}T23:59:59`),
         // Todas as despesas — filtro por data efetiva (paid_at > due_date >
         // created_at) é feito em JS, replicando a mesma regra da RPC.
         supabase.from("expenses").select("id, description, amount, paid_at, due_date, created_at").eq("company_id", companyId).order("created_at", { ascending: false }).limit(1000),
@@ -90,8 +87,8 @@ export function FinanceiroContent() {
           .select("price, professional_member_id, services(name)")
           .eq("company_id", companyId)
           .eq("status", "concluido")
-          .gte("scheduled_start", start)
-          .lte("scheduled_start", `${end}T23:59:59`),
+          .gte("scheduled_start", bounds.from)
+          .lte("scheduled_start", bounds.to),
         getActiveProfessionals(supabase, companyId),
         supabase
           .from("payments")
@@ -103,7 +100,6 @@ export function FinanceiroContent() {
       ]);
 
     setIndicators((ind as unknown as Indicators[])?.[0] ?? null);
-    setFaturamentoReal((paymentsInPeriod ?? []).reduce((s, p) => s + Number(p.amount), 0));
 
     const expensesInPeriod = ((expenses as ExpenseRow[]) ?? []).filter((e) =>
       isWithinPeriod(expenseEffectiveDate(e), start, end)
@@ -199,11 +195,11 @@ export function FinanceiroContent() {
             </p>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <p className="text-lg font-semibold text-ink-800 sm:text-xl">{formatMoney(faturamentoReal)}</p>
+                <p className="text-lg font-semibold text-ink-800 sm:text-xl">{formatMoney(indicators?.faturado)}</p>
                 <p className="text-xs text-ink-400">Faturamento</p>
               </div>
               <div>
-                <p className="text-lg font-semibold text-success sm:text-xl">{formatMoney(indicators?.faturamento)}</p>
+                <p className="text-lg font-semibold text-success sm:text-xl">{formatMoney(indicators?.recebido)}</p>
                 <p className="text-xs text-ink-400">Recebido</p>
               </div>
               <div>
@@ -231,9 +227,9 @@ export function FinanceiroContent() {
           {/* Resultado --------------------------------------------------- */}
           <Card className="!bg-ink-800 !text-cream">
             <p className="text-xs text-cream/60">Resultado do período</p>
-            <p className="mt-1 text-2xl font-semibold sm:text-3xl">{formatMoney(indicators?.resultado)}</p>
+            <p className="mt-1 text-2xl font-semibold sm:text-3xl">{formatMoney(indicators?.resultado_caixa)}</p>
             <p className="mt-2 text-xs text-cream/50">
-              {formatMoney(indicators?.faturamento)} recebido − {formatMoney(indicators?.despesas)} em despesas
+              {formatMoney(indicators?.recebido)} recebido − {formatMoney(indicators?.despesas)} em despesas
             </p>
           </Card>
 

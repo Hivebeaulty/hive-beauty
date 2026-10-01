@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/hive/format";
@@ -203,15 +204,7 @@ export default function AgendamentoDetalhePage() {
       {showConclude && (
         <form onSubmit={handleConclude} className="space-y-4 rounded-lg border border-ink-100 bg-surface p-5">
           <h2 className="font-semibold text-ink-800">Concluir atendimento</h2>
-          <Input
-            type="number"
-            label="Valor final (R$)"
-            required
-            min={0}
-            step={0.01}
-            value={finalPrice}
-            onChange={(e) => setFinalPrice(Number(e.target.value))}
-          />
+          <NumberInput label="Valor final (R$)" required value={finalPrice} onChange={setFinalPrice} />
           <div className="grid grid-cols-2 gap-3">
             <Select label="Pagamento" value={method} onChange={(e) => setMethod(e.target.value as typeof method)}>
               <option value="pix">Pix</option>
@@ -226,15 +219,7 @@ export default function AgendamentoDetalhePage() {
             </Select>
           </div>
           {payStatus === "parcial" && (
-            <Input
-              type="number"
-              label="Quanto já foi pago (R$)"
-              min={0}
-              max={finalPrice}
-              step={0.01}
-              value={paidAmount}
-              onChange={(e) => setPaidAmount(Number(e.target.value))}
-            />
+            <NumberInput label="Quanto já foi pago (R$)" value={paidAmount} onChange={setPaidAmount} />
           )}
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={() => setShowConclude(false)} className="flex-1">

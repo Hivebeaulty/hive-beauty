@@ -8,6 +8,7 @@ import { useCompany } from "@/components/company-provider";
 import { getActiveProfessionals, getAvailableSlots, hasAnyBusinessHours, type Professional } from "@/lib/hive/schedule";
 import { formatDuration } from "@/lib/hive/format";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -211,15 +212,7 @@ export default function NovoAgendamentoPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <Input type="date" label="Data" required value={date} onChange={(e) => setDate(e.target.value)} />
-          <Input
-            type="number"
-            label="Duração (min)"
-            required
-            min={5}
-            step={5}
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-          />
+          <NumberInput integer label="Duração (min)" required value={duration} onChange={setDuration} />
         </div>
 
         {/* Grade de horários disponíveis — o aviso antecipado que o
@@ -261,15 +254,7 @@ export default function NovoAgendamentoPage() {
           )}
         </div>
 
-        <Input
-          type="number"
-          label="Valor (R$)"
-          required
-          min={0}
-          step={0.01}
-          value={price}
-          onChange={(e) => setPrice(Number(e.target.value))}
-        />
+        <NumberInput label="Valor (R$)" required value={price} onChange={setPrice} />
 
         <Textarea
           label="Observação (opcional)"

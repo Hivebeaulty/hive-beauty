@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { formatDuration, formatMoney } from "@/lib/hive/format";
@@ -124,24 +125,19 @@ export function ServicoForm({ initial }: { initial?: ServiceFormData }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Input
-          type="number"
+        <NumberInput
+          integer
           label="Duração (min)"
           required
-          min={5}
-          step={5}
           value={duration}
-          onChange={(e) => setDuration(Number(e.target.value))}
+          onChange={setDuration}
           hint={formatDuration(duration)}
         />
-        <Input
-          type="number"
+        <NumberInput
           label="Preço (R$)"
           required
-          min={0}
-          step={0.01}
           value={price}
-          onChange={(e) => setPrice(Number(e.target.value))}
+          onChange={setPrice}
         />
       </div>
 

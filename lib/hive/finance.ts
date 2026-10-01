@@ -1,3 +1,5 @@
+import { toSaoPauloDate } from "./period";
+
 export const PAYMENT_METHOD_LABEL: Record<string, string> = {
   pix: "Pix",
   dinheiro: "Dinheiro",
@@ -12,12 +14,13 @@ export const PAYMENT_STATUS_LABEL: Record<string, string> = {
 };
 
 // Mesma regra de "qual data representa essa despesa" usada dentro da RPC
-// get_period_indicators (coalesce(paid_at, due_date, created_at)) — replicada
-// aqui em JS porque filtrar um coalesce de 3 colunas via query builder do
-// Supabase não é direto. Sem isso, despesa sem due_date nunca aparecia em
-// nenhum período (bug da versão anterior da tela).
+// get_period_indicators (coalesce(paid_at, due_date, created_at)), agora com
+// paid_at/created_at convertidos para o dia em Brasília (a RPC faz o mesmo
+// com AT TIME ZONE desde a migration 0006). due_date já é uma data pura.
 export function expenseEffectiveDate(e: { paid_at: string | null; due_date: string | null; created_at: string }) {
-  return (e.paid_at ?? e.due_date ?? e.created_at).slice(0, 10);
+  if (e.paid_at) return toSaoPauloDate(e.paid_at);
+  if (e.due_date) return e.due_date.slice(0, 10);
+  return toSaoPauloDate(e.created_at);
 }
 
 export function isWithinPeriod(dateStr: string, start: string, end: string) {

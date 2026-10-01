@@ -27,7 +27,7 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
   return (
     <>
       {/* Desktop — sidebar fixa à esquerda */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-ink-100 bg-surface p-6 md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-ink-100 bg-surface p-6 md:sticky md:top-0 md:flex md:h-screen md:self-start md:overflow-y-auto">
         <div className="mb-8 flex items-center gap-2">
           <Image src="/logo-icon.png" alt="" width={26} height={26} priority />
           <Image src="/logo-wordmark.png" alt="Áurea" width={72} height={17} priority className="mt-0.5" />

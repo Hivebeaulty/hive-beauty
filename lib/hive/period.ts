@@ -42,3 +42,19 @@ export function getPeriodRange(period: Period, reference = new Date(), custom?: 
 
   return { start: format(start, "yyyy-MM-dd"), end: format(end, "yyyy-MM-dd") };
 }
+
+// ---------------------------------------------------------------------------
+// Fuso do negócio: America/Sao_Paulo (UTC-3 fixo — o Brasil não tem horário de
+// verão desde 2019). Todo filtro por intervalo de datas contra colunas
+// timestamptz deve usar estes limites explícitos; "2026-09-27T23:59:59" sem
+// offset é interpretado como UTC e perde tudo que aconteceu à noite (depois
+// das 21h em Brasília já é o dia seguinte em UTC).
+// ---------------------------------------------------------------------------
+export function periodBoundsISO(start: string, end: string) {
+  return { from: `${start}T00:00:00-03:00`, to: `${end}T23:59:59.999-03:00` };
+}
+
+// "Que dia (em Brasília) foi esse timestamp?" -> "YYYY-MM-DD"
+export function toSaoPauloDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}

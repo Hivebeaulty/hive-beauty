@@ -19,7 +19,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DayTimeline, type TimelineAppointment } from "@/components/agenda/day-timeline";
-import { WeekStrip, type WeekAppointment } from "@/components/agenda/week-strip";
+import { WeekView, localDayKey, type WeekAppointment } from "@/components/agenda/week-view";
 import { MonthGrid } from "@/components/agenda/month-grid";
 import { CalendarPlus, ChevronLeft, ChevronRight, ChevronDown, CalendarX } from "lucide-react";
 
@@ -47,7 +47,7 @@ export default function AgendaPage() {
   const [loading, setLoading] = useState(true);
 
   const [dayAppointments, setDayAppointments] = useState<TimelineAppointment[]>([]);
-  const [weekByDay, setWeekByDay] = useState<Map<string, WeekAppointment[]>>(new Map());
+  const [weekAppointments, setWeekAppointments] = useState<WeekAppointment[]>([]);
   const [monthByDay, setMonthByDay] = useState<Map<string, { total: number; hasPending: boolean }>>(new Map());
 
   // Profissionais ativas — carregado uma vez. Se só houver uma, o filtro
@@ -76,19 +76,14 @@ export default function AgendaPage() {
       const days = getWeekDays(refDate);
       let query = supabase
         .from("appointments")
-        .select("id, scheduled_start, status, clients(name)")
+        .select("id, scheduled_start, scheduled_end, status, professional_member_id, clients(name), services(name)")
         .eq("company_id", companyId)
         .gte("scheduled_start", days[0].toISOString())
         .lt("scheduled_start", addDays(days[6], 1).toISOString())
         .order("scheduled_start");
       if (selectedProfessional !== "all") query = query.eq("professional_member_id", selectedProfessional);
       const { data } = await query;
-      const map = new Map<string, WeekAppointment[]>();
-      for (const a of (data as unknown as (WeekAppointment & { scheduled_start: string })[]) ?? []) {
-        const key = a.scheduled_start.slice(0, 10);
-        map.set(key, [...(map.get(key) ?? []), a]);
-      }
-      setWeekByDay(map);
+      setWeekAppointments((data as unknown as WeekAppointment[]) ?? []);
     }
 
     if (view === "mes") {
@@ -104,7 +99,9 @@ export default function AgendaPage() {
       const map = new Map<string, { total: number; hasPending: boolean }>();
       for (const a of (data as { scheduled_start: string; status: string }[]) ?? []) {
         if (a.status === "cancelado" || a.status === "nao_compareceu") continue;
-        const key = a.scheduled_start.slice(0, 10);
+        // Chave do dia no relógio local — um atendimento às 22h não pode cair
+        // no dia seguinte por causa de UTC.
+        const key = localDayKey(a.scheduled_start);
         const cur = map.get(key) ?? { total: 0, hasPending: false };
         cur.total += 1;
         if (a.status === "agendado") cur.hasPending = true;
@@ -242,7 +239,13 @@ export default function AgendaPage() {
             />
           )
         ) : view === "semana" ? (
-          <WeekStrip days={weekDays} appointmentsByDay={weekByDay} onSelectDay={selectDay} />
+          <WeekView
+            days={weekDays}
+            appointments={weekAppointments}
+            professionals={professionals}
+            showProfessional={selectedProfessional === "all" && professionals.length > 1}
+            onSelectDay={selectDay}
+          />
         ) : (
           <MonthGrid days={monthDays} reference={refDate} countByDay={monthByDay} onSelectDay={selectDay} />
         )}

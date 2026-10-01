@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +19,7 @@ type PaymentFormData = {
   paid_amount: number | null;
   method: string;
   status: "pago" | "pendente" | "parcial";
+  paid_at?: string | null;
 };
 
 // Mesma lógica de sempre (mesmos campos, mesmo cálculo de paid_amount por
@@ -66,7 +68,10 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
       paid_amount: effectivePaidAmount(),
       method,
       status,
-      paid_at: status === "pago" ? new Date().toISOString() : null,
+      // Preserva a data em que o pagamento REALMENTE entrou: reeditar um
+      // recebimento já pago (ex.: corrigir a descrição) não pode empurrá-lo
+      // pra "hoje" e mudar o período em que ele conta.
+      paid_at: status === "pago" ? (initial?.paid_at ?? new Date().toISOString()) : null,
     };
 
     const { error } = initial
@@ -118,15 +123,7 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
       </Select>
 
       <div className="grid grid-cols-2 gap-3">
-        <Input
-          type="number"
-          label="Valor (R$)"
-          required
-          min={0}
-          step={0.01}
-          value={amount}
-          onChange={(e) => setAmount(Number(e.target.value))}
-        />
+        <NumberInput label="Valor (R$)" required value={amount} onChange={setAmount} />
         <Select label="Forma de pagamento" value={method} onChange={(e) => setMethod(e.target.value)}>
           <option value="pix">Pix</option>
           <option value="dinheiro">Dinheiro</option>
@@ -146,15 +143,7 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
       </Select>
 
       {status === "parcial" && (
-        <Input
-          type="number"
-          label="Quanto já foi pago (R$)"
-          min={0}
-          max={amount}
-          step={0.01}
-          value={paidAmount}
-          onChange={(e) => setPaidAmount(Number(e.target.value))}
-        />
+        <NumberInput label="Quanto já foi pago (R$)" value={paidAmount} onChange={setPaidAmount} />
       )}
 
       {error && <p className="text-sm text-danger">{error}</p>}

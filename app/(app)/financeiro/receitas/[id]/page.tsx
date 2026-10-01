@@ -33,6 +33,7 @@ export default async function EditarReceitaPage({ params }: { params: Promise<{ 
           paid_amount: payment.paid_amount ? Number(payment.paid_amount) : null,
           method: payment.method,
           status: payment.status,
+          paid_at: payment.paid_at,
         }}
       />
     </div>

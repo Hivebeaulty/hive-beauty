@@ -20,7 +20,7 @@ import {
   type ClientSegment,
 } from "@/lib/hive/relationship";
 import { cn } from "@/lib/utils";
-import { Search, UserPlus, Users, Cake, AlertCircle } from "lucide-react";
+import { Search, UserPlus, Upload, Users, Cake, AlertCircle } from "lucide-react";
 
 type ClientRow = {
   id: string;
@@ -105,12 +105,20 @@ export default function ClientesPage() {
       <PageHeader
         title="Clientes"
         actions={
-          <Link href="/clientes/novo">
-            <Button size="sm">
-              <UserPlus className="size-4" />
-              Nova
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/clientes/importar">
+              <Button variant="secondary" size="sm">
+                <Upload className="size-4" />
+                <span className="hidden sm:inline">Importar</span>
+              </Button>
+            </Link>
+            <Link href="/clientes/novo">
+              <Button size="sm">
+                <UserPlus className="size-4" />
+                Nova
+              </Button>
+            </Link>
+          </div>
         }
       />
 

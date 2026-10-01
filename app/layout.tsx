@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Fraunces } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
@@ -32,6 +32,16 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
+};
+
+// viewport-fit=cover é o que faz env(safe-area-inset-*) valer de verdade em
+// celulares com notch/barra de gestos; theme-color pinta a barra do sistema com
+// o creme da marca quando o app é aberto como PWA.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#FAF6F1",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
