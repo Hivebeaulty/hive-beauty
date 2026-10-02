@@ -1,6 +1,11 @@
 // Painel separado do app principal — visualmente distinto de propósito
 // (fundo escuro/neutro) para nunca ser confundido com a experiência da cliente.
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+import { requireSuperadmin } from "@/lib/supabase/require-superadmin";
+
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  // Layouts não re-renderizam em toda navegação cliente; por isso a página também
+  // chama requireSuperadmin() antes de qualquer consulta com service role.
+  await requireSuperadmin();
   return (
     <div className="min-h-screen bg-ink-900 text-cream">
       <header className="border-b border-white/10 px-6 py-4">

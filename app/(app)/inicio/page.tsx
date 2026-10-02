@@ -114,10 +114,11 @@ export default function InicioPage() {
         .from("clients")
         .select("id", { count: "exact", head: true })
         .eq("company_id", companyId)
+        .is("archived_at", null)
         .gte("last_visit_at", activeSinceStr),
       // Relacionamento — mesma lógica pura usada em Clientes (nenhuma regra
       // nova inventada aqui, só reaproveitada).
-      supabase.from("clients").select("id, birth_date").eq("company_id", companyId),
+      supabase.from("clients").select("id, birth_date").eq("company_id", companyId).is("archived_at", null),
       supabase.from("appointments").select("client_id, scheduled_start").eq("company_id", companyId).eq("status", "concluido"),
     ]);
 

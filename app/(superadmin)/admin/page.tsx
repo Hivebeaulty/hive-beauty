@@ -1,9 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireSuperadmin } from "@/lib/supabase/require-superadmin";
 
 // Toda leitura cross-tenant do SuperAdmin passa pelo cliente com service role,
 // que só existe no servidor — nunca chega ao navegador. O acesso a esta rota
-// em si ainda depende de checar is_superadmin() antes de renderizar.
+// em si é protegido por requireSuperadmin() (is_superadmin() no banco).
 export default async function AdminHomePage() {
+  await requireSuperadmin();
   const admin = createAdminClient();
   const { count: companiesCount } = await admin
     .from("companies")

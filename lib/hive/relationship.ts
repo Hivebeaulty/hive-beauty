@@ -1,3 +1,5 @@
+import { parseDateOnly, todayInBusinessTz } from "./format";
+
 // ---------------------------------------------------------------------------
 // CRM / Relacionamento — tudo aqui é derivado do histórico real de
 // atendimentos concluídos. Nenhum dado novo é inventado; quando não há
@@ -68,10 +70,25 @@ export function computeClientRelationship(visitDates: (string | Date)[], now = n
   return { visitCount, lastVisitDate, daysSinceLastVisit, avgIntervalDays, nextEstimatedDate, isOverdue, hasEnoughHistory };
 }
 
-export type ClientSegment = "todas" | "novas" | "recorrentes" | "inativas" | "aniversariantes";
+export type ClientSegment =
+  | "todas"
+  | "novas"
+  | "recorrentes"
+  | "inativas"
+  | "fora_do_padrao"
+  | "aniversariantes";
 
+// Os segmentos são ETIQUETAS, não grupos exclusivos: uma cliente pode estar em
+// mais de um (ex.: "inativas" e "fora_do_padrao").
+//   inativas        = passou do tempo esperado sem voltar. Usa o ritmo dela quando
+//                     há histórico (>= 2 visitas) e o prazo fixo de 60 dias quando
+//                     não há (comportamento original, preservado).
+//   fora_do_padrao  = subconjunto de "inativas" com histórico SUFICIENTE: já passou
+//                     de 1,5x o intervalo médio entre as visitas DELA. É a lista
+//                     de maior confiança para uma futura mensagem de retorno.
 export function classifySegments(rel: ClientRelationship, daysToNextBirthday: number | null): ClientSegment[] {
   const segs: ClientSegment[] = ["todas"];
+  if (rel.isOverdue && rel.hasEnoughHistory) segs.push("fora_do_padrao");
   if (rel.isOverdue && rel.visitCount > 0) segs.push("inativas");
   else if (rel.visitCount >= MIN_VISITS_FOR_FREQUENCY) segs.push("recorrentes");
   else if (rel.visitCount <= 1) segs.push("novas");
@@ -80,13 +97,19 @@ export function classifySegments(rel: ClientRelationship, daysToNextBirthday: nu
 }
 
 // Próximo aniversário a partir de hoje (0 = hoje, sempre >= 0).
+// birthDate é um "date" do Postgres ("AAAA-MM-DD"): lido como dia do calendário,
+// nunca via new Date(string) (que é UTC e erra um dia no Brasil). "Hoje" é o dia
+// de America/Sao_Paulo, mesmo quando isto roda num servidor em UTC. Toda a conta
+// é feita em dias de calendário (Date.UTC), então não há efeito de fuso/horário
+// de verão. 29/02 em ano não bissexto cai em 01/03.
 export function daysUntilNextBirthday(birthDate: string | null, now = new Date()): number | null {
-  if (!birthDate) return null;
-  const bd = new Date(birthDate);
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  let next = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
-  if (next < today) next = new Date(now.getFullYear() + 1, bd.getMonth(), bd.getDate());
-  return Math.round((next.getTime() - today.getTime()) / DAY_MS);
+  const bd = parseDateOnly(birthDate);
+  if (!bd) return null;
+  const t = todayInBusinessTz(now);
+  const todayUtc = Date.UTC(t.y, t.m - 1, t.d);
+  let next = Date.UTC(t.y, bd.getMonth(), bd.getDate());
+  if (next < todayUtc) next = Date.UTC(t.y + 1, bd.getMonth(), bd.getDate());
+  return Math.round((next - todayUtc) / DAY_MS);
 }
 
 export function birthdayLabel(days: number) {

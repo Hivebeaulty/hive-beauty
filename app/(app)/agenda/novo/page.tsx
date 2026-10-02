@@ -45,7 +45,8 @@ export default function NovoAgendamentoPage() {
   // Dados de apoio — clientes, serviços ativos e profissionais ativas.
   useEffect(() => {
     const supabase = createClient();
-    supabase.from("clients").select("id, name").eq("company_id", companyId).order("name").then(({ data }) => setClients(data ?? []));
+    // Cliente arquivada não recebe novos atendimentos (o histórico dela segue intacto).
+    supabase.from("clients").select("id, name").eq("company_id", companyId).is("archived_at", null).order("name").then(({ data }) => setClients(data ?? []));
     supabase
       .from("services")
       .select("id, name, duration_minutes, price")

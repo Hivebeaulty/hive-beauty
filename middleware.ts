@@ -35,6 +35,14 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+// O middleware NÃO pode rodar em arquivos estáticos de /public: um visitante
+// deslogado (login/cadastro) pediria /logo-lockup.png, receberia um redirect para
+// /login (HTML) e o <Image> do Next exibiria imagem quebrada. O otimizador
+// /_next/image também busca o arquivo de origem sem cookies de sessão, então o
+// mesmo redirect o quebrava. Manifest e ícones de PWA/favicon sofriam igual.
+// Rotas de página (sem extensão) continuam protegidas normalmente.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|api|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|json|txt|xml|webmanifest)$).*)",
+  ],
 };

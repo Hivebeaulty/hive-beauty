@@ -6,7 +6,15 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { formatMoney, whatsappLink } from "@/lib/hive/format";
+import { formatMoney, whatsappLink, formatDateOnly } from "@/lib/hive/format";
+import { phoneDisplay } from "@/lib/hive/phone";
+import { COMM_STATUS_LABEL, type CommStatus } from "@/lib/hive/communication";
+import { ClienteRemover } from "@/components/cliente-remover";
+
+// Este é um Server Component: na Vercel o fuso do servidor é UTC. Todo horário
+// formatado aqui precisa dizer o fuso do negócio, senão o histórico mostra
+// atendimentos 3h adiantados e datas viradas perto da meia-noite.
+const TZ = "America/Sao_Paulo";
 import { computeClientRelationship, daysUntilNextBirthday, birthdayLabel } from "@/lib/hive/relationship";
 import {
   Phone,
@@ -22,6 +30,7 @@ import {
   Repeat,
   Clock,
   AlertCircle,
+  Archive,
 } from "lucide-react";
 
 type TimelineEntry = {
@@ -81,7 +90,10 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
 
   const relationship = computeClientRelationship(concluded.map((a) => a.scheduled_start));
   const daysToBirthday = daysUntilNextBirthday(client.birth_date);
-  const waLink = whatsappLink(client.phone);
+  const waLink = whatsappLink(client.phone, client.phone_normalized);
+  const phoneText = phoneDisplay(client.phone, client.phone_normalized);
+  const isArchived = !!client.archived_at;
+  const commStatus = (client.comm_status ?? "unknown") as CommStatus;
 
   const timeline: TimelineEntry[] = [
     ...(appointments ?? []).map((a): TimelineEntry => {
@@ -93,7 +105,13 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
         kind: "agendamento",
         title: svc ?? "Atendimento",
         subtitle: [
-          new Date(a.scheduled_start).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
+          new Date(a.scheduled_start).toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: TZ,
+          }),
           prof,
         ]
           .filter(Boolean)
@@ -108,7 +126,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       date: p.created_at,
       kind: "pagamento",
       title: `Pagamento · ${p.method}`,
-      subtitle: new Date(p.created_at).toLocaleDateString("pt-BR"),
+      subtitle: new Date(p.created_at).toLocaleDateString("pt-BR", { timeZone: TZ }),
       paymentLabel: p.status === "pago" ? "Pago" : p.status === "parcial" ? "Parcial" : "Pendente",
       paymentTone: p.status === "pago" ? "success" : p.status === "parcial" ? "warning" : "neutral",
       amountLabel: formatMoney(p.amount),
@@ -127,7 +145,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
           <Avatar name={client.name} size="lg" />
           <div>
             <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">{client.name}</h1>
-            <p className="text-sm text-ink-400">{client.phone ?? "Sem telefone"}</p>
+            <p className="text-sm text-ink-400">{phoneText ?? "Sem telefone"}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -137,14 +155,26 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
               Editar
             </Button>
           </Link>
-          <Link href={`/agenda/novo?cliente=${id}`}>
-            <Button size="sm">
-              <CalendarPlus className="size-4" />
-              Novo atendimento
-            </Button>
-          </Link>
+          {!isArchived && (
+            <Link href={`/agenda/novo?cliente=${id}`}>
+              <Button size="sm">
+                <CalendarPlus className="size-4" />
+                Novo atendimento
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
+
+      {isArchived && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-ink-50/70 px-4 py-3 text-sm text-ink-600">
+          <Archive className="mt-0.5 size-4 shrink-0 text-ink-400" />
+          <span>
+            Cliente arquivada em {new Date(client.archived_at).toLocaleDateString("pt-BR", { timeZone: TZ })}. Ela não aparece na lista
+            principal nem nos agendamentos novos, e o histórico continua preservado.
+          </span>
+        </div>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[340px_1fr]">
         {/* Coluna esquerda — contato, estatísticas, preferências */}
@@ -154,7 +184,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
               <div className="flex items-center justify-between gap-2.5 text-sm">
                 <div className="flex items-center gap-2.5">
                   <Phone className="size-4 shrink-0 text-ink-300" />
-                  <span className="text-ink-700">{client.phone}</span>
+                  <span className="text-ink-700">{phoneText}</span>
                 </div>
                 {waLink && (
                   <a
@@ -169,6 +199,14 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
                 )}
               </div>
             )}
+            {(client.phone || commStatus !== "unknown") && (
+              <div className="flex items-center gap-2.5 text-sm">
+                <MessageCircle className="size-4 shrink-0 text-ink-300" />
+                <Badge tone={commStatus === "allowed" ? "success" : commStatus === "blocked" ? "danger" : "neutral"}>
+                  {COMM_STATUS_LABEL[commStatus]}
+                </Badge>
+              </div>
+            )}
             {client.instagram && (
               <div className="flex items-center gap-2.5 text-sm">
                 <Instagram className="size-4 shrink-0 text-ink-300" />
@@ -179,7 +217,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
               <div className="flex items-center gap-2.5 text-sm">
                 <Cake className="size-4 shrink-0 text-ink-300" />
                 <span className="text-ink-700">
-                  {new Date(client.birth_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}
+                  {formatDateOnly(client.birth_date, { day: "2-digit", month: "long" })}
                 </span>
                 {daysToBirthday !== null && daysToBirthday <= 30 && (
                   <span className="rounded-full bg-gold-100 px-2 py-0.5 text-[11px] font-semibold text-gold-700">
@@ -216,7 +254,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-ink-400">Próximo retorno (estimado)</span>
                       <span className="font-semibold text-ink-800">
-                        {relationship.nextEstimatedDate!.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                        {relationship.nextEstimatedDate!.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: TZ })}
                       </span>
                     </div>
                   </>
@@ -247,7 +285,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
               <div className="flex items-center justify-between">
                 <span className="text-ink-400">Última visita</span>
                 <span className="font-semibold text-ink-800">
-                  {client.last_visit_at ? new Date(client.last_visit_at).toLocaleDateString("pt-BR") : "—"}
+                  {formatDateOnly(client.last_visit_at)}
                 </span>
               </div>
               {topService && (
@@ -332,6 +370,8 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
           )}
         </div>
       </div>
+
+      <ClienteRemover clientId={id} clientName={client.name} archived={isArchived} />
     </div>
   );
 }

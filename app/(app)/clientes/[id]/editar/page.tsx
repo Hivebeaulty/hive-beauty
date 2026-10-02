@@ -27,6 +27,7 @@ export default async function EditarClientePage({ params }: { params: Promise<{ 
           birth_date: client.birth_date ?? "",
           preferences: client.preferences ?? "",
           notes: client.notes ?? "",
+          comm_status: client.comm_status ?? "unknown",
         }}
       />
     </div>

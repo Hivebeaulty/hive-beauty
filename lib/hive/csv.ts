@@ -94,7 +94,3 @@ function normalizeBirthDate(raw: string | undefined): string | null {
   if (br) return `${br[3]}-${br[2].padStart(2, "0")}-${br[1].padStart(2, "0")}`;
   return null;
 }
-
-export function normalizePhoneDigits(phone: string) {
-  return phone.replace(/\D/g, "");
-}

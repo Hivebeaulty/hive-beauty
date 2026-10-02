@@ -9,7 +9,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
-type ClientOption = { id: string; name: string };
+type ClientOption = { id: string; name: string; archived_at: string | null };
 
 type PaymentFormData = {
   id: string;
@@ -42,7 +42,7 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
     const supabase = createClient();
     supabase
       .from("clients")
-      .select("id, name")
+      .select("id, name, archived_at")
       .eq("company_id", companyId)
       .order("name")
       .then(({ data }) => setClients(data ?? []));
@@ -118,6 +118,7 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
         {clients.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
+            {c.archived_at ? " (arquivada)" : ""}
           </option>
         ))}
       </Select>
