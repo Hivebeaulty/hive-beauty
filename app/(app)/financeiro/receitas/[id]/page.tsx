@@ -34,6 +34,7 @@ export default async function EditarReceitaPage({ params }: { params: Promise<{ 
           method: payment.method,
           status: payment.status,
           paid_at: payment.paid_at,
+          appointment_linked: !!payment.appointment_id,
         }}
       />
     </div>

@@ -20,6 +20,10 @@ type PaymentFormData = {
   method: string;
   status: "pago" | "pendente" | "parcial";
   paid_at?: string | null;
+  // Recebimento gerado por um atendimento da Agenda: nunca tem descrição, então
+  // ela não pode ser obrigatória para quitar/ajustar (senão a profissional é
+  // forçada a inventar um texto).
+  appointment_linked?: boolean;
 };
 
 // Mesma lógica de sempre (mesmos campos, mesmo cálculo de paid_amount por
@@ -62,7 +66,7 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
 
     const payload = {
       company_id: companyId,
-      description,
+      description: description.trim() || null,
       client_id: clientId || null,
       amount,
       paid_amount: effectivePaidAmount(),
@@ -106,11 +110,15 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input
         label="Descrição"
-        required
+        required={!initial?.appointment_linked}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Ex: Venda de produto, sinal de pacote..."
-        hint="Recebimentos de atendimentos são registrados automaticamente ao concluir na Agenda."
+        hint={
+          initial?.appointment_linked
+            ? "Opcional: este recebimento veio de um atendimento da Agenda."
+            : "Recebimentos de atendimentos são registrados automaticamente ao concluir na Agenda."
+        }
       />
 
       <Select label="Cliente (opcional)" value={clientId} onChange={(e) => setClientId(e.target.value)}>

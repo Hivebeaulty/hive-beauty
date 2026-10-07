@@ -104,7 +104,10 @@ export default function AgendaPage() {
         const key = localDayKey(a.scheduled_start);
         const cur = map.get(key) ?? { total: 0, hasPending: false };
         cur.total += 1;
-        if (a.status === "agendado") cur.hasPending = true;
+        // "Em aberto" = qualquer atendimento ainda sem desfecho (agendado, e também
+        // confirmado/em_atendimento caso existam). Só fica verde quando TODOS do dia
+        // foram concluídos (cancelados e faltas já foram ignorados acima).
+        if (a.status !== "concluido") cur.hasPending = true;
         map.set(key, cur);
       }
       setMonthByDay(map);

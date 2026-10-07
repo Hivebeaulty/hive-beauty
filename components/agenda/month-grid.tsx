@@ -51,12 +51,22 @@ export function MonthGrid({
               <span
                 className={cn(
                   "size-1.5 rounded-full",
-                  info && info.total > 0 ? (info.hasPending ? "bg-gold-500" : "bg-ink-300") : "bg-transparent"
+                  info && info.total > 0 ? (info.hasPending ? "bg-gold-500" : "bg-success") : "bg-transparent"
                 )}
               />
             </button>
           );
         })}
+      </div>
+      <div className="mt-3 flex items-center justify-center gap-4 text-[11px] text-ink-400">
+        <span className="flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-gold-500" />
+          Em aberto
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-success" />
+          Concluído
+        </span>
       </div>
     </div>
   );
