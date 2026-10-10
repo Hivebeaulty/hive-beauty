@@ -6,7 +6,8 @@ import { subDays, format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
 import { getPeriodRange } from "@/lib/hive/period";
-import { formatMoney, greetingForHour, firstName } from "@/lib/hive/format";
+import { formatMoney, greetingForHour } from "@/lib/hive/format";
+import { resolveGreetingName } from "@/lib/hive/display-name";
 import { computeClientRelationship, daysUntilNextBirthday } from "@/lib/hive/relationship";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -122,7 +123,27 @@ export default function InicioPage() {
       supabase.from("appointments").select("client_id, scheduled_start").eq("company_id", companyId).eq("status", "concluido"),
     ]);
 
-    setName(firstName(userData?.user?.user_metadata?.full_name as string | undefined));
+    // Saudação: "Como você quer ser chamada?" (profiles.display_name) > 1º nome do
+    // perfil > 1º nome do metadado do login (comportamento anterior). Se a coluna
+    // ainda não existir, a consulta falha em silêncio e cai no metadado.
+    let displayName: string | null = null;
+    let profileFullName: string | null = null;
+    if (userData?.user?.id) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("display_name, full_name")
+        .eq("id", userData.user.id)
+        .maybeSingle();
+      displayName = (prof?.display_name as string | null | undefined) ?? null;
+      profileFullName = (prof?.full_name as string | null | undefined) ?? null;
+    }
+    setName(
+      resolveGreetingName({
+        displayName,
+        profileFullName,
+        metadataFullName: userData?.user?.user_metadata?.full_name as string | undefined,
+      })
+    );
     setToday((todayInd as unknown as PeriodIndicators[])?.[0] ?? null);
     setMonth((monthInd as unknown as PeriodIndicators[])?.[0] ?? null);
     setAppointments((appts as unknown as Appointment[]) ?? []);

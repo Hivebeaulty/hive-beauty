@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useCompany } from "@/components/company-provider";
+import { ProfileNameCard } from "@/components/settings/profile-name-card";
 import { CompanyNameCard } from "@/components/settings/company-name-card";
 import { BusinessHoursCard } from "@/components/settings/business-hours-card";
 import { TeamCard } from "@/components/settings/team-card";
 import { ChevronLeft } from "lucide-react";
 
-export function ConfiguracoesContent() {
+export function ConfiguracoesContent({ isAdmin }: { isAdmin: boolean }) {
   const { companyId, memberId } = useCompany();
 
   return (
@@ -19,9 +20,14 @@ export function ConfiguracoesContent() {
 
       <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Configurações</h1>
 
-      <CompanyNameCard companyId={companyId} />
-      <BusinessHoursCard companyId={companyId} />
-      <TeamCard companyId={companyId} currentMemberId={memberId} />
+      <ProfileNameCard />
+      {isAdmin && (
+        <>
+          <CompanyNameCard companyId={companyId} />
+          <BusinessHoursCard companyId={companyId} />
+          <TeamCard companyId={companyId} currentMemberId={memberId} />
+        </>
+      )}
     </div>
   );
 }

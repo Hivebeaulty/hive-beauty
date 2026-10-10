@@ -115,7 +115,40 @@ export function isWhatsappCapable(normalized: string | null | undefined): boolea
 
 // Link "abrir conversa" (uso manual, 1 cliente por vez) — só para celular
 // válido. Corrige o caso do DDD 55 (RS), que a regra antiga tratava como DDI.
-export function whatsappChatLink(phone: string | null | undefined, normalized?: string | null): string | null {
+// `text` (opcional) vai pré-preenchido na conversa; NADA é enviado: quem decide
+// enviar é a profissional, dentro do WhatsApp.
+export function whatsappChatLink(
+  phone: string | null | undefined,
+  normalized?: string | null,
+  text?: string | null
+): string | null {
   const n = normalized ?? normalizeBrazilPhone(phone);
-  return isWhatsappCapable(n) ? `https://wa.me/${n}` : null;
+  if (!isWhatsappCapable(n)) return null;
+  const base = `https://wa.me/${n}`;
+  return text && text.trim() ? `${base}?text=${encodeURIComponent(text)}` : base;
+}
+
+// Contato com VÁRIOS telefones (agenda do Android, vCard do iPhone): escolhe o
+// que serve para WhatsApp. Ordem: 1º celular válido (13 dígitos) > 1º número
+// válido (fixo) > 1º texto não vazio (mantido como veio, para a revisão).
+// Com um único telefone o resultado é sempre esse telefone (comportamento antigo).
+export function pickBestPhone(candidates: ReadonlyArray<string | null | undefined>): string {
+  const list = candidates.map((c) => (c ?? "").trim()).filter((c) => c.length > 0);
+  if (list.length === 0) return "";
+  const mobile = list.find((c) => isWhatsappCapable(normalizeBrazilPhone(c)));
+  if (mobile) return mobile;
+  const valid = list.find((c) => normalizeBrazilPhone(c) !== null);
+  return valid ?? list[0];
+}
+
+// Por que (não) dá para abrir o WhatsApp desta cliente. Mesma regra do banco
+// (phone_normalized): só celular de 13 dígitos recebe WhatsApp.
+export type WhatsappReach = "ok" | "no_phone" | "landline" | "invalid";
+
+export function whatsappReach(phone: string | null | undefined, normalized?: string | null): WhatsappReach {
+  const n = normalized ?? normalizeBrazilPhone(phone);
+  if (isWhatsappCapable(n)) return "ok";
+  if (n) return "landline"; // número válido, mas fixo
+  if (!phone || !phone.trim()) return "no_phone";
+  return "invalid";
 }

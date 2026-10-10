@@ -11,16 +11,23 @@ import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Modal } from "@/components/ui/modal";
+import { useToast } from "@/components/ui/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/hive/format";
 import { phoneDisplay } from "@/lib/hive/phone";
 import {
+  canDeleteAppointment,
+  canManageAppointmentPayment,
   closingActions,
   concludeAvailability,
   concludeErrorMessage,
+  deleteErrorMessage,
   paymentStatusFor,
+  paymentUpdateErrorMessage,
 } from "@/lib/hive/appointment-flow";
-import { ChevronLeft, Phone, StickyNote, Info, Wallet } from "lucide-react";
+import { DEFAULT_PAYMENT_METHOD, paymentMethodOptions } from "@/lib/hive/payment-methods";
+import { ChevronLeft, Phone, StickyNote, Info, Wallet, Trash2, AlertTriangle } from "lucide-react";
 
 type AppointmentDetail = {
   id: string;
@@ -34,7 +41,7 @@ type AppointmentDetail = {
   services: { name: string } | null;
 };
 
-type PaymentSummary = { status: "pago" | "pendente" | "parcial"; amount: number; paid_amount: number };
+type PaymentSummary = { status: "pago" | "pendente" | "parcial"; amount: number; paid_amount: number; method: string };
 
 // Fluxo: agendado -> atendimento realizado -> recebido (padrão) ou recebimento
 // pendente. Não há mais "Confirmar" nem "Iniciar atendimento". A decisão de
@@ -44,12 +51,15 @@ export default function AgendamentoDetalhePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { role, memberId } = useCompany();
+  const toast = useToast();
   const [appt, setAppt] = useState<AppointmentDetail | null>(null);
   const [payment, setPayment] = useState<PaymentSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [showConclude, setShowConclude] = useState(false);
   const [finalPrice, setFinalPrice] = useState(0);
-  const [method, setMethod] = useState<"pix" | "dinheiro" | "cartao" | "outro">("pix");
+  const [method, setMethod] = useState<string>(DEFAULT_PAYMENT_METHOD); // PIX por padrão
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteAck, setDeleteAck] = useState(false);
   const [pending, setPending] = useState(false); // "Recebimento pendente" — desligado = recebido
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,16 +85,25 @@ export default function AgendamentoDetalhePage() {
     setAppt(a);
     if (a) setFinalPrice(Number(a.price));
 
-    // Situação do recebimento de um atendimento já concluído. A RLS só devolve
-    // pagamentos a owner/admin; para os demais papéis a linha simplesmente não
-    // vem e nada é exibido.
+    // Recebimento do atendimento concluído, via RPC: a profissional dona do
+    // atendimento não lê a tabela payments (RLS admin-only), mas a RPC a autoriza.
+    // Quem não pode vê (ex.: recepção) ou RPC indisponível => nada é exibido.
     if (a?.status === "concluido") {
-      const { data: p } = await supabase
-        .from("payments")
-        .select("status, amount, paid_amount")
-        .eq("appointment_id", id)
-        .maybeSingle();
-      setPayment((p as PaymentSummary | null) ?? null);
+      const { data: p } = await supabase.rpc("get_appointment_payment", { p_appointment_id: id });
+      const row = (Array.isArray(p) ? p[0] : p) as
+        | { pay_status: PaymentSummary["status"]; pay_amount: number; pay_paid_amount: number; pay_method: string }
+        | null
+        | undefined;
+      setPayment(
+        row
+          ? {
+              status: row.pay_status,
+              amount: Number(row.pay_amount),
+              paid_amount: Number(row.pay_paid_amount),
+              method: row.pay_method,
+            }
+          : null
+      );
     } else {
       setPayment(null);
     }
@@ -140,6 +159,44 @@ export default function AgendamentoDetalhePage() {
     load();
   }
 
+  // Altera a forma de pagamento (e, se pedido, marca como recebido) no pagamento
+  // EXISTENTE — nunca cria um segundo. A regra vive na RPC.
+  async function updatePayment(newMethod: string, markReceived: boolean) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    const { error } = await createClient().rpc("update_appointment_payment", {
+      p_appointment_id: id,
+      p_method: newMethod,
+      p_mark_received: markReceived,
+    });
+    setBusy(false);
+    if (error) {
+      setError(paymentUpdateErrorMessage(error.code));
+      load();
+      return;
+    }
+    toast.success(markReceived ? "Recebimento marcado como recebido." : "Forma de pagamento atualizada.");
+    load();
+  }
+
+  async function handleDelete() {
+    if (busy || !deleteAck) return;
+    setBusy(true);
+    setError(null);
+    const { error } = await createClient().rpc("delete_appointment", { p_appointment_id: id });
+    setBusy(false);
+    if (error) {
+      setShowDelete(false);
+      setError(deleteErrorMessage(error.code));
+      load();
+      return;
+    }
+    toast.success("Atendimento excluído.");
+    router.push("/agenda");
+    router.refresh();
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -161,6 +218,12 @@ export default function AgendamentoDetalhePage() {
   });
   const closing = closingActions({ status: appt.status, scheduledStart: appt.scheduled_start, now });
   const phoneText = phoneDisplay(appt.clients?.phone);
+  const canManagePayment = canManageAppointmentPayment({
+    role,
+    memberId,
+    professionalMemberId: appt.professional_member_id,
+  });
+  const canDelete = canDeleteAppointment(role);
 
   return (
     <div className="space-y-5 pb-4">
@@ -196,17 +259,6 @@ export default function AgendamentoDetalhePage() {
           <span className="text-ink-400">Valor</span>
           <span className="font-medium text-ink-800">{formatMoney(appt.price)}</span>
         </div>
-        {payment && (
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-1.5 text-ink-400">
-              <Wallet className="size-3.5" />
-              Recebimento
-            </span>
-            <Badge tone={payment.status === "pago" ? "success" : "warning"}>
-              {payment.status === "pago" ? "Recebido" : payment.status === "parcial" ? "Parcial" : "Pendente"}
-            </Badge>
-          </div>
-        )}
         {phoneText && (
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-1.5 text-ink-400">
@@ -235,6 +287,7 @@ export default function AgendamentoDetalhePage() {
             <Button
               onClick={() => {
                 setPending(false);
+                setMethod(DEFAULT_PAYMENT_METHOD); // cada registro começa em PIX
                 setError(null);
                 setShowConclude(true);
               }}
@@ -282,11 +335,12 @@ export default function AgendamentoDetalhePage() {
         <form onSubmit={handleConclude} className="space-y-4 rounded-lg border border-ink-100 bg-surface p-5">
           <h2 className="font-semibold text-ink-800">Atendimento realizado</h2>
           <NumberInput label="Valor final (R$)" required value={finalPrice} onChange={setFinalPrice} />
-          <Select label="Forma de pagamento" value={method} onChange={(e) => setMethod(e.target.value as typeof method)}>
-            <option value="pix">Pix</option>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="cartao">Cartão</option>
-            <option value="outro">Outro</option>
+          <Select label="Forma de pagamento" value={method} onChange={(e) => setMethod(e.target.value)}>
+            {paymentMethodOptions(method).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </Select>
 
           <div className="flex items-start justify-between gap-4 rounded-lg border border-ink-100 px-4 py-3">
@@ -317,6 +371,111 @@ export default function AgendamentoDetalhePage() {
           </div>
         </form>
       )}
+
+      {/* Atendimento concluído: recebimento (alterar forma / marcar recebido) */}
+      {appt.status === "concluido" && payment && canManagePayment && (
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-sm font-medium text-ink-800">
+              <Wallet className="size-4 text-ink-400" />
+              Recebimento
+            </span>
+            <Badge tone={payment.status === "pago" ? "success" : "warning"}>
+              {payment.status === "pago" ? "Recebido" : payment.status === "parcial" ? "Parcial" : "Pendente"}
+            </Badge>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-ink-400">Valor</span>
+            <span className="font-medium text-ink-800">{formatMoney(payment.amount)}</span>
+          </div>
+          <Select
+            label="Forma de pagamento"
+            value={payment.method}
+            disabled={busy}
+            onChange={(e) => updatePayment(e.target.value, false)}
+          >
+            {paymentMethodOptions(payment.method).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+          {payment.status !== "pago" && (
+            <div className="space-y-1.5">
+              <Button
+                variant="secondary"
+                className="w-full"
+                disabled={busy}
+                onClick={() => updatePayment(payment.method, true)}
+              >
+                Marcar como recebido
+              </Button>
+              <p className="text-xs text-ink-400">
+                Enquanto estiver pendente, este valor não entra como recebido nem no resultado de caixa.
+              </p>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Atendimento concluído: excluir (destrutivo, só administração) */}
+      {appt.status === "concluido" && canDelete && (
+        <div className="border-t border-ink-100 pt-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-danger"
+            onClick={() => {
+              setDeleteAck(false);
+              setShowDelete(true);
+            }}
+          >
+            <Trash2 className="size-4" />
+            Excluir atendimento
+          </Button>
+        </div>
+      )}
+
+      <Modal open={showDelete} onClose={() => !busy && setShowDelete(false)} title="Excluir atendimento">
+        <div className="space-y-4">
+          <p className="text-sm text-ink-700">
+            Você vai excluir o atendimento de <strong className="font-semibold">{appt.clients?.name}</strong>
+            {appt.services?.name ? ` (${appt.services.name})` : ""}.
+          </p>
+          <ul className="space-y-1.5 text-sm text-ink-500">
+            <li>
+              {payment
+                ? `O recebimento de ${formatMoney(payment.amount)} (${
+                    payment.status === "pago" ? "recebido" : "pendente"
+                  }) também será removido do Financeiro.`
+                : "Se houver recebimento ligado a ele, será removido do Financeiro."}
+            </li>
+            <li>Dashboard, Financeiro e Relatórios passam a refletir os dados que restarem.</li>
+            <li>Outros atendimentos e recebimentos não são alterados.</li>
+          </ul>
+          <div className="flex items-start gap-2.5 rounded-lg bg-danger/10 px-3.5 py-3 text-sm text-danger">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>Esta ação não pode ser desfeita. Use apenas para corrigir um lançamento incorreto.</span>
+          </div>
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-ink-200 p-3 text-sm text-ink-700">
+            <input
+              type="checkbox"
+              checked={deleteAck}
+              onChange={(e) => setDeleteAck(e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-ink-800"
+            />
+            <span>Entendi e quero excluir este atendimento.</span>
+          </label>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setShowDelete(false)} disabled={busy}>
+              Cancelar
+            </Button>
+            <Button variant="danger" className="flex-1" onClick={handleDelete} disabled={!deleteAck} loading={busy}>
+              Excluir definitivamente
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

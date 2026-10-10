@@ -7,7 +7,8 @@ import { Scissors, BarChart3, Settings, ChevronRight } from "lucide-react";
 
 // Só entram itens que já têm funcionalidade real por trás (regra do spec:
 // não criar tela "porque sistema de gestão normalmente tem"). Relatórios e
-// Configurações são sensíveis e só aparecem pra owner/admin.
+// Relatórios são sensíveis e só aparecem pra owner/admin; Configurações aparece
+// para todas (para quem não é admin, só "Como você quer ser chamada").
 export default async function MaisPage() {
   const supabase = await createClient();
   const membership = await getActiveMembership(supabase);
@@ -42,18 +43,20 @@ export default async function MaisPage() {
           </Link>
         )}
 
-        {isAdmin && (
-          <Link href="/mais/configuracoes">
-            <Card interactive className="flex items-center gap-3">
-              <Settings className="size-5 shrink-0 text-ink-400" />
-              <div className="flex-1">
-                <p className="font-semibold text-ink-800">Configurações</p>
-                <p className="text-sm text-ink-400">Empresa, horário de funcionamento e equipe.</p>
-              </div>
-              <ChevronRight className="size-4 shrink-0 text-ink-300" />
-            </Card>
-          </Link>
-        )}
+        <Link href="/mais/configuracoes">
+          <Card interactive className="flex items-center gap-3">
+            <Settings className="size-5 shrink-0 text-ink-400" />
+            <div className="flex-1">
+              <p className="font-semibold text-ink-800">Configurações</p>
+              <p className="text-sm text-ink-400">
+                {isAdmin
+                  ? "Seu nome, empresa, horário de funcionamento e equipe."
+                  : "Como você quer ser chamada."}
+              </p>
+            </div>
+            <ChevronRight className="size-4 shrink-0 text-ink-300" />
+          </Card>
+        </Link>
       </div>
 
       <div className="pt-2">

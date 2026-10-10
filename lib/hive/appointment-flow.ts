@@ -104,3 +104,57 @@ export function dayIndicator(statuses: string[]): DayIndicator {
   if (active.length === 0) return "none";
   return active.every((s) => s === "concluido") ? "done" : "open";
 }
+
+// ---------------------------------------------------------------------------
+// Recebimento de um atendimento JÁ concluído (alterar forma, marcar recebido,
+// excluir). Espelha as RPCs get/update_appointment_payment e delete_appointment.
+// ---------------------------------------------------------------------------
+
+// owner/admin: qualquer atendimento; profissional: só o seu; reception: nenhum.
+export function canManageAppointmentPayment(i: {
+  role: MemberRole;
+  memberId: string;
+  professionalMemberId: string;
+}): boolean {
+  return (
+    i.role === "owner" ||
+    i.role === "admin" ||
+    (i.role === "professional" && i.professionalMemberId === i.memberId)
+  );
+}
+
+// Excluir atendimento concluído é destrutivo (remove também o recebimento):
+// só a administração (mesma restrição de payments por RLS).
+export function canDeleteAppointment(role: MemberRole): boolean {
+  return role === "owner" || role === "admin";
+}
+
+export function paymentUpdateErrorMessage(code: string | undefined | null): string {
+  switch (code) {
+    case "22023":
+      return "Só é possível alterar o recebimento de um atendimento concluído.";
+    case "42501":
+      return "Você não tem permissão para alterar este recebimento.";
+    case "P0002":
+      return "Este atendimento não tem recebimento registrado ou não foi encontrado.";
+    case "28000":
+      return "Sua sessão expirou. Entre novamente.";
+    default:
+      return "Não foi possível alterar o recebimento. Tente novamente.";
+  }
+}
+
+export function deleteErrorMessage(code: string | undefined | null): string {
+  switch (code) {
+    case "22023":
+      return "Só atendimentos concluídos podem ser excluídos.";
+    case "42501":
+      return "Somente a administração do negócio pode excluir atendimentos.";
+    case "P0002":
+      return "Atendimento não encontrado. Ele pode já ter sido excluído.";
+    case "28000":
+      return "Sua sessão expirou. Entre novamente.";
+    default:
+      return "Não foi possível excluir o atendimento. Nada foi alterado.";
+  }
+}

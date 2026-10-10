@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
-import { contactsFromCSV, type ImportedContact } from "@/lib/hive/csv";
+import type { ImportedContact } from "@/lib/hive/csv";
+import { contactsFromPicker, parseContactsFiles } from "@/lib/hive/contact-import";
 import { parseBrazilPhone, formatBrazilPhone } from "@/lib/hive/phone";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/toast";
-import { ChevronLeft, Smartphone, FileUp, Download, AlertTriangle } from "lucide-react";
+import { ChevronLeft, Smartphone, FileUp, Download, Info } from "lucide-react";
 
 // phoneState: "none" = contato sem telefone; "invalid" = tem texto, mas não é um
 // número brasileiro válido (não vem marcado para importar); "ok" = válido.
@@ -22,12 +23,27 @@ type Row = ImportedContact & {
   normalized: string | null;
 };
 
-// API real do navegador (Contact Picker), NÃO uma simulação. Hoje só existe
-// no Chrome/Edge Android — não no iOS Safari, nem em navegador desktop.
-// Detecção em runtime: o botão de "importar do aparelho" só aparece onde a
-// API realmente existe, em vez de mostrar um botão que falha em produção.
+// Dois caminhos REAIS, nenhum simulado:
+//
+//  1) Contact Picker API (seletor nativo da agenda). Só existe no Chrome/Edge
+//     para Android. O WebKit (Safari e QUALQUER navegador no iPhone, inclusive
+//     Chrome e Firefox, que no iOS usam WebKit) não a implementa, e a Apple não
+//     oferece nenhuma API web para ler a agenda. Detectamos pela FUNCIONALIDADE,
+//     não pelo navegador: onde ela existe o botão aparece; onde não, não.
+//
+//  2) Arquivo de contatos. O iPhone exporta contatos como vCard (.vcf) — app
+//     Contatos > "Compartilhar contato" > "Salvar em Arquivos", ou iCloud/Google
+//     Contatos > Exportar. O seletor de arquivos funciona no Safari e no PWA do
+//     iOS. Também aceita CSV. É o caminho do iPhone, e funciona em qualquer
+//     aparelho.
 function isContactPickerAvailable() {
   return typeof navigator !== "undefined" && "contacts" in navigator && "ContactsManager" in window;
+}
+
+// Só para ajustar o TEXTO das instruções (não decide nenhuma funcionalidade).
+function isIOSDevice() {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
 const MODEL_CSV = "nome,telefone,aniversario\nMaria Silva,11999990000,15/03/1990\nJoana Souza,11988887777,\n";
@@ -39,12 +55,14 @@ export default function ImportarClientesPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [pickerAvailable, setPickerAvailable] = useState(false);
+  const [ios, setIos] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [existingPhones, setExistingPhones] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setPickerAvailable(isContactPickerAvailable());
+    setIos(isIOSDevice());
     createClient()
       .from("clients")
       .select("phone_normalized")
@@ -82,12 +100,7 @@ export default function ImportarClientesPage() {
     try {
       // @ts-expect-error -- Contact Picker API ainda não tem tipos oficiais no TypeScript/DOM lib.
       const selected = await navigator.contacts.select(["name", "tel"], { multiple: true });
-      const contacts: ImportedContact[] = selected.map((p: { name?: string[]; tel?: string[] }) => ({
-        name: p.name?.[0] ?? "",
-        phone: p.tel?.[0] ?? "",
-        // A API do navegador não expõe aniversário — não é limitação nossa.
-        birthDate: null,
-      }));
+      const contacts = contactsFromPicker(selected as { name?: string[]; tel?: string[] }[]);
       if (contacts.length === 0) return;
       buildRows(contacts);
     } catch {
@@ -95,20 +108,23 @@ export default function ImportarClientesPage() {
     }
   }
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const contacts = contactsFromCSV(String(reader.result));
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files: File[] = Array.from(e.target.files ?? []);
+    e.target.value = ""; // permite escolher o mesmo arquivo de novo
+    if (files.length === 0) return;
+    try {
+      // O formato (vCard ou CSV) é reconhecido pelo CONTEÚDO: o iOS às vezes
+      // entrega o arquivo sem extensão ou com tipo genérico.
+      const texts = await Promise.all(files.map((f) => f.text()));
+      const contacts = parseContactsFiles(texts);
       if (contacts.length === 0) {
-        toast.error("Não encontrei contatos nesse arquivo. Confira o formato (veja o modelo).");
+        toast.error("Não encontrei contatos nesse arquivo. Use um arquivo de contatos (.vcf) ou o modelo de CSV.");
         return;
       }
       buildRows(contacts);
-    };
-    reader.readAsText(file, "utf-8");
-    e.target.value = "";
+    } catch {
+      toast.error("Não foi possível ler o arquivo. Tente novamente.");
+    }
   }
 
   function downloadModel() {
@@ -161,7 +177,7 @@ export default function ImportarClientesPage() {
         <ChevronLeft className="size-4" />
         Clientes
       </Link>
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Importar clientes</h1>
+      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Importar contatos</h1>
 
       {rows.length === 0 ? (
         <div className="space-y-3">
@@ -169,7 +185,7 @@ export default function ImportarClientesPage() {
             <Card interactive onClick={handleDevicePicker} className="flex cursor-pointer items-center gap-3">
               <Smartphone className="size-5 shrink-0 text-ink-400" />
               <div className="flex-1">
-                <p className="font-medium text-ink-800">Importar do aparelho</p>
+                <p className="font-medium text-ink-800">Selecionar contatos do aparelho</p>
                 <p className="text-xs text-ink-400">Escolha contatos direto da agenda do celular.</p>
               </div>
             </Card>
@@ -182,34 +198,77 @@ export default function ImportarClientesPage() {
           >
             <FileUp className="size-5 shrink-0 text-ink-400" />
             <div className="flex-1">
-              <p className="font-medium text-ink-800">Importar arquivo (CSV)</p>
+              <p className="font-medium text-ink-800">Importar arquivo de contatos</p>
               <p className="text-xs text-ink-400">
                 {pickerAvailable
-                  ? "Funciona em qualquer aparelho, inclusive iPhone."
-                  : "Seu navegador não permite importar direto do aparelho — essa opção funciona em qualquer um."}
+                  ? "Arquivo .vcf (contatos) ou planilha .csv. Funciona em qualquer aparelho."
+                  : "Escolha o arquivo .vcf dos seus contatos (ou uma planilha .csv)."}
               </p>
             </div>
           </Card>
-          <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={handleFile} className="hidden" />
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept=".vcf,.vcard,text/vcard,text/x-vcard,.csv,text/csv"
+            onChange={handleFiles}
+            className="hidden"
+          />
+
+          {/* Sem o seletor nativo (iPhone e outros): em vez de um "não suportado",
+              o passo a passo REAL para levar os contatos. */}
+          {!pickerAvailable && (
+            <details open className="rounded-lg border border-ink-200 bg-ink-50/60 px-4 py-3 text-sm text-ink-600">
+              <summary className="flex cursor-pointer list-none items-center gap-2 font-medium text-ink-700">
+                <Info className="size-4 shrink-0 text-ink-400" />
+                {ios ? "Como trazer os contatos do iPhone" : "Como trazer os contatos do seu celular"}
+              </summary>
+              <div className="mt-3 space-y-3">
+                <ol className="list-decimal space-y-1.5 pl-5">
+                  {ios ? (
+                    <>
+                      <li>
+                        No app <strong>Contatos</strong>, abra o contato, toque em <strong>Compartilhar contato</strong>{" "}
+                        e escolha <strong>Salvar em Arquivos</strong>.
+                      </li>
+                      <li>
+                        Volte aqui, toque em <strong>Importar arquivo de contatos</strong> e escolha o arquivo .vcf. Dá
+                        para escolher vários de uma vez.
+                      </li>
+                    </>
+                  ) : (
+                    <>
+                      <li>
+                        No app de contatos do celular, compartilhe ou exporte os contatos como arquivo{" "}
+                        <strong>.vcf</strong> (vCard).
+                      </li>
+                      <li>
+                        Volte aqui, toque em <strong>Importar arquivo de contatos</strong> e escolha o arquivo.
+                      </li>
+                    </>
+                  )}
+                  <li>Revise a lista e toque em <strong>Importar</strong>.</li>
+                </ol>
+                <p className="text-xs text-ink-500">
+                  <strong>Muitos contatos de uma vez?</strong> No computador, abra <em>icloud.com/contacts</em> ou{" "}
+                  <em>contacts.google.com</em>, selecione os contatos e exporte como <strong>vCard (.vcf)</strong>.
+                  Depois envie o arquivo ao celular (AirDrop, e-mail ou app Arquivos) e importe por aqui.
+                </p>
+                <p className="text-xs text-ink-400">
+                  O seletor direto da agenda não existe no iPhone: a Apple não permite que sites leiam os contatos.
+                  Por isso a importação é por arquivo, e nada é lido sem você escolher.
+                </p>
+              </div>
+            </details>
+          )}
 
           <button
             onClick={downloadModel}
             className="flex items-center gap-1.5 text-xs font-medium text-ink-400 hover:text-ink-700"
           >
             <Download className="size-3.5" />
-            Baixar modelo de CSV
+            Baixar modelo de planilha (CSV)
           </button>
-
-          {!pickerAvailable && (
-            <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-ink-50/60 px-4 py-3 text-xs text-ink-500">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-ink-400" />
-              <span>
-                A importação direta da agenda do celular só existe hoje no Chrome/Edge no Android — o iPhone e a
-                maioria dos navegadores não oferecem essa permissão para sites. O arquivo CSV funciona em qualquer
-                aparelho.
-              </span>
-            </div>
-          )}
         </div>
       ) : (
         <div className="space-y-3">

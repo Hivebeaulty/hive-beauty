@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_PAYMENT_METHOD, paymentMethodOptions } from "@/lib/hive/payment-methods";
 
 type ClientOption = { id: string; name: string; archived_at: string | null };
 
@@ -36,7 +37,7 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
   const [clientId, setClientId] = useState(initial?.client_id ?? "");
   const [amount, setAmount] = useState(initial?.amount ?? 0);
   const [paidAmount, setPaidAmount] = useState(initial?.paid_amount ?? 0);
-  const [method, setMethod] = useState(initial?.method ?? "pix");
+  const [method, setMethod] = useState(initial?.method ?? DEFAULT_PAYMENT_METHOD);
   const [status, setStatus] = useState<PaymentFormData["status"]>(initial?.status ?? "pago");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -134,10 +135,11 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
       <div className="grid grid-cols-2 gap-3">
         <NumberInput label="Valor (R$)" required value={amount} onChange={setAmount} />
         <Select label="Forma de pagamento" value={method} onChange={(e) => setMethod(e.target.value)}>
-          <option value="pix">Pix</option>
-          <option value="dinheiro">Dinheiro</option>
-          <option value="cartao">Cartão</option>
-          <option value="outro">Outro</option>
+          {paymentMethodOptions(method).map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </Select>
       </div>
 

@@ -1,11 +1,11 @@
 import { toSaoPauloDate } from "./period";
 
-export const PAYMENT_METHOD_LABEL: Record<string, string> = {
-  pix: "Pix",
-  dinheiro: "Dinheiro",
-  cartao: "Cartão",
-  outro: "Outro",
-};
+export {
+  PAYMENT_METHOD_LABEL,
+  DEFAULT_PAYMENT_METHOD,
+  SELECTABLE_PAYMENT_METHODS,
+  paymentMethodOptions,
+} from "./payment-methods";
 
 export const PAYMENT_STATUS_LABEL: Record<string, string> = {
   pago: "Pago",

@@ -7,21 +7,38 @@ import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
 import { getActiveProfessionals, getAvailableSlots, hasAnyBusinessHours, type Professional } from "@/lib/hive/schedule";
 import { formatDuration } from "@/lib/hive/format";
+import { buildConfirmationMessage } from "@/lib/hive/appointment-message";
+import { resolveSignatureName } from "@/lib/hive/display-name";
+import { whatsappChatLink, whatsappReach, type WhatsappReach } from "@/lib/hive/phone";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { Clock, AlertTriangle, CheckCircle2, MessageCircle, Info } from "lucide-react";
 
-type ClientOption = { id: string; name: string };
+type ClientOption = { id: string; name: string; phone: string | null; phone_normalized: string | null };
+
+// O que a tela de confirmação mostra DEPOIS que o banco confirmou o agendamento.
+type CreatedAppointment = {
+  id: string;
+  clientId: string;
+  clientName: string;
+  serviceName: string;
+  startsAt: Date;
+  professionalName: string | null;
+  whatsappUrl: string | null;
+  reach: WhatsappReach;
+};
 type ServiceOption = { id: string; name: string; duration_minutes: number; price: number };
 
 export default function NovoAgendamentoPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { companyId, memberId } = useCompany();
+  const { companyId, companyName, memberId } = useCompany();
 
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
@@ -41,12 +58,18 @@ export default function NovoAgendamentoPage() {
   const [hoursConfigured, setHoursConfigured] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<CreatedAppointment | null>(null);
+  // Como cada profissional quer ser chamada (assina a mensagem). Se a função do
+  // banco ainda não existir, fica vazio e usamos o 1º nome cadastrado.
+  const [displayNames, setDisplayNames] = useState<Map<string, { display: string | null; full: string | null }>>(
+    new Map()
+  );
 
   // Dados de apoio — clientes, serviços ativos e profissionais ativas.
   useEffect(() => {
     const supabase = createClient();
     // Cliente arquivada não recebe novos atendimentos (o histórico dela segue intacto).
-    supabase.from("clients").select("id, name").eq("company_id", companyId).is("archived_at", null).order("name").then(({ data }) => setClients(data ?? []));
+    supabase.from("clients").select("id, name, phone, phone_normalized").eq("company_id", companyId).is("archived_at", null).order("name").then(({ data }) => setClients(data ?? []));
     supabase
       .from("services")
       .select("id, name, duration_minutes, price")
@@ -63,6 +86,17 @@ export default function NovoAgendamentoPage() {
       else if (list.some((p) => p.id === memberId)) setProfessionalId(memberId);
     });
     hasAnyBusinessHours(supabase, companyId).then(setHoursConfigured);
+    supabase.rpc("get_company_member_display_names", { p_company_id: companyId }).then(({ data, error }) => {
+      if (error || !data) return;
+      setDisplayNames(
+        new Map(
+          (data as { member_id: string; display_name: string | null; full_name: string | null }[]).map((r) => [
+            r.member_id,
+            { display: r.display_name, full: r.full_name },
+          ])
+        )
+      );
+    });
   }, [companyId, memberId]);
 
   function handleServiceChange(id: string) {
@@ -112,7 +146,9 @@ export default function NovoAgendamentoPage() {
     const scheduledEnd = new Date(scheduledStart.getTime() + duration * 60000);
 
     const supabase = createClient();
-    const { error } = await supabase.from("appointments").insert({
+    // .select("id").single(): só seguimos (e só oferecemos o WhatsApp) quando o
+    // banco CONFIRMOU a gravação e devolveu o registro.
+    const { data: inserted, error } = await supabase.from("appointments").insert({
       company_id: companyId,
       client_id: clientId,
       service_id: serviceId,
@@ -122,7 +158,7 @@ export default function NovoAgendamentoPage() {
       price,
       notes: notes || null,
       status: "agendado",
-    });
+    }).select("id").single();
 
     setSaving(false);
     if (error) {
@@ -137,8 +173,109 @@ export default function NovoAgendamentoPage() {
       }
       return;
     }
+
+    // Agendamento salvo. Monta a confirmação; NADA é enviado: o link só abre o
+    // WhatsApp com o texto pronto, e quem envia é a profissional.
+    const client = clients.find((c) => c.id === clientId);
+    const service = services.find((s) => s.id === serviceId);
+    const prof = professionals.find((p) => p.id === professionalId);
+    const names = displayNames.get(professionalId);
+    const professionalName =
+      resolveSignatureName({ displayName: names?.display, fullName: names?.full ?? prof?.name }) ?? null;
+    const message = buildConfirmationMessage({
+      clientName: client?.name ?? "",
+      startsAt: scheduledStart,
+      durationMinutes: duration,
+      serviceName: service?.name ?? "",
+      professionalName,
+      businessName: companyName,
+      variantSeed: inserted.id,
+    });
+    setCreated({
+      id: inserted.id,
+      clientId,
+      clientName: client?.name ?? "",
+      serviceName: service?.name ?? "",
+      startsAt: scheduledStart,
+      professionalName,
+      whatsappUrl: whatsappChatLink(client?.phone, client?.phone_normalized, message),
+      reach: whatsappReach(client?.phone, client?.phone_normalized),
+    });
+  }
+
+  function closeCreated() {
     router.push("/agenda");
     router.refresh();
+  }
+
+  // Confirmação visual depois de agendar.
+  if (created) {
+    return (
+      <div className="space-y-5 pb-4">
+        <div className="flex items-center gap-2.5">
+          <CheckCircle2 className="size-6 text-success" />
+          <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Agendamento confirmado</h1>
+        </div>
+
+        <Card className="space-y-3">
+          <div className="flex justify-between gap-4 text-sm">
+            <span className="text-ink-400">Cliente</span>
+            <span className="text-right font-medium text-ink-800">{created.clientName}</span>
+          </div>
+          <div className="flex justify-between gap-4 text-sm">
+            <span className="text-ink-400">Serviço</span>
+            <span className="text-right font-medium text-ink-800">{created.serviceName}</span>
+          </div>
+          <div className="flex justify-between gap-4 text-sm">
+            <span className="text-ink-400">Data</span>
+            <span className="font-medium text-ink-800">{format(created.startsAt, "dd/MM/yyyy")}</span>
+          </div>
+          <div className="flex justify-between gap-4 text-sm">
+            <span className="text-ink-400">Horário</span>
+            <span className="font-medium text-ink-800">{format(created.startsAt, "HH:mm")}</span>
+          </div>
+        </Card>
+
+        <div className="space-y-2">
+          {created.whatsappUrl ? (
+            <>
+              {/* Âncora (não window.open): o iOS não bloqueia e a profissional
+                  confere a mensagem no WhatsApp antes de enviar. */}
+              <a
+                href={created.whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded bg-ink-800 px-5 text-base font-semibold text-cream transition-colors hover:bg-ink-900"
+              >
+                <MessageCircle className="size-5" />
+                Enviar confirmação pelo WhatsApp
+              </a>
+              <p className="text-center text-xs text-ink-400">
+                Abre o WhatsApp com a mensagem pronta. Você revisa e decide se envia.
+              </p>
+            </>
+          ) : (
+            <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-ink-50/60 px-4 py-3 text-sm text-ink-600">
+              <Info className="mt-0.5 size-4 shrink-0 text-ink-400" />
+              <span>
+                {created.reach === "landline"
+                  ? "O telefone cadastrado é fixo, então não dá para enviar pelo WhatsApp. "
+                  : created.reach === "invalid"
+                    ? "O telefone cadastrado não parece válido, então não dá para abrir o WhatsApp. "
+                    : "Esta cliente não tem telefone cadastrado, então não dá para enviar pelo WhatsApp. "}
+                O agendamento já está salvo.{" "}
+                <Link href={`/clientes/${created.clientId}/editar`} className="font-semibold text-ink-800 underline">
+                  Corrigir o telefone
+                </Link>
+              </span>
+            </div>
+          )}
+          <Button variant="secondary" className="w-full" onClick={closeCreated}>
+            Fechar
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
