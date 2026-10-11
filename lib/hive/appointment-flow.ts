@@ -158,3 +158,80 @@ export function deleteErrorMessage(code: string | undefined | null): string {
       return "Não foi possível excluir o atendimento. Nada foi alterado.";
   }
 }
+
+// ---------------------------------------------------------------------------
+// 0014 — recebido -> pendente, falta depois da conclusão automática e mudança
+// de status recusada pelo banco. Espelha mark_appointment_payment_pending,
+// reclassify_appointment_as_no_show, get_appointment_no_show_eligibility e o
+// gatilho trg_appointments_guard_lifecycle. Nada aqui é segurança: a autoridade
+// é o banco; isto só decide o que MOSTRAR e traduz erros.
+// ---------------------------------------------------------------------------
+
+// "Marcar como pendente" só faz sentido para um recebimento já recebido.
+// Parcial é recusado pelo banco (viraria pendente e apagaria o que já entrou).
+export function canMarkPaymentPending(paymentStatus: string | null | undefined): boolean {
+  return paymentStatus === "pago";
+}
+
+export function markPendingErrorMessage(code: string | undefined | null): string {
+  switch (code) {
+    case "AUR03":
+      return "Este recebimento é parcial. Ajuste-o pelo Financeiro.";
+    case "22023":
+      return "Só é possível alterar o recebimento de um atendimento concluído.";
+    case "42501":
+      return "Você não tem permissão para alterar este recebimento.";
+    case "P0002":
+      return "Este atendimento não tem recebimento registrado ou não foi encontrado.";
+    case "28000":
+      return "Sua sessão expirou. Entre novamente.";
+    default:
+      return "Não foi possível marcar como pendente. Tente novamente.";
+  }
+}
+
+export type NoShowReason = "ok" | "not_concluded" | "no_payment" | "manual" | "modified";
+export type NoShowEligibility = { eligible: boolean; reason: NoShowReason | "unknown" };
+
+const NO_SHOW_REASONS: readonly string[] = ["ok", "not_concluded", "no_payment", "manual", "modified"];
+
+// Lê a resposta (jsonb) de get_appointment_no_show_eligibility. Qualquer coisa
+// inesperada vira "não elegível" — na dúvida, o botão não aparece.
+export function parseNoShowEligibility(data: unknown): NoShowEligibility {
+  if (!data || typeof data !== "object") return { eligible: false, reason: "unknown" };
+  const d = data as { eligible?: unknown; reason?: unknown };
+  const reason = typeof d.reason === "string" && NO_SHOW_REASONS.includes(d.reason) ? (d.reason as NoShowReason) : "unknown";
+  return { eligible: d.eligible === true && reason === "ok", reason };
+}
+
+export function noShowErrorMessage(code: string | undefined | null): { message: string; reload: boolean } {
+  switch (code) {
+    case "AUR01":
+      return { message: "Este atendimento foi registrado manualmente; não dá para reclassificar como falta.", reload: true };
+    case "AUR02":
+      return { message: "O recebimento foi alterado depois da conclusão automática. Ajuste manualmente.", reload: true };
+    case "22023":
+      return { message: "Este atendimento não está mais concluído. A tela foi atualizada.", reload: true };
+    case "42501":
+      return { message: "Você não tem permissão para alterar este atendimento.", reload: false };
+    case "P0002":
+      return { message: "Atendimento não encontrado.", reload: true };
+    case "28000":
+      return { message: "Sua sessão expirou. Entre novamente.", reload: false };
+    default:
+      return { message: "Não foi possível registrar a falta. Nada foi alterado.", reload: true };
+  }
+}
+
+// Cancelar / "não compareceu" é um UPDATE direto. Se o atendimento já foi
+// concluído (por outro aparelho ou pela automação), o banco recusa com 22023.
+export function statusChangeErrorMessage(code: string | undefined | null): { message: string; reload: boolean } {
+  switch (code) {
+    case "22023":
+      return { message: "Este atendimento já foi concluído e não pode mais ser alterado por aqui. A tela foi atualizada.", reload: true };
+    case "28000":
+      return { message: "Sua sessão expirou. Entre novamente.", reload: false };
+    default:
+      return { message: "Não foi possível atualizar o status.", reload: true };
+  }
+}

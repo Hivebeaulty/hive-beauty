@@ -122,7 +122,14 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
         }
       />
 
-      <Select label="Cliente (opcional)" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+      {/* Recebimento de atendimento: a cliente é a do atendimento (o banco recusa
+          trocar, migration 0014), então o campo fica travado. */}
+      <Select
+        label="Cliente (opcional)"
+        value={clientId}
+        onChange={(e) => setClientId(e.target.value)}
+        disabled={!!initial?.appointment_linked}
+      >
         <option value="">Nenhuma</option>
         {clients.map((c) => (
           <option key={c.id} value={c.id}>
@@ -163,10 +170,19 @@ export function ReceitaForm({ initial }: { initial?: PaymentFormData }) {
         {saving ? "Salvando..." : "Salvar recebimento"}
       </Button>
 
-      {initial && (
+      {/* Recebimento de atendimento concluído não é apagado sozinho (o banco
+          recusa, migration 0014): sumiria do Financeiro e o atendimento ficaria
+          concluído sem recebimento. Para corrigir, use a Agenda. */}
+      {initial && !initial.appointment_linked && (
         <Button type="button" variant="secondary" onClick={handleDelete} loading={deleting} className="w-full !border-danger !text-danger">
           {deleting ? "Excluindo..." : "Excluir recebimento"}
         </Button>
+      )}
+      {initial?.appointment_linked && (
+        <p className="text-xs text-ink-400">
+          Este recebimento é de um atendimento. Para marcar como pendente, use a tela do atendimento na Agenda; para
+          remover, use &quot;Excluir atendimento&quot;.
+        </p>
       )}
     </form>
   );

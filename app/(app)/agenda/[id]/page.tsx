@@ -19,15 +19,20 @@ import { phoneDisplay } from "@/lib/hive/phone";
 import {
   canDeleteAppointment,
   canManageAppointmentPayment,
+  canMarkPaymentPending,
   closingActions,
   concludeAvailability,
   concludeErrorMessage,
   deleteErrorMessage,
+  markPendingErrorMessage,
+  noShowErrorMessage,
+  parseNoShowEligibility,
   paymentStatusFor,
   paymentUpdateErrorMessage,
+  statusChangeErrorMessage,
 } from "@/lib/hive/appointment-flow";
 import { DEFAULT_PAYMENT_METHOD, paymentMethodOptions } from "@/lib/hive/payment-methods";
-import { ChevronLeft, Phone, StickyNote, Info, Wallet, Trash2, AlertTriangle } from "lucide-react";
+import { ChevronLeft, Phone, StickyNote, Info, Wallet, Trash2, AlertTriangle, UserX } from "lucide-react";
 
 type AppointmentDetail = {
   id: string;
@@ -60,6 +65,8 @@ export default function AgendamentoDetalhePage() {
   const [method, setMethod] = useState<string>(DEFAULT_PAYMENT_METHOD); // PIX por padrão
   const [showDelete, setShowDelete] = useState(false);
   const [deleteAck, setDeleteAck] = useState(false);
+  const [noShowEligible, setNoShowEligible] = useState(false); // concluído automaticamente e recebimento intacto
+  const [showNoShow, setShowNoShow] = useState(false);
   const [pending, setPending] = useState(false); // "Recebimento pendente" — desligado = recebido
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +111,14 @@ export default function AgendamentoDetalhePage() {
             }
           : null
       );
+      // Falta depois da conclusão automática: o banco diz se ainda é possível
+      // (recebimento automático e nunca alterado). Erro/sem permissão => oculto.
+      const { data: elig, error: eligError } = await supabase.rpc("get_appointment_no_show_eligibility", {
+        p_appointment_id: id,
+      });
+      setNoShowEligible(!eligError && parseNoShowEligibility(elig).eligible);
     } else {
+      setNoShowEligible(false);
       setPayment(null);
     }
     setLoading(false);
@@ -124,7 +138,11 @@ export default function AgendamentoDetalhePage() {
     const { data, error } = await supabase.from("appointments").update({ status }).eq("id", id).select("id");
     setBusy(false);
     if (error || !data || data.length === 0) {
-      setError("Não foi possível atualizar o status.");
+      // 22023: o atendimento já foi concluído (outro aparelho ou a conclusão
+      // automática) e o banco recusou. Mostra o estado real.
+      const { message, reload } = statusChangeErrorMessage(error?.code);
+      setError(message);
+      if (reload) load();
       return;
     }
     load();
@@ -177,6 +195,41 @@ export default function AgendamentoDetalhePage() {
       return;
     }
     toast.success(markReceived ? "Recebimento marcado como recebido." : "Forma de pagamento atualizada.");
+    load();
+  }
+
+  // Recebido -> pendente, no MESMO recebimento (a regra vive na RPC).
+  async function markPending() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    const { error } = await createClient().rpc("mark_appointment_payment_pending", { p_appointment_id: id });
+    setBusy(false);
+    if (error) {
+      setError(markPendingErrorMessage(error.code));
+      load();
+      return;
+    }
+    toast.success("Recebimento marcado como pendente.");
+    load();
+  }
+
+  // Concluído automaticamente -> não compareceu: remove o recebimento automático
+  // (só se ele nunca foi alterado). Tudo numa transação no banco.
+  async function handleNoShow() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    const { error } = await createClient().rpc("reclassify_appointment_as_no_show", { p_appointment_id: id });
+    setBusy(false);
+    setShowNoShow(false);
+    if (error) {
+      const { message, reload } = noShowErrorMessage(error.code);
+      setError(message);
+      if (reload) load();
+      return;
+    }
+    toast.success("Atendimento marcado como não compareceu.");
     load();
   }
 
@@ -400,6 +453,14 @@ export default function AgendamentoDetalhePage() {
               </option>
             ))}
           </Select>
+          {canMarkPaymentPending(payment.status) && (
+            <div className="space-y-1.5">
+              <Button variant="secondary" className="w-full" disabled={busy} onClick={markPending}>
+                Marcar como pendente
+              </Button>
+              <p className="text-xs text-ink-400">Use se a cliente ainda não pagou. O valor sai de recebido e vai para pendente.</p>
+            </div>
+          )}
           {payment.status !== "pago" && (
             <div className="space-y-1.5">
               <Button
@@ -417,6 +478,39 @@ export default function AgendamentoDetalhePage() {
           )}
         </Card>
       )}
+
+      {/* Concluído automaticamente, recebimento intacto: registrar falta */}
+      {appt.status === "concluido" && payment && canManagePayment && noShowEligible && (
+        <Button variant="secondary" className="w-full" disabled={busy} onClick={() => setShowNoShow(true)}>
+          <UserX className="size-4" />
+          Cliente não compareceu
+        </Button>
+      )}
+
+      <Modal open={showNoShow} onClose={() => !busy && setShowNoShow(false)} title="Cliente não compareceu">
+        <div className="space-y-4">
+          <p className="text-sm text-ink-700">
+            Este atendimento foi concluído automaticamente no horário de término. Ao confirmar:
+          </p>
+          <ul className="space-y-1.5 text-sm text-ink-500">
+            <li>O atendimento passa para &quot;Não compareceu&quot;.</li>
+            <li>
+              {payment
+                ? `O recebimento automático de ${formatMoney(payment.amount)} é removido do Financeiro.`
+                : "O recebimento automático é removido do Financeiro."}
+            </li>
+            <li>A alteração fica registrada no histórico do atendimento.</li>
+          </ul>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setShowNoShow(false)} disabled={busy}>
+              Voltar
+            </Button>
+            <Button variant="danger" className="flex-1" onClick={handleNoShow} loading={busy}>
+              Confirmar falta
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Atendimento concluído: excluir (destrutivo, só administração) */}
       {appt.status === "concluido" && canDelete && (
