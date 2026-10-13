@@ -1,0 +1,14 @@
+{
+  "name": "aurea-ui-tests",
+  "private": true,
+  "description": "Testes de tela em navegador real (Chromium) — isolados do app; não entram no build nem no deploy.",
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "138.0.2",
+    "esbuild": "0.25.9",
+    "puppeteer-core": "24.15.0"
+  }
+}
