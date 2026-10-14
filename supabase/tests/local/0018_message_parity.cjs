@@ -13,7 +13,7 @@ const DB = process.argv[2];
 if (!DB) throw new Error("informe o banco local");
 
 const clients = ["Ana Maria Lima", "  Beatriz  ", "José", "Ana", "Maria  das   Dores", "Ágata Ñuñez", "Lu 💅 Silva", "x"];
-const services = ["Manicure", "  Escova progressiva ", "Pé e mão", "Design de sobrancelha"];
+const services = ["Manicure", "  Escova progressiva ", "Pé e mão", "Design de sobrancelha", "Unha em gel ✨"];
 const durations = [15, 30, 45, 60, 65, 90, 120, 125, 600];
 const displays = [null, "Paty", "  Dra.   Ju  ", "", "Nome de exibição com quarenta letras ok", "studio bella"];
 const fulls = [null, "Patrícia Souza", "Carla", "  Joana   Dark "];
@@ -75,7 +75,7 @@ for (const c of cases) {
     now: new Date(c.now),
     variantSeed: c.id,
   });
-  variants.add(expected.split("\n")[0].replace(/^Oi(, [^!,]+)?/, ""));
+  variants.add(msg.confirmationVariant(c.id));
   if (bySeq.get(c.n) === expected) pass++;
   else {
     fail++;
@@ -83,7 +83,7 @@ for (const c of cases) {
   }
 }
 const ok = (cond, label) => { if (cond) { pass++; console.log(`PASS ${label}`); } else { fail++; console.log(`FAIL ${label}`); } };
-ok(variants.size === 3, `P-var as 3 variações de texto aparecem (${[...variants].join(" | ")})`);
-console.log(`${fail === 0 ? "INFO" : "FAIL"} ${cases.length} casos comparados; divergentes: ${cases.length - (pass - (variants.size === 3 ? 1 : 0))}`);
+ok(variants.size === msg.CONFIRMATION_VARIANTS, `P-var as ${msg.CONFIRMATION_VARIANTS} variações aparecem nos casos (${[...variants].sort().join(",")})`);
+console.log(`${fail === 0 ? "INFO" : "FAIL"} ${cases.length} casos comparados; divergentes: ${cases.length - (pass - (variants.size === msg.CONFIRMATION_VARIANTS ? 1 : 0))}`);
 console.log(`RESULTADO paridade 0018: PASS=${pass} FAIL=${fail}`);
 process.exit(fail ? 1 : 0);

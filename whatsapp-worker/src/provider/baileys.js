@@ -11,7 +11,7 @@ export function createSocket({ auth, logger }) {
     logger,
     browser: Browsers.ubuntu('Áurea'),
     syncFullHistory: false,
-    shouldSyncHistoryMessage: () => false,   // não baixa histórico antigo: menos memória e menos dado pessoal
+    shouldSyncHistoryMessage: ({ syncType }) => syncType !== proto.HistorySync.HistorySyncType.FULL, // padrão do Baileys: sem histórico completo, mas recebe o mapa LID↔telefone (o worker só grava mensagens novas)
     markOnlineOnConnect: false,              // não marca "online" no celular da profissional
     generateHighQualityLinkPreview: false,
     getMessage: async () => undefined,       // não guardamos mensagens em memória

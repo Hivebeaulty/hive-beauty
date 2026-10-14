@@ -88,8 +88,9 @@ a="$(mk "$K_OK")"
 check "C2 pedido certo: cliente, telefone normalizado, chave por agendamento, autor = quem agendou" \
   "(select client_id = '$K_OK' and to_phone = '5511987654321' and idempotency_key = 'auto-confirmation:$a' and status = 'pending'
           and created_by = '$OWN' from whatsapp_private.outbox where appointment_id = '$a')"
-check "C3 texto com dados reais: 1º nome, serviço · duração, assinatura da profissional · empresa" \
-  "(select body like 'Oi, Ana%' and body like '%Manicure · 1h%' and body like '%Patrícia · Studio A' and body like '%às %h%'
+check "C3 texto com dados reais: 1º nome, serviço, dia e hora; SEM assinatura (0019)" \
+  "(select body like 'Oi, Ana%' and body like '%Manicure%' and body ~ '\\d{2}/\\d{2}' and body like '%às %h%'
+          and body not like '%Patrícia%' and body not like '%Studio A%'
      from whatsapp_private.outbox where appointment_id = '$a')"
 check "C4 texto do banco = whatsapp_private.confirmation_text (mesma regra da tela; paridade em 0018_message_parity)" \
   "(select body = whatsapp_private.confirmation_text('$a') from whatsapp_private.outbox where appointment_id = '$a')"
