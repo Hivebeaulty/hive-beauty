@@ -17,8 +17,8 @@ createdb "$DB"
 for f in "$ROOT"/migrations/0*.sql; do
   n="$(basename "$f" | cut -c1-4)"
   [[ "$n" > "$LAST" ]] && break
-  # a 0016 (pg_cron) só entra quando pedida explicitamente: WITH_CRON=1
-  [[ "$f" == *schedule_auto_conclusion* && "${WITH_CRON:-0}" != 1 ]] && continue
+  # as migrations de agendamento (0016, 0021: pg_cron) só entram com WITH_CRON=1
+  [[ "$f" == *_schedule_* && "${WITH_CRON:-0}" != 1 ]] && continue
   "${PSQL[@]}" -1 -d "$DB" -f "$f"
   echo "aplicada: $(basename "$f")"
 done
