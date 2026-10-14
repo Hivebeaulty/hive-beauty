@@ -175,3 +175,16 @@ test('(W4) contato só com LID: usa o número do mapa LID do Baileys; sem mapa, 
   const got = db.calls.filter((c) => c.inbound).map((c) => [c.inbound.waMessageId, c.inbound.remoteJid])
   assert.deepEqual(got, [['L1', '5511987654321@s.whatsapp.net'], ['L2', '888000222@lid']])
 })
+
+test('(W4) sincronização inicial/histórico: nada é gravado nem bloqueia ninguém (nem um SAIR antigo); só mensagem NOVA conta', async () => {
+  const s = make({ ...config, messagingEnabled: true }); await s.start(); FakeHub.last().scanAndOpen(); await tick(20)
+  const sock = FakeHub.last()
+  const old = (id, text) => ({ key: { id, remoteJid: '5511987654321@s.whatsapp.net', fromMe: false }, message: { conversation: text }, messageTimestamp: 1700000000 })
+  // como o Baileys entrega histórico: evento próprio e/ou upsert do tipo 'append'
+  sock.ev.emit('messaging-history.set', { messages: [old('H1', 'SAIR'), old('H2', 'oi')], chats: [], contacts: [], isLatest: true })
+  sock.ev.emit('messages.upsert', { type: 'append', messages: [old('H3', 'SAIR'), old('H4', 'oi')] })
+  await tick(20)
+  assert.equal(db.calls.filter((c) => c.inbound).length, 0, 'mensagem de histórico foi gravada')
+  sock.incoming({ id: 'N1', from: '5511987654321@s.whatsapp.net', text: 'oi agora' }); await tick(20)
+  assert.deepEqual(db.calls.filter((c) => c.inbound).map((c) => c.inbound.waMessageId), ['N1'], 'mensagem nova deve ser gravada')
+})

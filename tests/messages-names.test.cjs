@@ -17,22 +17,28 @@ const base = {
 
 function emojis(s) { return (s.match(/\p{Extended_Pictographic}/gu) || []).length; }
 
-test("mensagem: primeiro nome, dia, hora, serviço, duração, quem atende e negócio", () => {
-  const m = msg.buildConfirmationMessage(base);
-  assert.match(m, /Maria/); assert.doesNotMatch(m, /da Silva/);
-  assert.match(m, /quinta-feira, 15\/10, às 14h/);
-  assert.match(m, /Alongamento em gel · 1h30/);
-  assert.match(m, /Paty · Studio Bella$/);
-  assert.ok(emojis(m) <= 1, "no máximo 1 emoji");
-  assert.doesNotMatch(m, /\n{3,}/);
+test("mensagem: primeiro nome, dia, hora e serviço; SEM assinatura de empresa ou profissional", () => {
+  for (const seed of ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]) {
+    const m = msg.buildConfirmationMessage({ ...base, variantSeed: seed });
+    assert.match(m, /^Oi, Maria[!,]/); assert.doesNotMatch(m, /da Silva/);
+    assert.match(m, /15\/10 \(quinta-feira\), às 14h/);
+    assert.match(m, /Alongamento em gel/);
+    assert.doesNotMatch(m, /Studio Bella|Paty|·/, "não pode ter assinatura");
+    assert.ok(emojis(m) <= 1, "no máximo 1 emoji");
+    assert.doesNotMatch(m, /\n{3,}/);
+    assert.doesNotMatch(m, /\s$/);
+  }
 });
 
-test("mensagem: hora com minutos, 'hoje' e 'amanhã'", () => {
-  const at = (iso, now) => msg.buildConfirmationMessage({ ...base, startsAt: new Date(iso), now: new Date(now) });
-  assert.match(at("2026-10-15T17:30:00Z", "2026-10-10T12:00:00Z"), /às 14h30\./);
-  assert.match(at("2026-10-15T12:00:00Z", "2026-10-10T12:00:00Z"), /às 9h\./);
-  assert.match(at("2026-10-15T17:00:00Z", "2026-10-15T09:00:00Z"), /hoje, quinta-feira \(15\/10\), às 14h/);
-  assert.match(at("2026-10-16T17:00:00Z", "2026-10-15T09:00:00Z"), /amanhã, sexta-feira \(16\/10\), às 14h/);
+test("mensagem: hora com minutos, 'hoje' e 'amanhã' encaixados na frase", () => {
+  const at = (iso, now, seed = "a") => msg.buildConfirmationMessage({ ...base, startsAt: new Date(iso), now: new Date(now), variantSeed: seed });
+  assert.match(at("2026-10-15T17:30:00Z", "2026-10-10T12:00:00Z"), /às 14h30/);
+  assert.match(at("2026-10-15T12:00:00Z", "2026-10-10T12:00:00Z"), /às 9h[^0-9]/);
+  for (const seed of ["a", "b", "c", "d", "e", "f", "g", "h"]) {
+    assert.match(at("2026-10-15T17:00:00Z", "2026-10-15T09:00:00Z", seed), /hoje, quinta-feira \(15\/10\), às 14h/);
+    assert.match(at("2026-10-16T17:00:00Z", "2026-10-15T09:00:00Z", seed), /amanhã, sexta-feira \(16\/10\), às 14h/);
+    assert.doesNotMatch(at("2026-10-16T17:00:00Z", "2026-10-15T09:00:00Z", seed), /(no dia|o dia) amanhã|para no dia/);
+  }
 });
 
 test("mensagem: independe do fuso do servidor (UTC às 22h de Brasília)", () => {
@@ -41,7 +47,7 @@ test("mensagem: independe do fuso do servidor (UTC às 22h de Brasília)", () =>
     try {
       // 23:30 em Brasília = 02:30Z do dia seguinte: precisa continuar 'dia 15, 23h30'
       const m = msg.buildConfirmationMessage({ ...base, startsAt: new Date("2026-10-16T02:30:00Z"), now: NOW });
-      assert.match(m, /quinta-feira, 15\/10, às 23h30/, tz);
+      assert.match(m, /15\/10 \(quinta-feira\), às 23h30/, tz);
       // 'amanhã' calculado pelo dia de Brasília, não do servidor (01:00Z = 22:00 do dia 14)
       const t = msg.buildConfirmationMessage({ ...base, startsAt: new Date("2026-10-15T17:00:00Z"), now: new Date("2026-10-15T01:00:00Z") });
       assert.match(t, /amanhã, quinta-feira \(15\/10\)/, tz);
@@ -49,28 +55,37 @@ test("mensagem: independe do fuso do servidor (UTC às 22h de Brasília)", () =>
   }
 });
 
-test("mensagem: variações determinísticas, todas completas e com no máximo 1 emoji", () => {
-  const seen = new Set();
-  for (const seed of ["a", "b", "c", "d", "e", "f", "g", "h"]) {
+test("mensagem: 8 variações determinísticas, todas completas; emoji em parte delas (no máximo 1)", () => {
+  const byVariant = new Map();
+  for (let i = 0; i < 400 && byVariant.size < msg.CONFIRMATION_VARIANTS; i++) {
+    const seed = `seed-${i}`;
     const m = msg.buildConfirmationMessage({ ...base, variantSeed: seed });
     assert.equal(m, msg.buildConfirmationMessage({ ...base, variantSeed: seed }), "mesma entrada => mesma mensagem");
-    assert.match(m, /às 14h/); assert.match(m, /Alongamento em gel/); assert.match(m, /Paty · Studio Bella/);
-    assert.ok(emojis(m) <= 1);
-    seen.add(m.split("\n")[0]);
+    byVariant.set(msg.confirmationVariant(seed), m);
   }
-  assert.ok(seen.size >= 2, "há variação de abertura");
+  assert.equal(msg.CONFIRMATION_VARIANTS, 8);
+  assert.equal(byVariant.size, 8, "todas as 8 variações aparecem");
+  const texts = [...byVariant.values()];
+  assert.equal(new Set(texts).size, 8, "as 8 variações são textos diferentes");
+  for (const m of texts) {
+    assert.match(m, /Alongamento em gel/); assert.match(m, /15\/10/); assert.match(m, /às 14h/);
+    assert.ok(emojis(m) <= 1);
+  }
+  const comEmoji = texts.filter((m) => emojis(m) === 1).length;
+  assert.ok(comEmoji >= 2 && comEmoji <= 6, `emoji ocasional (${comEmoji} de 8)`);
 });
 
-test("mensagem: sem profissional / sem negócio / sem duração / sem nome", () => {
-  const only = (o) => msg.buildConfirmationMessage({ ...base, variantSeed: "x", ...o });
-  assert.match(only({ professionalName: null }), /Studio Bella$/);
-  assert.match(only({ businessName: null }), /Paty$/);
-  assert.doesNotMatch(only({ professionalName: null, businessName: null }), /·\s*$/);
-  assert.match(only({ durationMinutes: 0 }), /Alongamento em gel\n/);
-  assert.doesNotMatch(only({ durationMinutes: 0 }), /Alongamento em gel ·/);
-  assert.match(only({ clientName: "" }), /^Oi/);
-  assert.match(only({ professionalName: "Studio Bella", businessName: "Studio Bella" }), /Studio Bella$/); // sem duplicar
-  assert.doesNotMatch(only({ professionalName: "Studio Bella", businessName: "Studio Bella" }), /Studio Bella · Studio Bella/);
+test("mensagem: sem serviço / sem nome continua natural; profissional e empresa nunca aparecem", () => {
+  for (let i = 0; i < 400; i++) {
+    const seed = `s-${i}`;
+    const noSv = msg.buildConfirmationMessage({ ...base, serviceName: "  ", variantSeed: seed });
+    assert.doesNotMatch(noSv, /(de|para|:) *[.,]| {2,}|: no dia|de :/, noSv);
+    assert.match(noSv, /15\/10 \(quinta-feira\), às 14h/);
+    const noName = msg.buildConfirmationMessage({ ...base, clientName: "", variantSeed: seed });
+    assert.match(noName, /^Oi[!,]/);
+    const named = msg.buildConfirmationMessage({ ...base, professionalName: "Studio Bella", businessName: "Studio Bella", variantSeed: seed });
+    assert.doesNotMatch(named, /Studio Bella/);
+  }
 });
 
 test("WhatsApp da confirmação: link com a mensagem codificada; sem link para fixo/inválido/sem telefone", () => {

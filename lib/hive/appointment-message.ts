@@ -1,17 +1,23 @@
 // ---------------------------------------------------------------------------
-// Mensagem de CONFIRMAÇÃO de agendamento para a cliente (WhatsApp, manual).
+// Mensagem de CONFIRMAÇÃO de agendamento para a cliente (WhatsApp).
 //
-// Isto só monta o TEXTO. Nada é enviado: a tela abre o WhatsApp com a mensagem
-// pronta e quem decide enviar é a profissional. Não é a integração automática
-// (essa vem depois, em serviço separado).
+// ÚNICA regra de texto da confirmação, com DUAS cópias que precisam ficar
+// idênticas (teste de paridade em supabase/tests/local/0018_message_parity.cjs):
+//   * esta, usada pela tela no envio manual (wa.me);
+//   * whatsapp_private.confirmation_text no banco (migration 0019), usada na
+//     confirmação AUTOMÁTICA.
 //
-// Tom: uma profissional de verdade confirmando um horário — curta, calorosa,
-// sem excesso de emoji. Para não soar "robô", há 3 aberturas/fechamentos; a
-// escolha é DETERMINÍSTICA (mesma entrada, mesma mensagem), então é testável e
-// não muda se a tela for reaberta. Datas e horas sempre em America/Sao_Paulo,
-// qualquer que seja o fuso do servidor ou do aparelho.
+// Tom: feminino, acolhedor e natural, de salão de beleza; sem exagero e sem
+// soar comercial. Emoji só em parte das variações (no máximo 1 por mensagem).
+// SEM assinatura: a mensagem termina naturalmente, sem nome de empresa nem de
+// profissional. Sempre traz serviço, dia e horário (America/Sao_Paulo).
+//
+// 8 variações. A escolha é DETERMINÍSTICA pela semente (o id do agendamento):
+// o mesmo agendamento sempre gera a mesma variação — inclusive quando o banco
+// refaz o texto antes do envio — e a idempotência por agendamento continua
+// impedindo mensagens duplicadas.
 // ---------------------------------------------------------------------------
-import { firstName, formatDuration } from "./format";
+import { firstName } from "./format";
 
 const TZ = "America/Sao_Paulo";
 
@@ -20,8 +26,9 @@ export type ConfirmationInput = {
   startsAt: Date | string;
   durationMinutes: number;
   serviceName: string;
-  /** Como a profissional quer ser chamada (ex.: "Paty"). */
+  /** Mantido por compatibilidade; NÃO entra mais no texto (sem assinatura). */
   professionalName?: string | null;
+  /** Mantido por compatibilidade; NÃO entra mais no texto (sem assinatura). */
   businessName?: string | null;
   now?: Date;
   /** Define a variação do texto; por padrão deriva do cliente + horário. */
@@ -76,53 +83,56 @@ export function formatDayLabel(startsAt: Date, now: Date = new Date()): string {
   return `${s.weekday}, ${date}`;
 }
 
+// Como o dia entra na frase. Dois encaixes, para a frase ficar sempre correta:
+//   em:   "no dia 15/10 (quinta-feira)"  → "Te esperamos no dia 15/10 (quinta-feira), às 14h"
+//   para: "o dia 15/10 (quinta-feira)"   → "ficou para o dia 15/10 (quinta-feira), às 14h"
+// Hoje/amanhã servem nos dois:            "hoje, quinta-feira (15/10)" / "amanhã, quinta-feira (15/10)"
+export function dayPhrases(startsAt: Date, now: Date = new Date()): { em: string; para: string } {
+  const s = partsOf(startsAt);
+  const today = partsOf(now).ymd;
+  const date = `${s.day}/${s.month}`;
+  if (s.ymd === today) return { em: `hoje, ${s.weekday} (${date})`, para: `hoje, ${s.weekday} (${date})` };
+  if (s.ymd === addDaysYmd(today, 1)) return { em: `amanhã, ${s.weekday} (${date})`, para: `amanhã, ${s.weekday} (${date})` };
+  return { em: `no dia ${date} (${s.weekday})`, para: `o dia ${date} (${s.weekday})` };
+}
+
 function hash(str: string): number {
   let h = 0;
   for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
   return h;
 }
 
-function signature(professional?: string | null, business?: string | null): string {
-  const p = (professional ?? "").trim();
-  const b = (business ?? "").trim();
-  if (p && b && p.toLowerCase() !== b.toLowerCase()) return `${p} · ${b}`;
-  return p || b;
+export const CONFIRMATION_VARIANTS = 8;
+
+/** Qual das 8 variações uma semente usa (mesma semente → mesma variação). */
+export function confirmationVariant(seed: string): number {
+  return hash(seed) % CONFIRMATION_VARIANTS;
 }
 
 export function buildConfirmationMessage(i: ConfirmationInput): string {
   const startsAt = typeof i.startsAt === "string" ? new Date(i.startsAt) : i.startsAt;
   const s = partsOf(startsAt);
-  const when = `${formatDayLabel(startsAt, i.now)}, às ${formatTimeLabel(s.hour, s.minute)}`;
+  const { em, para } = dayPhrases(startsAt, i.now);
+  const hora = `às ${formatTimeLabel(s.hour, s.minute)}`;
 
   const nome = firstName(i.clientName);
-  const service = i.serviceName.trim();
-  const duration = i.durationMinutes > 0 ? formatDuration(i.durationMinutes) : "";
-  const serviceLine = [service, duration].filter(Boolean).join(" · ");
-  const sign = signature(i.professionalName, i.businessName);
+  const sv = i.serviceName.trim();
+  const oi = nome ? `Oi, ${nome}!` : "Oi!";
+  const oiTudoBem = nome ? `Oi, ${nome}, tudo bem?` : "Oi, tudo bem?";
 
-  const variant = hash(i.variantSeed ?? `${i.clientName}|${startsAt.toISOString()}`) % 3;
+  const variant = confirmationVariant(i.variantSeed ?? `${i.clientName}|${startsAt.toISOString()}`);
 
-  const greeting = [
-    nome ? `Oi, ${nome}! 💛` : "Oi! 💛", // o ÚNICO emoji da mensagem
-    nome ? `Oi, ${nome}, tudo bem?` : "Oi, tudo bem?",
-    nome ? `Oi, ${nome}!` : "Oi!",
-  ][variant];
+  // [abertura, corpo] — cada corpo traz serviço (quando houver), dia e horário
+  const [greeting, body] = ([
+    [oi, `Seu horário está confirmado! Te esperamos ${em}, ${hora}${sv ? `, para ${sv}` : ""}. 💕`],
+    [oi, `Tudo certinho com o seu agendamento${sv ? ` de ${sv}` : ""}: ficou para ${para}, ${hora}. Até lá!`],
+    [oi, `Agendamento confirmado! Vamos te esperar ${em}, ${hora}${sv ? `, para ${sv}` : ""}. ✨`],
+    [oiTudoBem, `Passando para confirmar o seu horário${sv ? `: ${sv}` : ""} ${em}, ${hora}. Qualquer imprevisto, é só avisar por aqui.`],
+    [oi, `Seu horário${sv ? ` de ${sv}` : ""} está garantido para ${para}, ${hora}. Vai ser um prazer te receber! 🌸`],
+    [oi, `Prontinho, seu horário está confirmado${sv ? `: ${sv}` : ""} ${em}, ${hora}. Se precisar remarcar, é só chamar por aqui.`],
+    [oiTudoBem, `Seu agendamento${sv ? ` de ${sv}` : ""} está confirmado para ${para}, ${hora}. Te esperamos com carinho! 💕`],
+    [oi, `Só para confirmar: te esperamos ${em}, ${hora}${sv ? `, para ${sv}` : ""}. Até breve!`],
+  ] as const)[variant];
 
-  const intro = [
-    `Seu horário está confirmado: ${when}.`,
-    `Passando para confirmar o seu horário: ${when}.`,
-    `Seu atendimento está marcado para ${when}.`,
-  ][variant];
-
-  const closing = [
-    "Qualquer imprevisto, é só me avisar por aqui. Te espero!",
-    "Se precisar remarcar, me avisa por aqui, combinado?",
-    "Vai ser um prazer te receber! Se algo mudar, é só me chamar por aqui.",
-  ][variant];
-
-  return [greeting, "", intro, serviceLine, "", closing, sign]
-    .filter((line, idx, arr) => !(line === "" && (idx === 0 || arr[idx - 1] === "")))
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return `${greeting}\n\n${body}`;
 }
