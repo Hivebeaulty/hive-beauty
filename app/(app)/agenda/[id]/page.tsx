@@ -32,6 +32,8 @@ import {
   statusChangeErrorMessage,
 } from "@/lib/hive/appointment-flow";
 import { DEFAULT_PAYMENT_METHOD, paymentMethodOptions } from "@/lib/hive/payment-methods";
+import { describeConfirmation, parseConfirmation, type ConfirmationView } from "@/lib/hive/whatsapp-confirmation";
+import { WhatsappConfirmationStatus } from "@/components/whatsapp-confirmation-status";
 import { ChevronLeft, Phone, StickyNote, Info, Wallet, Trash2, AlertTriangle, UserX } from "lucide-react";
 
 type AppointmentDetail = {
@@ -71,6 +73,7 @@ export default function AgendamentoDetalhePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
+  const [confirmation, setConfirmation] = useState<ConfirmationView | null>(null); // WhatsApp automático (0018)
 
   // O botão "Atendimento realizado" aparece quando chega a hora do atendimento,
   // mesmo com a tela já aberta.
@@ -120,6 +123,11 @@ export default function AgendamentoDetalhePage() {
     } else {
       setNoShowEligible(false);
       setPayment(null);
+    }
+    // Situação da confirmação automática por WhatsApp. Erro ou 0018 ausente => oculto.
+    if (a) {
+      const { data: conf, error: confError } = await supabase.rpc("wa_get_appointment_confirmation", { p_appointment_id: id });
+      setConfirmation(confError ? null : describeConfirmation(parseConfirmation(conf)));
     }
     setLoading(false);
   }, [id]);
@@ -319,6 +327,11 @@ export default function AgendamentoDetalhePage() {
               Telefone
             </span>
             <span className="font-medium text-ink-800">{phoneText}</span>
+          </div>
+        )}
+        {confirmation && (
+          <div className="border-t border-ink-100 pt-3">
+            <WhatsappConfirmationStatus view={confirmation} />
           </div>
         )}
         {appt.notes && (

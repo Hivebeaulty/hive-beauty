@@ -10,6 +10,8 @@ import { formatDuration } from "@/lib/hive/format";
 import { buildConfirmationMessage } from "@/lib/hive/appointment-message";
 import { resolveSignatureName } from "@/lib/hive/display-name";
 import { whatsappChatLink, whatsappReach, type WhatsappReach } from "@/lib/hive/phone";
+import { describeConfirmation, parseConfirmation, type ConfirmationView } from "@/lib/hive/whatsapp-confirmation";
+import { WhatsappConfirmationStatus } from "@/components/whatsapp-confirmation-status";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
@@ -32,6 +34,8 @@ type CreatedAppointment = {
   professionalName: string | null;
   whatsappUrl: string | null;
   reach: WhatsappReach;
+  /** Confirmação automática (0018). null = sem automação: só o envio manual, como sempre. */
+  confirmation: ConfirmationView | null;
 };
 type ServiceOption = { id: string; name: string; duration_minutes: number; price: number };
 
@@ -191,8 +195,21 @@ export default function NovoAgendamentoPage() {
       businessName: companyName,
       variantSeed: inserted.id,
     });
+    // Confirmação AUTOMÁTICA (0018): o banco já decidiu na mesma transação do
+    // agendamento. Se ela está na fila, o wa.me some (evita mensagem em dobro).
+    // RPC ausente (0018 não aplicada) ou erro => tela como antes.
+    let confirmation: ConfirmationView | null = null;
+    try {
+      const { data: conf, error: confError } = await supabase.rpc("wa_get_appointment_confirmation", {
+        p_appointment_id: inserted.id,
+      });
+      if (!confError) confirmation = describeConfirmation(parseConfirmation(conf));
+    } catch {
+      confirmation = null;
+    }
     setCreated({
       id: inserted.id,
+      confirmation,
       clientId,
       clientName: client?.name ?? "",
       serviceName: service?.name ?? "",
@@ -237,7 +254,12 @@ export default function NovoAgendamentoPage() {
         </Card>
 
         <div className="space-y-2">
-          {created.whatsappUrl ? (
+          {created.confirmation && (
+            <Card>
+              <WhatsappConfirmationStatus view={created.confirmation} />
+            </Card>
+          )}
+          {created.confirmation && !created.confirmation.allowManual ? null : created.whatsappUrl ? (
             <>
               {/* Âncora (não window.open): o iOS não bloqueia e a profissional
                   confere a mensagem no WhatsApp antes de enviar. */}
