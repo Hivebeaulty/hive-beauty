@@ -151,3 +151,16 @@ test("whatsappReach: ok, sem telefone, fixo, inválido (mesma regra do banco)", 
   assert.equal(phone.whatsappReach("123"), "invalid");
   assert.equal(phone.whatsappReach("31 9999-9999"), "invalid");            // celular sem o 9: não inventamos o dígito
 });
+
+test("mensagem no SINGULAR: quem fala é a profissional, nunca uma equipe (todas as 8 variações)", () => {
+  const coletivo = /esperamos|aguardamos|a gente|estamos|vamos|nossa|nosso|conosco|nós/i;
+  const seen = new Set();
+  for (let i = 0; i < 400 && seen.size < msg.CONFIRMATION_VARIANTS; i++) {
+    const seed = `sing-${i}`;
+    if (seen.has(msg.confirmationVariant(seed))) continue;
+    seen.add(msg.confirmationVariant(seed));
+    const m = msg.buildConfirmationMessage({ ...base, variantSeed: seed });
+    assert.doesNotMatch(m, coletivo, m);
+  }
+  assert.equal(seen.size, 8);
+});

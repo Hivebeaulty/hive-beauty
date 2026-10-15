@@ -354,3 +354,70 @@ test("U16 situação da confirmação: rótulos certos, quem dispensa o wa.me, n
   await page.screenshot({ path: join(SHOTS, "22-situacoes-confirmacao-320.png"), fullPage: true });
   await page.close();
 });
+
+// ============================================================ Sprint visual — dashboard responsivo
+// Mede a GEOMETRIA real no Chromium: nenhum valor invade outro nem sai da
+// própria célula, em telas estreitas e largas, com valores grandes.
+async function dashboardGeometry(width, query) {
+  const page = await browser.newPage();
+  await page.setViewport({ width, height: 900, deviceScaleFactor: 1 });
+  await page.goto(`${PAGE}?view=dashboard&${query}`);
+  await page.waitForSelector('[data-testid="today-summary"]', { timeout: 6000 });
+  const r = await page.evaluate(() => {
+    const rect = (el) => el.getBoundingClientRect();
+    // extensão REAL do texto desenhado (a caixa do <p> ocupa a célula toda mesmo se o texto transbordar)
+    const ink = (el) => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect(); };
+    const out = { overlaps: [], escapes: [], hscroll: document.documentElement.scrollWidth > window.innerWidth + 1 };
+    for (const sel of ['[data-testid="today-summary"]', '[data-testid="month"]']) {
+      const card = document.querySelector(sel);
+      const stats = [...card.querySelectorAll("[data-stat]")];
+      const vals = stats.map((s) => ({ cell: rect(s), val: ink(s.querySelector("p")), lab: ink(s.querySelectorAll("p")[1]),
+        overflow: s.querySelector("p").scrollWidth > s.querySelector("p").clientWidth + 1, text: s.innerText.replace(/\n/g, " | ") }));
+      const cr = rect(card);
+      for (const v of vals) {
+        if (v.overflow || v.val.right > v.cell.right + 1 || v.val.left < v.cell.left - 1) out.escapes.push(`${sel}: valor sai da célula: ${v.text}`);
+        if (v.val.right > cr.right - 8) out.escapes.push(`${sel}: valor encosta/sai do cartão: ${v.text}`);
+      }
+      const boxes = vals.flatMap((v) => [{ b: v.val, n: "valor " + v.text }, { b: v.lab, n: "rótulo " + v.text }]);
+      for (let i = 0; i < vals.length; i++) for (let j = i + 1; j < vals.length; j++) {
+        for (const a of [vals[i].val, vals[i].lab]) for (const b of [vals[j].val, vals[j].lab]) {
+          const inter = Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+          if (inter) out.overlaps.push(`${sel}: "${vals[i].text}" x "${vals[j].text}"`);
+        }
+      }
+    }
+    return out;
+  });
+  return { page, r };
+}
+
+test("U17 dashboard: valor recebido e contagens NUNCA se sobrepõem nem saem do cartão (320–1440 px, com e sem financeiro)", async () => {
+  const widths = [320, 360, 375, 390, 414, 768, 1024, 1440];
+  for (const w of widths) for (const q of ["money=123456.78&today=12&up=148", "fin=0&today=128&up=1480", "money=0.5&today=0&up=0"]) {
+    const { page, r } = await dashboardGeometry(w, q);
+    assert.deepEqual(r.overlaps, [], `${w}px ${q}: sobreposição`);
+    assert.deepEqual(r.escapes, [], `${w}px ${q}: valor fora do espaço`);
+    assert.equal(r.hscroll, false, `${w}px ${q}: rolagem lateral`);
+    if (q.startsWith("money=123456") && [320, 390, 768, 1440].includes(w)) await page.screenshot({ path: join(SHOTS, `30-dashboard-${w}.png`), fullPage: true });
+    await page.close();
+  }
+});
+
+test("U18 dashboard: 'Pendências' saiu; 'Próximos atendimentos' aparece com o período; carregando sem quebrar", async () => {
+  const page = await browser.newPage();
+  await page.setViewport({ width: 390, height: 900, deviceScaleFactor: 1 });
+  await page.goto(`${PAGE}?view=dashboard&money=1500&up=7`);
+  await page.waitForSelector('[data-testid="today-summary"]', { timeout: 6000 });
+  const t = await page.$eval('[data-testid="today-summary"]', (e) => e.innerText);
+  assert.doesNotMatch(t, /Pendências/);
+  assert.match(t, /Próximos atendimentos/);
+  assert.match(t, /nos próximos 7 dias/);
+  assert.match(t, /Recebido hoje/);
+  await page.goto(`${PAGE}?view=dashboard&loading=1`);
+  await page.waitForSelector('[data-testid="today-summary"]', { timeout: 6000 });
+  assert.ok(await noHorizontalScroll(page));
+  await page.goto(`${PAGE}?view=kit`);
+  await sleep(300);
+  await page.screenshot({ path: join(SHOTS, "31-kit-390.png"), fullPage: true });
+  await page.close();
+});

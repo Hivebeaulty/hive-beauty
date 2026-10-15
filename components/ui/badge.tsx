@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export type BadgeTone = "neutral" | "primary" | "success" | "warning" | "danger" | "gold";
+export type BadgeTone = "neutral" | "primary" | "success" | "warning" | "danger" | "gold" | "wine" | "muted";
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
   neutral: "bg-ink-100 text-ink-700",
@@ -9,6 +9,9 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
   warning: "bg-warning/15 text-warning",
   danger: "bg-danger/15 text-danger",
   gold: "bg-gold-100 text-gold-700",
+  wine: "bg-wine-50 text-wine-500",
+  // "perdeu o efeito" (ex.: cancelado): só contorno, texto discreto
+  muted: "bg-transparent text-ink-400 ring-1 ring-inset ring-ink-200",
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {

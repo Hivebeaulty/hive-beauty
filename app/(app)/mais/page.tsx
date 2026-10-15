@@ -16,7 +16,7 @@ export default async function MaisPage() {
 
   return (
     <div className="space-y-6 pb-4">
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Mais</h1>
+      <h1 className="page-title">Mais</h1>
 
       <div className="space-y-2">
         <Link href="/mais/servicos">

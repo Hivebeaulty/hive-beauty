@@ -14,3 +14,4 @@ export * from "./page-header";
 export * from "./segmented-control";
 export * from "./switch";
 export * from "./number-input";
+export * from "./stat";

@@ -20,7 +20,7 @@ export function WhatsappContent() {
       </Link>
 
       <div>
-        <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">WhatsApp</h1>
+        <h1 className="page-title">WhatsApp</h1>
         <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Áurea.</p>
       </div>
 

@@ -9,7 +9,7 @@ export default function NovaDespesaPage() {
         <ChevronLeft className="size-4" />
         Despesas
       </Link>
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Nova despesa</h1>
+      <h1 className="page-title">Nova despesa</h1>
       <DespesaForm />
     </div>
   );

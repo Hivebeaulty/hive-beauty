@@ -44,8 +44,8 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
                 className={cn(
                   "flex items-center gap-3 rounded-md border-l-2 py-2.5 pl-3.5 pr-3 text-sm font-medium transition-colors",
                   active
-                    ? "border-gold-500 bg-ink-50 text-ink-800"
-                    : "border-transparent text-ink-500 hover:bg-ink-50 hover:text-ink-800"
+                    ? "border-gold-500 bg-sand font-semibold text-ink-800"
+                    : "border-transparent text-ink-500 hover:bg-sand/60 hover:text-ink-800"
                 )}
               >
                 <Icon className="size-[18px]" strokeWidth={active ? 2.25 : 2} />
@@ -62,7 +62,7 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
       </aside>
 
       {/* Mobile — barra inferior */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-ink-100 bg-surface pb-[env(safe-area-inset-bottom,0px)] md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-ink-100 bg-surface/95 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_16px_-8px_rgba(42,29,22,0.12)] backdrop-blur md:hidden">
         {items.map((item) => {
           const Icon = ICONS[item.href] ?? Home;
           const active = isActive(pathname, item.href);
@@ -70,12 +70,20 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
-                active ? "text-ink-800" : "text-ink-400"
+                "relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] transition-colors",
+                active ? "font-semibold text-ink-800" : "font-medium text-ink-400"
               )}
             >
-              <Icon className="size-5" strokeWidth={active ? 2.25 : 2} />
+              {/* indicador do item ativo: traço dourado no topo + ícone sobre areia */}
+              <span
+                aria-hidden="true"
+                className={cn("absolute inset-x-5 top-0 h-[3px] rounded-b-full", active ? "bg-gold-500" : "bg-transparent")}
+              />
+              <span className={cn("flex h-7 w-11 items-center justify-center rounded-full", active && "bg-sand")}>
+                <Icon className="size-5" strokeWidth={active ? 2.25 : 2} />
+              </span>
               {item.label}
             </Link>
           );

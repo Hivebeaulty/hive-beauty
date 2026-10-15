@@ -14,6 +14,9 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, SkeletonListItem } from "@/components/ui/skeleton";
+import { Stat } from "@/components/ui/stat";
+import { TodaySummary } from "@/components/dashboard/today-summary";
+import { UPCOMING_STATUSES, upcomingWindow } from "@/lib/hive/dashboard";
 import { CalendarPlus, UserPlus, CalendarX, Sparkles, ArrowRight } from "lucide-react";
 
 type PeriodIndicators = {
@@ -67,6 +70,7 @@ export default function InicioPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [pending, setPending] = useState<PendingPayment[]>([]);
   const [activeClients, setActiveClients] = useState<number>(0);
+  const [upcomingCount, setUpcomingCount] = useState(0);
   const [overdueCount, setOverdueCount] = useState(0);
   const [birthdaysWeekCount, setBirthdaysWeekCount] = useState(0);
 
@@ -79,6 +83,7 @@ export default function InicioPage() {
     const dayEnd = addDays(dayStart, 1);
     const { start: monthStart, end: monthEnd } = getPeriodRange("mes");
     const activeSinceStr = format(subDays(now, 60), "yyyy-MM-dd");
+    const upcoming = upcomingWindow(now);
 
     // Cada chamada roda com o privilégio de quem está logado — RLS já garante
     // que faturado/recebido/pendente venham zerados para quem não é
@@ -93,6 +98,7 @@ export default function InicioPage() {
       { count: activeCount },
       { data: clientsForRelationship },
       { data: apptsForRelationship },
+      { count: upcomingTotal },
     ] = await Promise.all([
       supabase.auth.getUser(),
       supabase.rpc("get_period_indicators", { p_company_id: companyId, p_start: todayStr, p_end: todayStr }),
@@ -121,6 +127,15 @@ export default function InicioPage() {
       // nova inventada aqui, só reaproveitada).
       supabase.from("clients").select("id, birth_date").eq("company_id", companyId).is("archived_at", null),
       supabase.from("appointments").select("client_id, scheduled_start").eq("company_id", companyId).eq("status", "concluido"),
+      // Próximos atendimentos: agendados/confirmados, de agora até 7 dias
+      // (regra em lib/hive/dashboard.ts). Contagem feita no banco.
+      supabase
+        .from("appointments")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", companyId)
+        .in("status", [...UPCOMING_STATUSES])
+        .gt("scheduled_start", upcoming.from)
+        .lt("scheduled_start", upcoming.to),
     ]);
 
     // Saudação: "Como você quer ser chamada?" (profiles.display_name) > 1º nome do
@@ -149,6 +164,7 @@ export default function InicioPage() {
     setAppointments((appts as unknown as Appointment[]) ?? []);
     setPending((pend as unknown as PendingPayment[]) ?? []);
     setActiveClients(activeCount ?? 0);
+    setUpcomingCount(upcomingTotal ?? 0);
 
     const visitsByClient = new Map<string, string[]>();
     for (const a of apptsForRelationship ?? []) {
@@ -208,43 +224,26 @@ export default function InicioPage() {
         </Link>
       </div>
 
-      {/* HOJE ------------------------------------------------------------ */}
+      {/* HOJE: painel em destaque (indicadores) + agenda do dia ------------------ */}
+      <TodaySummary
+        loading={loading}
+        canSeeFinance={canSeeFinance}
+        received={today?.recebido}
+        appointmentsToday={activeAppointments.length}
+        upcoming={upcomingCount}
+        dateLabel={dateLabel}
+      />
+
       <Card>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-ink-700">Hoje</h2>
-          <span className="text-xs capitalize text-ink-400">{dateLabel}</span>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-ink-700">Agenda de hoje</h2>
+          {activeAppointments.length > 0 && (
+            <Link href="/agenda" className="text-xs font-medium text-ink-500 hover:text-ink-800">
+              Ver agenda
+            </Link>
+          )}
         </div>
-
-        {loading ? (
-          <div className="mb-5 grid grid-cols-3 gap-4">
-            <Skeleton className="h-12" />
-            <Skeleton className="h-12" />
-            <Skeleton className="h-12" />
-          </div>
-        ) : (
-          <div className={`mb-5 grid gap-4 ${canSeeFinance ? "grid-cols-3" : "grid-cols-2"}`}>
-            {canSeeFinance && (
-              <div>
-                <p className="text-2xl font-semibold text-ink-800">{formatMoney(today?.recebido)}</p>
-                <p className="text-xs text-ink-400">Recebido</p>
-              </div>
-            )}
-            <div>
-              <p className="text-2xl font-semibold text-ink-800">{activeAppointments.length}</p>
-              <p className="text-xs text-ink-400">Atendimentos</p>
-            </div>
-            {canSeeFinance && (
-              <div>
-                <p className={`text-2xl font-semibold ${pending.length > 0 ? "text-warning" : "text-ink-800"}`}>
-                  {pending.length}
-                </p>
-                <p className="text-xs text-ink-400">Pendências</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="space-y-2 border-t border-ink-100 pt-4">
+        <div className="space-y-1">
           {loading ? (
             <>
               <SkeletonListItem />
@@ -268,12 +267,12 @@ export default function InicioPage() {
               <Link
                 key={a.id}
                 href={`/agenda/${a.id}`}
-                className="flex items-center gap-3 rounded-md py-2 transition-colors hover:bg-ink-50"
+                className="-mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-sand/60"
               >
-                <div className="w-12 shrink-0 text-sm font-semibold text-ink-700">
+                <div className="w-12 shrink-0 font-serif text-[15px] font-medium tabular-nums text-ink-800">
                   {new Date(a.scheduled_start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 border-l border-sand-200 pl-3">
                   <p className="truncate text-sm font-medium text-ink-800">{a.clients?.name}</p>
                   <p className="truncate text-xs text-ink-400">{a.services?.name}</p>
                 </div>
@@ -304,25 +303,13 @@ export default function InicioPage() {
             <Skeleton className="h-12" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
             {canSeeFinance && (
-              <div>
-                <p className="text-lg font-semibold text-ink-800">{formatMoney(month?.recebido)}</p>
-                <p className="text-xs text-ink-400">Recebido</p>
-              </div>
+              <Stat size="sm" accent value={formatMoney(month?.recebido)} label="Recebido" className="col-span-2 sm:col-span-1" />
             )}
-            <div>
-              <p className="text-lg font-semibold text-ink-800">{month?.atendimentos_realizados ?? 0}</p>
-              <p className="text-xs text-ink-400">Atendimentos</p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-ink-800">{activeClients}</p>
-              <p className="text-xs text-ink-400">Clientes ativas</p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-ink-800">{month?.clientes_novas ?? 0}</p>
-              <p className="text-xs text-ink-400">Clientes novas</p>
-            </div>
+            <Stat size="sm" value={month?.atendimentos_realizados ?? 0} label="Atendimentos" />
+            <Stat size="sm" value={activeClients} label="Clientes ativas" />
+            <Stat size="sm" value={month?.clientes_novas ?? 0} label="Clientes novas" />
           </div>
         )}
       </Card>
@@ -359,15 +346,13 @@ export default function InicioPage() {
           <h2 className="mb-4 text-sm font-semibold text-ink-700">Relacionamento</h2>
           <div className="grid grid-cols-2 gap-4">
             {overdueCount > 0 && (
-              <Link href="/clientes?segmento=inativas" className="block">
-                <p className="text-lg font-semibold text-warning">{overdueCount}</p>
-                <p className="text-xs text-ink-400">sem retorno recente</p>
+              <Link href="/clientes?segmento=inativas" className="block rounded-md transition-colors hover:bg-sand/60">
+                <Stat size="sm" value={overdueCount} label="sem retorno recente" valueClassName="text-wine-500" />
               </Link>
             )}
             {birthdaysWeekCount > 0 && (
-              <Link href="/clientes?segmento=aniversariantes" className="block">
-                <p className="text-lg font-semibold text-ink-800">{birthdaysWeekCount}</p>
-                <p className="text-xs text-ink-400">aniversário{birthdaysWeekCount !== 1 ? "s" : ""} esta semana</p>
+              <Link href="/clientes?segmento=aniversariantes" className="block rounded-md transition-colors hover:bg-sand/60">
+                <Stat size="sm" value={birthdaysWeekCount} label={`aniversário${birthdaysWeekCount !== 1 ? "s" : ""} esta semana`} />
               </Link>
             )}
           </div>

@@ -73,7 +73,7 @@ export default function RelatoriosPage() {
         Mais
       </Link>
 
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Relatórios</h1>
+      <h1 className="page-title">Relatórios</h1>
 
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {PERIOD_OPTIONS.map((p) => (

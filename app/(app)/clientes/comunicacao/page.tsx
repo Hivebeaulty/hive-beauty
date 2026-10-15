@@ -172,7 +172,7 @@ export default function ComunicacaoPage() {
       </Link>
 
       <div>
-        <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Central de comunicação</h1>
+        <h1 className="page-title">Central de comunicação</h1>
         <p className="mt-0.5 text-sm text-ink-400">Prepare uma mensagem e veja quem a receberia.</p>
       </div>
 

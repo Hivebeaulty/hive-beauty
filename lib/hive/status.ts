@@ -22,10 +22,10 @@ export const STATUS_COLOR: Record<string, string> = {
 import type { BadgeTone } from "@/components/ui/badge";
 
 export const STATUS_TONE: Record<string, BadgeTone> = {
-  agendado: "neutral",
+  agendado: "wine",
   confirmado: "gold",
   em_atendimento: "warning",
   concluido: "success",
-  cancelado: "neutral",
+  cancelado: "muted",
   nao_compareceu: "danger",
 };

@@ -231,7 +231,7 @@ export default function NovoAgendamentoPage() {
       <div className="space-y-5 pb-4">
         <div className="flex items-center gap-2.5">
           <CheckCircle2 className="size-6 text-success" />
-          <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Agendamento confirmado</h1>
+          <h1 className="page-title">Agendamento confirmado</h1>
         </div>
 
         <Card className="space-y-3">
@@ -302,7 +302,7 @@ export default function NovoAgendamentoPage() {
 
   return (
     <div className="space-y-5 pb-4">
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Novo atendimento</h1>
+      <h1 className="page-title">Novo atendimento</h1>
 
       {hoursConfigured === false && (
         <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-ink-700">

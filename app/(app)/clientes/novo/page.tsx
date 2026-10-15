@@ -9,7 +9,7 @@ export default function NovaClientePage() {
         <ChevronLeft className="size-4" />
         Clientes
       </Link>
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Nova cliente</h1>
+      <h1 className="page-title">Nova cliente</h1>
       <ClienteForm />
     </div>
   );

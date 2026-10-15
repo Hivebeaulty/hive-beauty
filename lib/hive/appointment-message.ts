@@ -8,7 +8,8 @@
 //     confirmação AUTOMÁTICA.
 //
 // Tom: feminino, acolhedor e natural, de salão de beleza; sem exagero e sem
-// soar comercial. Emoji só em parte das variações (no máximo 1 por mensagem).
+// soar comercial. Na PRIMEIRA PESSOA DO SINGULAR: quem fala é a profissional
+// ("te espero", "me avise"), nunca uma equipe ("te esperamos", "a gente"). Emoji só em parte das variações (no máximo 1 por mensagem).
 // SEM assinatura: a mensagem termina naturalmente, sem nome de empresa nem de
 // profissional. Sempre traz serviço, dia e horário (America/Sao_Paulo).
 //
@@ -84,7 +85,7 @@ export function formatDayLabel(startsAt: Date, now: Date = new Date()): string {
 }
 
 // Como o dia entra na frase. Dois encaixes, para a frase ficar sempre correta:
-//   em:   "no dia 15/10 (quinta-feira)"  → "Te esperamos no dia 15/10 (quinta-feira), às 14h"
+//   em:   "no dia 15/10 (quinta-feira)"  → "Te espero no dia 15/10 (quinta-feira), às 14h"
 //   para: "o dia 15/10 (quinta-feira)"   → "ficou para o dia 15/10 (quinta-feira), às 14h"
 // Hoje/amanhã servem nos dois:            "hoje, quinta-feira (15/10)" / "amanhã, quinta-feira (15/10)"
 export function dayPhrases(startsAt: Date, now: Date = new Date()): { em: string; para: string } {
@@ -124,14 +125,14 @@ export function buildConfirmationMessage(i: ConfirmationInput): string {
 
   // [abertura, corpo] — cada corpo traz serviço (quando houver), dia e horário
   const [greeting, body] = ([
-    [oi, `Seu horário está confirmado! Te esperamos ${em}, ${hora}${sv ? `, para ${sv}` : ""}. 💕`],
+    [oi, `Seu horário está confirmado! Te espero ${em}, ${hora}${sv ? `, para ${sv}` : ""}. 💕`],
     [oi, `Tudo certinho com o seu agendamento${sv ? ` de ${sv}` : ""}: ficou para ${para}, ${hora}. Até lá!`],
-    [oi, `Agendamento confirmado! Vamos te esperar ${em}, ${hora}${sv ? `, para ${sv}` : ""}. ✨`],
-    [oiTudoBem, `Passando para confirmar o seu horário${sv ? `: ${sv}` : ""} ${em}, ${hora}. Qualquer imprevisto, é só avisar por aqui.`],
-    [oi, `Seu horário${sv ? ` de ${sv}` : ""} está garantido para ${para}, ${hora}. Vai ser um prazer te receber! 🌸`],
-    [oi, `Prontinho, seu horário está confirmado${sv ? `: ${sv}` : ""} ${em}, ${hora}. Se precisar remarcar, é só chamar por aqui.`],
-    [oiTudoBem, `Seu agendamento${sv ? ` de ${sv}` : ""} está confirmado para ${para}, ${hora}. Te esperamos com carinho! 💕`],
-    [oi, `Só para confirmar: te esperamos ${em}, ${hora}${sv ? `, para ${sv}` : ""}. Até breve!`],
+    [oi, `Agendamento confirmado! Vou te esperar ${em}, ${hora}${sv ? `, para ${sv}` : ""}. ✨`],
+    [oiTudoBem, `Passando para confirmar o seu horário${sv ? `: ${sv}` : ""} ${em}, ${hora}. Qualquer imprevisto, é só me avisar por aqui.`],
+    [oi, `Seu horário${sv ? ` de ${sv}` : ""} está garantido para ${para}, ${hora}. Vou adorar te receber! 🌸`],
+    [oi, `Prontinho, seu horário está confirmado${sv ? `: ${sv}` : ""} ${em}, ${hora}. Se precisar remarcar, é só me chamar por aqui.`],
+    [oiTudoBem, `Seu agendamento${sv ? ` de ${sv}` : ""} está confirmado para ${para}, ${hora}. Te espero com carinho! 💕`],
+    [oi, `Só para confirmar: te espero ${em}, ${hora}${sv ? `, para ${sv}` : ""}. Até breve!`],
   ] as const)[variant];
 
   return `${greeting}\n\n${body}`;
