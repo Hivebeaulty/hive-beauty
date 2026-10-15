@@ -8,6 +8,15 @@ import type { RpcResult, WaApi } from "@/lib/hive/whatsapp-controller";
 import { WhatsappAutoConfirmation } from "@/components/settings/whatsapp-auto-confirmation";
 import { WhatsappConfirmationStatus } from "@/components/whatsapp-confirmation-status";
 import { describeConfirmation, type ConfirmationState } from "@/lib/hive/whatsapp-confirmation";
+import { TodaySummary } from "@/components/dashboard/today-summary";
+import { Stat } from "@/components/ui/stat";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CalendarX } from "lucide-react";
 
 type Scenario = { status: RpcResult; qr: RpcResult; request: RpcResult; disc: RpcResult; delayMs: number };
 const sc: Scenario = {
@@ -39,7 +48,48 @@ createRoot(document.getElementById("root")!).render(
           <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">WhatsApp</h1>
           <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Áurea.</p>
         </div>
-        {view === "auto" ? (
+        {view === "dashboard" ? (
+          // Sprint visual: painel "Hoje" + "Negócio no mês" com números reais grandes (pior caso de largura)
+          (() => {
+            const q = new URLSearchParams(location.search);
+            const money = Number(q.get("money") ?? "12345.67");
+            const fin = q.get("fin") !== "0";
+            const fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+            return (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="font-serif text-[26px] italic text-ink-800 sm:text-[30px]">Boa tarde, Patrícia.</h1>
+                  <p className="text-sm text-ink-400">Veja como está o seu negócio hoje.</p>
+                </div>
+                <TodaySummary loading={q.get("loading") === "1"} canSeeFinance={fin} received={money}
+                  appointmentsToday={Number(q.get("today") ?? "12")} upcoming={Number(q.get("up") ?? "148")} dateLabel="quinta-feira, 15 de outubro" />
+                <Card data-testid="month">
+                  <h2 className="mb-4 text-sm font-semibold text-ink-700">Negócio no mês</h2>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+                    {fin && <Stat size="sm" accent value={fmt.format(money * 9)} label="Recebido" className="col-span-2 sm:col-span-1" />}
+                    <Stat size="sm" value={286} label="Atendimentos" />
+                    <Stat size="sm" value={143} label="Clientes ativas" />
+                    <Stat size="sm" value={27} label="Clientes novas" />
+                  </div>
+                </Card>
+              </div>
+            );
+          })()
+        ) : view === "kit" ? (
+          <div className="space-y-5">
+            <PageHeader title="Clientes" description="Acompanhe quem volta e quem sumiu." actions={<Button size="sm">Nova cliente</Button>} />
+            <Card>
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge status="agendado" /><StatusBadge status="confirmado" /><StatusBadge status="concluido" />
+                <StatusBadge status="cancelado" /><StatusBadge status="nao_compareceu" /><Badge tone="gold">Plano Ouro</Badge>
+              </div>
+              <p className="mt-3 text-sm text-ink-400">Texto secundário com o novo contraste, usado em toda a interface.</p>
+            </Card>
+            <Card tone="sand"><p className="text-sm text-ink-700">Cartão areia para agrupar conteúdo secundário.</p></Card>
+            <div className="flex flex-wrap gap-2"><Button>Salvar</Button><Button variant="secondary">Cancelar</Button><Button variant="ghost">Voltar</Button><Button variant="danger">Excluir</Button></div>
+            <EmptyState icon={CalendarX} title="Nenhum atendimento hoje" description="Aproveite para organizar a agenda dos próximos dias." />
+          </div>
+        ) : view === "auto" ? (
           // W5: preferência da empresa, falando com o cliente do Supabase simulado (window.__rpc)
           <WhatsappAutoConfirmation companyId="00000000-0000-0000-0000-000000000001" />
         ) : view === "confirmation" ? (

@@ -177,7 +177,7 @@ export default function ImportarClientesPage() {
         <ChevronLeft className="size-4" />
         Clientes
       </Link>
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Importar contatos</h1>
+      <h1 className="page-title">Importar contatos</h1>
 
       {rows.length === 0 ? (
         <div className="space-y-3">

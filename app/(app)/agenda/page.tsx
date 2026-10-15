@@ -148,7 +148,7 @@ export default function AgendaPage() {
   return (
     <div className="space-y-4 pb-4">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Agenda</h1>
+        <h1 className="page-title">Agenda</h1>
         <Link href={`/agenda/novo?data=${format(refDate, "yyyy-MM-dd")}`}>
           <Button size="sm">
             <CalendarPlus className="size-4" />

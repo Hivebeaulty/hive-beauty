@@ -19,7 +19,7 @@ export function ConfiguracoesContent({ isAdmin }: { isAdmin: boolean }) {
         Mais
       </Link>
 
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Configurações</h1>
+      <h1 className="page-title">Configurações</h1>
 
       <ProfileNameCard />
 

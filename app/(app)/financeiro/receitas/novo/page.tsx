@@ -9,7 +9,7 @@ export default function NovaReceitaPage() {
         <ChevronLeft className="size-4" />
         Receitas
       </Link>
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Novo recebimento</h1>
+      <h1 className="page-title">Novo recebimento</h1>
       <ReceitaForm />
     </div>
   );

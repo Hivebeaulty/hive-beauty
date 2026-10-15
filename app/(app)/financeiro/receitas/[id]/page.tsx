@@ -17,7 +17,7 @@ export default async function EditarReceitaPage({ params }: { params: Promise<{ 
         <ChevronLeft className="size-4" />
         Receitas
       </Link>
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Editar recebimento</h1>
+      <h1 className="page-title">Editar recebimento</h1>
       {payment.appointment_id && (
         <p className="rounded-lg bg-gold-50 p-3 text-xs text-gold-700">
           Este recebimento está vinculado a um atendimento na Agenda. Editar aqui não altera o

@@ -25,7 +25,7 @@ export default async function EditarDespesaPage({ params }: { params: Promise<{ 
         <ChevronLeft className="size-4" />
         Despesas
       </Link>
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Editar despesa</h1>
+      <h1 className="page-title">Editar despesa</h1>
       <DespesaForm
         initial={{
           id: expense.id,

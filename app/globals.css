@@ -28,6 +28,14 @@ body {
   outline-offset: 2px;
 }
 
+/* Título de página: a serifada da marca dá personalidade aos títulos (antes
+   só a saudação a usava). Um padrão só, aplicado em todas as telas. */
+@layer components {
+  .page-title {
+    @apply font-serif text-[1.625rem] font-medium leading-tight tracking-[-0.01em] text-ink-800 sm:text-[1.875rem];
+  }
+}
+
 /* Base para o efeito shimmer do componente Skeleton. */
 .skeleton-shimmer {
   background: linear-gradient(

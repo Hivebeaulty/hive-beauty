@@ -50,8 +50,8 @@ begin
   insert into appointments (id, company_id, client_id, service_id, professional_member_id, price, scheduled_start, scheduled_end, notes)
     values ('f077bf3d-5507-441a-8114-b3493ebd640b', c1, k1, s1, m1, 100, (hoje - 14 + time '17:00') at time zone 'America/Sao_Paulo',
             (hoje - 14 + time '18:00') at time zone 'America/Sao_Paulo', 'REGULARIZAR-100'),
-           ('674b1ea5-3bbc-46dd-bd39-2799f0f51a35', c2, k2, s2, m2, 150, (hoje - 10 + time '08:00') at time zone 'America/Sao_Paulo',
-            (hoje - 10 + time '09:00') at time zone 'America/Sao_Paulo', 'REGULARIZAR-150');
+           ('674b1ea5-3bbc-46dd-bd39-2799f0f51a35', c2, k2, s2, m2, 150, (hoje - 16 + time '08:00') at time zone 'America/Sao_Paulo',
+            (hoje - 16 + time '09:00') at time zone 'America/Sao_Paulo', 'REGULARIZAR-150');
 
   -- cancelados/faltas e futuros
   for i in 1..5 loop

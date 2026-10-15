@@ -17,7 +17,7 @@ export default async function EditarClientePage({ params }: { params: Promise<{ 
         <ChevronLeft className="size-4" />
         {client.name}
       </Link>
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Editar cliente</h1>
+      <h1 className="page-title">Editar cliente</h1>
       <ClienteForm
         initial={{
           id: client.id,

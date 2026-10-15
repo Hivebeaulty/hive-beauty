@@ -144,7 +144,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
         <div className="flex items-center gap-3">
           <Avatar name={client.name} size="lg" />
           <div>
-            <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">{client.name}</h1>
+            <h1 className="page-title">{client.name}</h1>
             <p className="text-sm text-ink-400">{phoneText ?? "Sem telefone"}</p>
           </div>
         </div>

@@ -9,7 +9,7 @@ export default function NovoServicoPage() {
         <ChevronLeft className="size-4" />
         Serviços
       </Link>
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Novo serviço</h1>
+      <h1 className="page-title">Novo serviço</h1>
       <ServicoForm />
     </div>
   );

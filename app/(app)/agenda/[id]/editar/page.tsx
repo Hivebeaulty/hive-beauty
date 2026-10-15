@@ -213,7 +213,7 @@ export default function EditarAgendamentoPage() {
   if (!canEditAppointment(original.status)) {
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Editar agendamento</h1>
+        <h1 className="page-title">Editar agendamento</h1>
         <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-ink-50/60 px-4 py-3 text-sm text-ink-600">
           <Info className="mt-0.5 size-4 shrink-0 text-ink-400" />
           <span>Só agendamentos em aberto podem ser editados. Este já foi concluído, cancelado ou marcado como falta.</span>
@@ -255,7 +255,7 @@ export default function EditarAgendamentoPage() {
 
   return (
     <div className="space-y-5 pb-4">
-      <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">Editar agendamento</h1>
+      <h1 className="page-title">Editar agendamento</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Select label="Cliente" required value={clientId} onChange={(e) => setClientId(e.target.value)}>

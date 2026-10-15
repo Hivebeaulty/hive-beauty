@@ -307,7 +307,7 @@ export default function AgendamentoDetalhePage() {
 
       <div>
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">{appt.clients?.name}</h1>
+          <h1 className="page-title">{appt.clients?.name}</h1>
           <StatusBadge status={appt.status} />
         </div>
         <p className="text-sm text-ink-400">{appt.services?.name}</p>

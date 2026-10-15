@@ -27,7 +27,9 @@ const config: Config = {
           100: "#E9E0D6",
           200: "#D6CABE",
           300: "#B0A093",
-          400: "#8C7A6B",
+          // texto secundário: escurecido de #8C7A6B (3,8:1 sobre o creme, abaixo
+          // do mínimo de leitura) para 5,1:1 — principal causa da tela "pálida"
+          400: "#7A6656",
           500: "#6F5B4C",
           600: "#5C4A3D",
           700: "#4A382E",
@@ -42,13 +44,30 @@ const config: Config = {
           300: "#E3CBA0",
           500: "#C9A876", // accent aprovado
           600: "#B08F5E",
-          700: "#8F7349",
+          700: "#7E6338", // texto dourado legível (5,2:1 sobre o creme)
         },
 
-        // Semânticas — já eram tons terrosos e discretos, mantidas.
-        success: "#7A9B76",
-        warning: "#C98A4B",
-        danger: "#B85C5C",
+        // Cor de apoio: ameixa. Detalhes de destaque (indicadores, avisos
+        // de atenção suave) — nunca fundo grande, nunca botão principal.
+        wine: {
+          50: "#F5EEF3",
+          100: "#EADCE6",
+          300: "#B993AE",
+          500: "#6A3E5C", // ameixa — distinta do vermelho de alerta (danger)
+          700: "#4E2C44",
+        },
+
+        // Areia: superfície tingida para agrupar conteúdo sem usar branco puro.
+        sand: {
+          DEFAULT: "#F3EADF",
+          200: "#E8D9C6",
+        },
+
+        // Semânticas — mesmos tons terrosos, aprofundados para serem legíveis
+        // como texto (antes 2,9:1 / 2,7:1 / 4,1:1 sobre o creme).
+        success: "#4F7A52", // sálvia — 4,6:1
+        warning: "#A8642A", // âmbar — 4,3:1
+        danger: "#A2443F", // vinho-rosado — 5,7:1
 
         // --- LEGADO (Hive Beauty) -------------------------------------
         // Mantido de propósito para não quebrar telas que ainda não foram
@@ -80,6 +99,10 @@ const config: Config = {
         // (modal, dropdown, toast, FAB). O resto usa borda 1px (ink-100).
         elevated:
           "0 8px 24px -4px rgba(42, 29, 22, 0.12), 0 2px 8px -2px rgba(42, 29, 22, 0.08)",
+        // Cartões: borda quente + sombra curta e quente (não a sombra cinza genérica).
+        card: "0 1px 0 rgba(58, 42, 34, 0.04), 0 2px 6px -2px rgba(58, 42, 34, 0.08)",
+        // Painel em destaque (cartão "Hoje"): profundidade só onde está o foco.
+        feature: "0 12px 28px -12px rgba(42, 29, 22, 0.45)",
       },
       keyframes: {
         shimmer: {
