@@ -287,3 +287,16 @@ test('AC11 número sem WhatsApp: falha definitiva, sem novas tentativas; tela v�
   assert.equal(j.state, 'failed'); assert.equal(j.reason, 'no_whatsapp')
   await w.manager.shutdown()
 })
+
+test('AC12 encerramento seguro: gravação de chaves que chega DEPOIS de fechar a conexão é salva antes de devolver a posse', async () => {
+  const w = newWorker('ac-w1')
+  await connectFresh(w, A, '5511900000001')
+  await sleep(800)                                // conexão parada há um tempo: nenhuma atividade recente
+  FakeHub.lateWriteMs = 150                       // a biblioteca ainda grava 150 ms depois do fim da conexão
+  await w.manager.shutdown()                       // como no SIGTERM da Discloud
+  await sleep(300)
+  assert.deepEqual(FakeHub.lateWriteErrors, [], 'a gravação tardia foi recusada (posse já devolvida)')
+  assert.equal(await q1(`select count(*)::int from whatsapp_private.auth where company_id = $1 and category = 'session' and key_id = 'late-write'`, [A]), 1)
+  const s = await session(A)
+  assert.equal(s.lease_owner, null, 'a posse foi devolvida no fim')
+})

@@ -32,6 +32,7 @@ test('sem credencial: grava QR; ao escanear, conecta e grava número e credencia
 test('QR não escaneado depois do limite: marca desconectado com motivo e encerra', async () => {
   const s = make(); await s.start()
   for (let i = 0; i < 4; i++) { FakeHub.last().emitQr(`QR-${i}`); await tick() }
+  await tick(80)   // a parada espera a biblioteca silenciar (encerramento seguro)
   assert.equal(stopped, 'qr_timeout')
   assert.ok(db.calls.some((c) => c.setState === 'disconnected' && /QR/.test(c.error)))
 })
@@ -71,7 +72,7 @@ test('evento do socket ANTIGO após reconectar é ignorado (sem reconexão fanta
 test('desconectado pelo celular (401): estado logged_out e encerra sem tentar de novo', async () => {
   const s = make(); await s.start()
   FakeHub.last().scanAndOpen(); await tick(20)
-  FakeHub.last().close(401); await tick(60)
+  FakeHub.last().close(401); await tick(120)   // a parada espera a biblioteca silenciar
   assert.equal(stopped, 'logged_out')
   assert.ok(db.states().includes('logged_out'))
   assert.equal(FakeHub.sockets.length, 1)
@@ -81,7 +82,7 @@ test('sessão aberta em outro lugar (440) e acesso negado (403): erro e encerra'
   for (const [code, reason] of [[440, 'replaced'], [403, 'forbidden']]) {
     db = new MemoryDb(); FakeHub.reset()
     const s = make(); await s.start()
-    FakeHub.last().close(code); await tick(30)
+    FakeHub.last().close(code); await tick(100)   // a parada espera a biblioteca silenciar
     assert.equal(stopped, reason)
     assert.ok(db.calls.some((c) => c.setState === 'error'))
   }

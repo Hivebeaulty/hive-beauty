@@ -33,8 +33,10 @@ import {
 } from "@/lib/hive/appointment-flow";
 import { DEFAULT_PAYMENT_METHOD, paymentMethodOptions } from "@/lib/hive/payment-methods";
 import { describeConfirmation, parseConfirmation, type ConfirmationView } from "@/lib/hive/whatsapp-confirmation";
+import { canEditAppointment } from "@/lib/hive/appointment-edit";
+import { describeChangeNotice, parseChangeNotice, type ChangeNoticeView } from "@/lib/hive/whatsapp-change-notice";
 import { WhatsappConfirmationStatus } from "@/components/whatsapp-confirmation-status";
-import { ChevronLeft, Phone, StickyNote, Info, Wallet, Trash2, AlertTriangle, UserX } from "lucide-react";
+import { ChevronLeft, Phone, StickyNote, Info, Wallet, Trash2, AlertTriangle, UserX, MessageCircle } from "lucide-react";
 
 type AppointmentDetail = {
   id: string;
@@ -74,6 +76,7 @@ export default function AgendamentoDetalhePage() {
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [confirmation, setConfirmation] = useState<ConfirmationView | null>(null); // WhatsApp automático (0018)
+  const [cancelNotice, setCancelNotice] = useState<ChangeNoticeView | null>(null); // aviso de cancelamento (0023)
 
   // O botão "Atendimento realizado" aparece quando chega a hora do atendimento,
   // mesmo com a tela já aberta.
@@ -152,6 +155,12 @@ export default function AgendamentoDetalhePage() {
       setError(message);
       if (reload) load();
       return;
+    }
+    // Aviso à cliente, decidido pelo banco junto com o cancelamento (0023).
+    // Ausente (migration não aplicada) ou erro => nada é mostrado.
+    if (status === "cancelado") {
+      const { data: n, error: nErr } = await supabase.rpc("wa_get_change_notice", { p_appointment_id: id });
+      setCancelNotice(nErr ? null : describeChangeNotice(parseChangeNotice(n), "cancel"));
     }
     load();
   }
@@ -345,6 +354,13 @@ export default function AgendamentoDetalhePage() {
         )}
       </Card>
 
+      {cancelNotice && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-ink-50/60 px-4 py-3 text-sm text-ink-600" role="status">
+          <MessageCircle className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden="true" />
+          <span>{cancelNotice.text}</span>
+        </div>
+      )}
+
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {!showConclude && (
@@ -381,6 +397,12 @@ export default function AgendamentoDetalhePage() {
                 Quem registra o atendimento é a profissional responsável ou a administração do negócio.
               </span>
             </div>
+          )}
+
+          {canEditAppointment(appt.status) && (
+            <Button variant="secondary" className="w-full" disabled={busy} onClick={() => router.push(`/agenda/${id}/editar`)}>
+              Editar agendamento
+            </Button>
           )}
 
           {closing.map((a) => (

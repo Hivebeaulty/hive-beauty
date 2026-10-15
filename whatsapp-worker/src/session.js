@@ -189,6 +189,13 @@ export class CompanySession {
     this.generation++
     clearTimeout(this.reconnectTimer)
     await this.#closeSocket()
+    // Encerramento seguro: a biblioteca pode concluir gravações de chaves logo
+    // depois de a conexão fechar. Esperamos ela silenciar (com limite) ANTES de
+    // devolver a posse; senão essas gravações seriam recusadas e perdidas.
+    if (this.auth?.drain) {
+      const quiet = await this.auth.drain({ quietMs: this.config.shutdownQuietMs ?? 500, maxMs: this.config.shutdownDrainMs ?? 3000 })
+      if (!quiet) this.log.warn('credenciais ainda em gravação ao encerrar (limite de espera atingido)')
+    }
     try { await this.auth?.flush() } catch (e) { this.log.warn({ err: e.message }, 'credenciais pendentes não gravadas') }
     if (release) await this.#safe(() => this.db.releaseLease(this.companyId), 'liberar posse')
     this.state = 'stopped'
