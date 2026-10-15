@@ -33,6 +33,6 @@ export const silentLogger = {
   child() { return silentLogger }, info() {}, warn() {}, error() {}, debug() {}, fatal() {}, trace() {}, level: 'silent',
 }
 
-export const baseConfig = { maxQrCycles: 3, sendIntervalMs: 0, leaseTtlSec: 60 }
+export const baseConfig = { maxQrCycles: 3, sendIntervalMs: 0, leaseTtlSec: 60, shutdownQuietMs: 20, shutdownDrainMs: 300 }
 
 export const tick = (ms = 5) => new Promise((r) => setTimeout(r, ms))

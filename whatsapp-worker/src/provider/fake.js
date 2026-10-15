@@ -12,7 +12,10 @@ export const baileysUtils = { initAuthCreds, BufferJSON, proto }
 
 export const FakeHub = {
   sockets: [],
-  reset() { this.sockets = []; this.notOnWhatsApp = new Set(); this.sendFailures = 0; this.lidMap = new Map(); this.crashAfterSend = 0 },
+  reset() { this.sockets = []; this.notOnWhatsApp = new Set(); this.sendFailures = 0; this.lidMap = new Map(); this.crashAfterSend = 0; this.lateWriteMs = 0; this.lateWriteErrors = [] },
+  // simula a biblioteca terminando de gravar chaves DEPOIS que a conexão foi fechada
+  lateWriteMs: 0,
+  lateWriteErrors: [],
   notOnWhatsApp: new Set(),
   sendFailures: 0,
   lidMap: new Map(),        // '123@lid' -> '5511...:0@s.whatsapp.net'
@@ -70,7 +73,15 @@ export class FakeSocket {
     return { key: { id, remoteJid: jid, fromMe: true } }
   }
   async logout() { this.loggedOut = true; this.close(401) }
-  async end() { this.ended = true }
+  async end() {
+    this.ended = true
+    if (FakeHub.lateWriteMs > 0) {
+      setTimeout(() => {
+        this.auth.state.keys.set({ session: { 'late-write': { ok: true } } })
+          .catch((e) => FakeHub.lateWriteErrors.push(e.code || e.message))
+      }, FakeHub.lateWriteMs)
+    }
+  }
 }
 
 export function createSocket({ auth }) {

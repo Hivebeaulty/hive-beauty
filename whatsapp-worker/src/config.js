@@ -46,6 +46,9 @@ export function readConfig(env = process.env) {
     tickMs: int(env, 'TICK_MS', 3000, 100, 60000),
     leaseTtlSec: int(env, 'LEASE_TTL_SECONDS', 60, 10, 300),
     shutdownTimeoutMs: int(env, 'SHUTDOWN_TIMEOUT_MS', 10000, 1000, 60000),
+    // encerramento seguro: silêncio exigido da biblioteca e espera máxima por sessão
+    shutdownQuietMs: int(env, 'SHUTDOWN_QUIET_MS', 500, 0, 5000),
+    shutdownDrainMs: int(env, 'SHUTDOWN_DRAIN_MS', 3000, 0, 8000),
     maxQrCycles: int(env, 'MAX_QR_CYCLES', 5, 1, 20),
     maxSessions: int(env, 'MAX_SESSIONS', 50, 1, 500),
     outboxBatch: int(env, 'OUTBOX_BATCH', 10, 1, 100),

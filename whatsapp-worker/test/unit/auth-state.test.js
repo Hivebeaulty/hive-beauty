@@ -86,3 +86,25 @@ test('falha do banco ao gravar não trava as gravações seguintes', async () =>
   const b = await useDbAuthState({ db, companyId: A, masterKey, baileys })
   assert.equal(b.state.creds.nextPreKeyId, 99)
 })
+
+test('encerramento seguro (drain): parado termina logo; espera atividade tardia; respeita o limite', async () => {
+  const db = new MemoryDb()
+  const a = await useDbAuthState({ db, companyId: A, masterKey: randomBytes(32), baileys })
+  // parado: silencia em ~quietMs
+  let t = Date.now()
+  assert.equal(await a.drain({ quietMs: 50, maxMs: 1000 }), true)
+  assert.ok(Date.now() - t < 400)
+  // gravação tardia (como a biblioteca faz ao fechar): a espera só termina DEPOIS dela
+  setTimeout(() => { a.state.keys.set({ session: { tardia: { x: 1 } } }) }, 80)
+  t = Date.now()
+  assert.equal(await a.drain({ quietMs: 150, maxMs: 2000 }), true)
+  const got = await a.state.keys.get('session', ['tardia'])
+  assert.deepEqual(got.tardia, { x: 1 }, 'gravação tardia concluída antes do fim da espera')
+  // atividade sem parar: desiste no limite (o encerramento nunca fica preso)
+  const iv = setInterval(() => { a.state.keys.get('session', ['tardia']) }, 20)
+  t = Date.now()
+  const quiet = await a.drain({ quietMs: 200, maxMs: 300 })
+  clearInterval(iv)
+  assert.equal(quiet, false)
+  assert.ok(Date.now() - t < 700, 'respeitou o limite')
+})
