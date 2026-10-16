@@ -18,6 +18,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CalendarX } from "lucide-react";
 import { WhatsappConfirmationTemplate } from "@/components/settings/whatsapp-confirmation-template";
+import { Rankings } from "@/components/reports/rankings";
+import { buildRankings } from "@/lib/hive/rankings";
 
 type Scenario = { status: RpcResult; qr: RpcResult; request: RpcResult; disc: RpcResult; delayMs: number };
 const sc: Scenario = {
@@ -49,7 +51,20 @@ createRoot(document.getElementById("root")!).render(
           <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">WhatsApp</h1>
           <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Áurea.</p>
         </div>
-        {view === "msgtpl" ? (
+        {view === "rankings" ? (
+          (() => {
+            const svc = [["s1", "Manicure", 50, 60, 31], ["s2", "Alongamento em gel com decoração artística completa", 180, 150, 9],
+                         ["s3", "Design de sobrancelha", 45, 30, 22], ["s4", "Pedicure", 60, 60, 14], ["s5", "Spa dos pés", 90, 90, 4], ["s6", "Esmaltação", 30, 30, 2]] as const;
+            const names = ["Ana Lima", "Bia Rocha", "Carla Dias", "Maria Aparecida dos Santos Oliveira", "Eva", "Fê"];
+            const rows = svc.flatMap(([id, name, price, min, n], k) => Array.from({ length: n }, (_, i) => ({
+              id: `${id}-${i}`, scheduled_start: new Date(Date.UTC(2026, 9, 1 + (i % 28), 12)).toISOString(),
+              scheduled_end: new Date(Date.UTC(2026, 9, 1 + (i % 28), 12) + min * 60000).toISOString(), price,
+              client_id: `c${(i + k) % names.length}`, service_id: id, clients: { name: names[(i + k) % names.length] }, services: { name },
+            })));
+            const r = buildRankings(rows);
+            return <Rankings services={r.services} clients={r.clients} />;
+          })()
+        ) : view === "msgtpl" ? (
           <WhatsappConfirmationTemplate companyId="00000000-0000-0000-0000-000000000001" companyName="Studio Bella" />
         ) : view === "dashboard" ? (
           // Sprint visual: painel "Hoje" + "Negócio no mês" com números reais grandes (pior caso de largura)

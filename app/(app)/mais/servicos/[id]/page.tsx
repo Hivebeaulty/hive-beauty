@@ -15,6 +15,13 @@ export default async function EditarServicoPage({ params }: { params: Promise<{ 
 
   if (!service) notFound();
 
+  // Uso do serviço: só leitura, para mostrar que o histórico é preservado.
+  const [{ count: done }, { count: upcoming }] = await Promise.all([
+    supabase.from("appointments").select("id", { count: "exact", head: true }).eq("service_id", id).eq("status", "concluido"),
+    supabase.from("appointments").select("id", { count: "exact", head: true }).eq("service_id", id)
+      .in("status", ["agendado", "confirmado"]).gt("scheduled_start", new Date().toISOString()),
+  ]);
+
   const categoryName = Array.isArray(service.service_categories)
     ? service.service_categories[0]?.name
     : (service.service_categories as { name: string } | null)?.name;
@@ -35,6 +42,7 @@ export default async function EditarServicoPage({ params }: { params: Promise<{ 
           price: Number(service.price),
           active: service.active,
         }}
+        usage={{ done: done ?? 0, upcoming: upcoming ?? 0 }}
       />
     </div>
   );

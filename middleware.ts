@@ -26,7 +26,10 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/cadastro");
+    request.nextUrl.pathname.startsWith("/cadastro") ||
+    // recuperação de senha: quem esqueceu a senha não está logada
+    request.nextUrl.pathname.startsWith("/esqueci-senha") ||
+    request.nextUrl.pathname.startsWith("/redefinir-senha");
 
   if (!user && !isAuthRoute) {
     return NextResponse.redirect(new URL("/login", request.url));

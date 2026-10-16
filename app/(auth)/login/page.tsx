@@ -50,6 +50,9 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
           {error && <p className="text-sm text-danger">{error}</p>}
+          <a href="/esqueci-senha" className="-mt-1 block text-right text-xs font-medium text-ink-500 hover:text-ink-800">
+            Esqueci minha senha
+          </a>
           <Button type="submit" loading={loading} className="w-full">
             {loading ? "Entrando..." : "Entrar"}
           </Button>

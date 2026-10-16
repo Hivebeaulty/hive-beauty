@@ -17,13 +17,16 @@ type ServiceFormData = {
   duration_minutes: number;
   price: number;
   active: boolean;
-};
+}
+
+/** Uso do serviço (só na edição): valores e horários dos atendimentos antigos não mudam. */
+export type ServicoUsage = { done: number; upcoming: number };
 
 // Mesma lógica de sempre: categoria é texto livre que busca-ou-cria em
 // service_categories (case-insensitive). A <datalist> só ajuda a reaproveitar
 // o nome de uma categoria já existente sem digitar de novo — não é um
 // sistema novo, é o mesmo "resolveCategoryId" de antes com uma sugestão.
-export function ServicoForm({ initial }: { initial?: ServiceFormData }) {
+export function ServicoForm({ initial, usage }: { initial?: ServiceFormData; usage?: ServicoUsage }) {
   const router = useRouter();
   const { companyId } = useCompany();
   const [name, setName] = useState(initial?.name ?? "");
@@ -140,6 +143,12 @@ export function ServicoForm({ initial }: { initial?: ServiceFormData }) {
           onChange={setPrice}
         />
       </div>
+      {initial?.id && (
+        <p className="-mt-2 text-xs text-ink-400">
+          Mudar o preço ou a duração vale para os próximos agendamentos: os atendimentos já marcados ou realizados mantêm os
+          valores e horários deles. Mudar o nome atualiza também como o serviço aparece nos atendimentos antigos.
+        </p>
+      )}
 
       {/* Prévia — "informação operacional", não só campos soltos */}
       {name && (
@@ -158,6 +167,22 @@ export function ServicoForm({ initial }: { initial?: ServiceFormData }) {
           <p className="text-xs text-ink-400">Desativado, some das opções de novo atendimento — o histórico continua intacto.</p>
         </div>
       </div>
+
+      {usage && (
+        <div className="rounded-lg bg-sand px-4 py-3 text-xs text-ink-600" data-testid="servico-uso">
+          <p>
+            {usage.done === 0
+              ? "Ainda não há atendimentos realizados com este serviço."
+              : `${usage.done} atendimento${usage.done === 1 ? "" : "s"} realizado${usage.done === 1 ? "" : "s"} com este serviço — continua${usage.done === 1 ? "" : "m"} no histórico e nos relatórios.`}
+          </p>
+          {usage.upcoming > 0 && (
+            <p className={!active && initial?.active ? "mt-1 font-medium text-ink-800" : "mt-1"}>
+              {usage.upcoming} agendamento{usage.upcoming === 1 ? "" : "s"} futuro{usage.upcoming === 1 ? "" : "s"} com este serviço
+              {!active && initial?.active ? " continuam valendo mesmo com o serviço desativado." : "."}
+            </p>
+          )}
+        </div>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 

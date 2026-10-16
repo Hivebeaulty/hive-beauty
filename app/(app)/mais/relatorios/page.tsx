@@ -4,7 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
-import { getPeriodRange, PERIOD_LABEL, type Period } from "@/lib/hive/period";
+import { getPeriodRange, periodBoundsISO, PERIOD_LABEL, type Period } from "@/lib/hive/period";
+import { buildRankings, type ClientRank, type RankingRow, type ServiceRank } from "@/lib/hive/rankings";
+import { Rankings } from "@/components/reports/rankings";
 import { formatMoney } from "@/lib/hive/format";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -48,6 +50,7 @@ export default function RelatoriosPage() {
   const [period, setPeriod] = useState<Period>("mes");
   const [data, setData] = useState<Indicators | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ranks, setRanks] = useState<{ services: ServiceRank[]; clients: ClientRank[] } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -59,6 +62,26 @@ export default function RelatoriosPage() {
       p_end: end,
     });
     setData((rows as unknown as Indicators[])?.[0] ?? null);
+
+    // Rankings: atendimentos concluídos do período (mesma consulta do Financeiro),
+    // lidos em páginas de 1000 para não cortar períodos longos.
+    const bounds = periodBoundsISO(start, end);
+    const all: RankingRow[] = [];
+    for (let from = 0; from < 20000; from += 1000) {
+      const { data: page, error } = await supabase
+        .from("appointments")
+        .select("id, scheduled_start, scheduled_end, price, client_id, service_id, clients(name), services(name)")
+        .eq("company_id", companyId)
+        .eq("status", "concluido")
+        .gte("scheduled_start", bounds.from)
+        .lte("scheduled_start", bounds.to)
+        .order("scheduled_start")
+        .range(from, from + 999);
+      if (error || !page) break;
+      all.push(...(page as unknown as RankingRow[]));
+      if (page.length < 1000) break;
+    }
+    setRanks(buildRankings(all));
     setLoading(false);
   }, [companyId, period]);
 
@@ -105,9 +128,14 @@ export default function RelatoriosPage() {
         </div>
       ) : null}
 
-      <p className="text-center text-xs text-ink-300">
-        Uma visão mais completa (por serviço, por profissional) já está em Financeiro.
-      </p>
+      {!loading && ranks && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-ink-700">Rankings do período</h2>
+          <Rankings services={ranks.services} clients={ranks.clients} />
+        </section>
+      )}
+
+      <p className="text-center text-xs text-ink-400">Resultados por profissional estão em Financeiro.</p>
     </div>
   );
 }
