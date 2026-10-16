@@ -19,6 +19,7 @@
 // impedindo mensagens duplicadas.
 // ---------------------------------------------------------------------------
 import { firstName } from "./format";
+import { confirmationTemplateProblems, renderConfirmationTemplate } from "./message-template";
 
 const TZ = "America/Sao_Paulo";
 
@@ -29,8 +30,13 @@ export type ConfirmationInput = {
   serviceName: string;
   /** Mantido por compatibilidade; NÃO entra mais no texto (sem assinatura). */
   professionalName?: string | null;
-  /** Mantido por compatibilidade; NÃO entra mais no texto (sem assinatura). */
+  /** Não entra no texto do sistema (sem assinatura); só na mensagem própria, via {negocio}. */
   businessName?: string | null;
+  /**
+   * Opção 2: mensagem própria da empresa (com {nome}, {data}...). Ausente ou
+   * inválida => mensagens variadas do sistema (opção 1). Mesma regra do banco.
+   */
+  customTemplate?: string | null;
   now?: Date;
   /** Define a variação do texto; por padrão deriva do cliente + horário. */
   variantSeed?: string;
@@ -113,6 +119,16 @@ export function confirmationVariant(seed: string): number {
 export function buildConfirmationMessage(i: ConfirmationInput): string {
   const startsAt = typeof i.startsAt === "string" ? new Date(i.startsAt) : i.startsAt;
   const s = partsOf(startsAt);
+  if (i.customTemplate && confirmationTemplateProblems(i.customTemplate).length === 0) {
+    return renderConfirmationTemplate(i.customTemplate, {
+      nome: firstName(i.clientName) ?? "",
+      negocio: (i.businessName ?? "").trim(),
+      servico: i.serviceName.trim(),
+      data: `${s.day}/${s.month}`,
+      dia_semana: s.weekday,
+      horario: formatTimeLabel(s.hour, s.minute),
+    });
+  }
   const { em, para } = dayPhrases(startsAt, i.now);
   const hora = `às ${formatTimeLabel(s.hour, s.minute)}`;
 

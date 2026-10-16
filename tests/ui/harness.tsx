@@ -17,6 +17,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CalendarX } from "lucide-react";
+import { WhatsappConfirmationTemplate } from "@/components/settings/whatsapp-confirmation-template";
 
 type Scenario = { status: RpcResult; qr: RpcResult; request: RpcResult; disc: RpcResult; delayMs: number };
 const sc: Scenario = {
@@ -48,7 +49,9 @@ createRoot(document.getElementById("root")!).render(
           <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">WhatsApp</h1>
           <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Áurea.</p>
         </div>
-        {view === "dashboard" ? (
+        {view === "msgtpl" ? (
+          <WhatsappConfirmationTemplate companyId="00000000-0000-0000-0000-000000000001" companyName="Studio Bella" />
+        ) : view === "dashboard" ? (
           // Sprint visual: painel "Hoje" + "Negócio no mês" com números reais grandes (pior caso de largura)
           (() => {
             const q = new URLSearchParams(location.search);

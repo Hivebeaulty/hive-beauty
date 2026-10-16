@@ -164,3 +164,33 @@ test("mensagem no SINGULAR: quem fala é a profissional, nunca uma equipe (todas
   }
   assert.equal(seen.size, 8);
 });
+
+// ---------------- opção 2: mensagem própria da empresa
+const tpl = load("lib/hive/message-template.ts");
+
+test("mensagem própria: variáveis trocadas; maiúsculas/acentos aceitos; mesma data/hora das variações", () => {
+  const m = msg.buildConfirmationMessage({ ...base, customTemplate: "Olá {Nome}, seu {serviço} é {dia_semana}, {data}, às {HORÁRIO}. {negocio}" });
+  assert.equal(m, "Olá Maria, seu Alongamento em gel é quinta-feira, 15/10, às 14h. Studio Bella");
+});
+
+test("mensagem própria: sem nome/serviço a pontuação fica limpa; quebras de linha preservadas", () => {
+  const m = msg.buildConfirmationMessage({ ...base, clientName: "", serviceName: " ",
+    customTemplate: "Olá {nome}!\r\nSeu horário {servico} : {data} às {horario} .\n\nObrigada!" });
+  assert.equal(m, "Olá!\nSeu horário: 15/10 às 14h.\n\nObrigada!");
+});
+
+test("mensagem própria inválida (variável desconhecida ou sem data/horário): usa as variações do sistema", () => {
+  for (const bad of ["Olá {nome}, {data} {horario} {cupom}", "Olá {nome}, te espero!", "   ", null]) {
+    const m = msg.buildConfirmationMessage({ ...base, variantSeed: "x", customTemplate: bad });
+    assert.equal(m, msg.buildConfirmationMessage({ ...base, variantSeed: "x" }), String(bad));
+  }
+});
+
+test("validação da mensagem própria: mensagens claras", () => {
+  assert.deepEqual(tpl.confirmationTemplateProblems(tpl.DEFAULT_CUSTOM_TEMPLATE), []);
+  assert.deepEqual(tpl.confirmationTemplateProblems(""), ["Escreva a mensagem."]);
+  assert.match(tpl.confirmationTemplateProblems("{data} {horario} {cupom} {Promo}").join(" "), /desconhecida: \{cupom\}, \{Promo\}/);
+  assert.match(tpl.confirmationTemplateProblems("Olá {nome}").join(" "), /Inclua \{data\} e \{horario\}/);
+  assert.match(tpl.confirmationTemplateProblems("{data}{horario}" + "x".repeat(1000)).join(" "), /1000 caracteres/);
+  assert.equal(tpl.normalizeVariable("Serviço"), "servico");
+});

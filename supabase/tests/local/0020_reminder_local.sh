@@ -9,7 +9,9 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 DB="aurea_reminder_0020"
 export PGOPTIONS="-c client_min_messages=warning"
-"$HERE/fresh_db.sh" "$DB" >/dev/null || { echo "FALHA ao montar o banco"; exit 1; }
+# Testa o lembrete como definido de 0020 a 0024 (disparo às 18h). O horário das 8h
+# (0025/0026) tem bateria própria: 0025_local.sh.
+"$HERE/fresh_db.sh" "$DB" 0024 >/dev/null || { echo "FALHA ao montar o banco"; exit 1; }
 PSQL=(psql -X -q -A -t -v ON_ERROR_STOP=1 -v VERBOSITY=verbose -d "$DB")
 Q() { "${PSQL[@]}" -c "$1"; }
 U() { "${PSQL[@]}" -c "begin; set local \"request.jwt.claim.sub\" = '$1'; set local role authenticated; $2; commit;"; }
