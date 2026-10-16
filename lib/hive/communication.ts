@@ -124,3 +124,42 @@ export function findUnknownVariables(body: string): string[] {
   }
   return [...found];
 }
+
+// --- Envio pelo WhatsApp (migration 0028) -------------------------------------
+// Rodapé fixo de saída em TODO envio da central. Mesma regra no banco
+// (whatsapp_private.campaign_text): o texto da prévia é exatamente o enviado.
+export const OPT_OUT_FOOTER = "Para não receber mais mensagens, responda SAIR.";
+
+export function campaignMessage(body: string, ctx: TemplateContext): string {
+  return `${renderTemplate(body.trim(), ctx)}\n\n${OPT_OUT_FOOTER}`;
+}
+
+// Por que o botão está desligado (null = pode enviar).
+export function sendBlockReason(canManage: boolean, waReady: boolean | null, selected: number, message: string, unknown: number): string | null {
+  if (!canManage) return "Só a administração do negócio pode enviar mensagens pela central.";
+  if (waReady === null) return "Verificando a conexão do WhatsApp...";
+  if (!waReady) return "Conecte o WhatsApp em Mais → Configurações → WhatsApp para enviar daqui.";
+  if (selected === 0) return "Selecione pelo menos uma cliente.";
+  if (!message.trim()) return "Escreva a mensagem.";
+  if (unknown > 0) return "Corrija as variáveis desconhecidas na mensagem.";
+  if (message.length > MAX_MESSAGE_LENGTH) return `A mensagem passou de ${MAX_MESSAGE_LENGTH} caracteres.`;
+  return null;
+}
+
+export function campaignErrorMessage(code: string | undefined, message: string): string {
+  switch (code) {
+    case "AUW01":
+      return "O WhatsApp do negócio não está conectado. Nada foi enviado.";
+    case "AUW02":
+      return "Nenhuma das clientes selecionadas pode receber agora. Nada foi enviado.";
+    case "AUW03":
+    case "AUW05":
+    case "AUW06":
+      return `${message} Nada foi enviado.`;
+    case "42501":
+      return "Só a administração do negócio pode enviar mensagens pela central.";
+    default:
+      return "Não foi possível iniciar o envio. Nada foi enviado; tente novamente.";
+  }
+}
+

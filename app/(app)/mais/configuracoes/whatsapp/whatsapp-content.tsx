@@ -5,9 +5,10 @@ import { ChevronLeft } from "lucide-react";
 import { useCompany } from "@/components/company-provider";
 import { WhatsappPanel } from "@/components/settings/whatsapp-panel";
 import { WhatsappAutoConfirmation } from "@/components/settings/whatsapp-auto-confirmation";
+import { WhatsappConfirmationTemplate } from "@/components/settings/whatsapp-confirmation-template";
 
 export function WhatsappContent() {
-  const { companyId, role } = useCompany();
+  const { companyId, companyName, role } = useCompany();
 
   return (
     <div className="space-y-5 pb-4">
@@ -27,6 +28,8 @@ export function WhatsappContent() {
       <WhatsappPanel companyId={companyId} role={role} />
 
       <WhatsappAutoConfirmation companyId={companyId} />
+
+      <WhatsappConfirmationTemplate companyId={companyId} companyName={companyName ?? ""} />
     </div>
   );
 }
