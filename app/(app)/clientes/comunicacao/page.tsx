@@ -22,12 +22,14 @@ import {
   displayPhone,
   findUnknownVariables,
   recipientBlock,
-  renderTemplate,
+  campaignMessage,
+  campaignErrorMessage,
+  sendBlockReason,
   summarizeAudience,
   type RecipientBlock,
 } from "@/lib/hive/communication";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, Info, AlertCircle, MessageSquareText, ShieldCheck, Send } from "lucide-react";
+import { ChevronLeft, Info, AlertCircle, MessageSquareText, ShieldCheck, Send, CheckCircle2 } from "lucide-react";
 
 const SEGMENTS: { value: ClientSegment; label: string }[] = [
   { value: "todas", label: "Todas" },
@@ -49,7 +51,7 @@ const BLOCK_TONE: Record<RecipientBlock, "danger" | "warning" | "neutral"> = {
 const CHUNK = 100;
 
 export default function ComunicacaoPage() {
-  const { companyId, companyName } = useCompany();
+  const { companyId, companyName, role } = useCompany();
   const toast = useToast();
   const messageRef = useRef<HTMLTextAreaElement>(null);
 
@@ -62,6 +64,14 @@ export default function ComunicacaoPage() {
   const [consentOpen, setConsentOpen] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const [savingConsent, setSavingConsent] = useState(false);
+  // Envio pelo WhatsApp (migration 0028)
+  const [waReady, setWaReady] = useState<boolean | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [campaign, setCampaign] = useState<CampaignView | null>(null);
+  const requestId = useRef<string | null>(null);
+  const canManage = role === "owner" || role === "admin";
 
   const reload = useCallback(async () => {
     const { rows, failed } = await loadClientRows(createClient(), companyId);
@@ -73,6 +83,56 @@ export default function ComunicacaoPage() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // O WhatsApp da empresa está conectado? (mesma consulta da tela de configurações)
+  useEffect(() => {
+    let alive = true;
+    createClient()
+      .rpc("wa_get_status", { p_company_id: companyId })
+      .then(({ data, error }) => {
+        if (alive) setWaReady(!error && (data as { status?: string } | null)?.status === "connected");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [companyId]);
+
+  // Andamento do envio: atualiza a cada 5 s enquanto houver mensagem esperando.
+  useEffect(() => {
+    if (!campaign || campaign.waiting === 0) return;
+    const t = setTimeout(async () => {
+      const { data, error } = await createClient().rpc("wa_get_campaign", { p_campaign_id: campaign.campaign_id });
+      if (!error && data) setCampaign(data as CampaignView);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [campaign]);
+
+  async function sendCampaign() {
+    if (sending) return;
+    setSending(true);
+    setSendError(null);
+    // a MESMA identificação é reenviada se a rede falhar: o banco nunca enfileira duas vezes
+    requestId.current ??= crypto.randomUUID();
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("wa_send_campaign", {
+      p_company_id: companyId,
+      p_client_ids: selectedClients.map((c) => c.id),
+      p_body: message,
+      p_request_id: requestId.current,
+    });
+    if (error) {
+      setSending(false);
+      setSendError(campaignErrorMessage(error.code, error.message));
+      return;
+    }
+    const id = (data as { campaign_id: string }).campaign_id;
+    const { data: progress } = await supabase.rpc("wa_get_campaign", { p_campaign_id: id });
+    setCampaign((progress as CampaignView) ?? null);
+    requestId.current = null; // próximo envio = nova identificação
+    setSending(false);
+    setSendOpen(false);
+    toast.success("Envio iniciado. As mensagens saem aos poucos.");
+  }
 
   const segmentCounts = useMemo(() => {
     const counts = new Map<ClientSegment, number>();
@@ -161,7 +221,7 @@ export default function ComunicacaoPage() {
 
   const previewClient = selectedClients[0] ?? null;
   const previewName = previewClient?.name ?? "Maria Silva";
-  const previewText = renderTemplate(message, { clientName: previewName, companyName: companyName || "seu negócio" });
+  const previewText = campaignMessage(message, { clientName: previewName, companyName: companyName || "seu negócio" });
   const unknownVars = findUnknownVariables(message);
 
   return (
@@ -398,17 +458,52 @@ export default function ComunicacaoPage() {
             </div>
 
             <div className="space-y-2 pt-1">
-              <Button className="w-full" disabled aria-describedby="envio-indisponivel">
+              <Button
+                className="w-full"
+                disabled={sendBlockReason(canManage, waReady, selectedClients.length, message, unknownVars.length) !== null}
+                onClick={() => { setSendError(null); setSendOpen(true); }}
+                aria-describedby="envio-ajuda"
+              >
                 <Send className="size-4" />
                 Enviar para {selectedClients.length} cliente{selectedClients.length === 1 ? "" : "s"}
               </Button>
-              <p id="envio-indisponivel" className="text-center text-xs text-ink-400">
-                Envio indisponível por enquanto. Quando o WhatsApp do seu negócio for conectado, você poderá enviar daqui.
+              <p id="envio-ajuda" className="text-center text-xs text-ink-400">
+                {sendBlockReason(canManage, waReady, selectedClients.length, message, unknownVars.length) ??
+                  "As mensagens saem aos poucos pelo WhatsApp do negócio, uma a cada poucos segundos."}
               </p>
             </div>
+
+            {campaign && <CampaignProgress c={campaign} />}
           </section>
         </>
       )}
+
+      <Modal open={sendOpen} onClose={() => !sending && setSendOpen(false)} title="Enviar pelo WhatsApp">
+        <div className="space-y-4">
+          <p className="text-sm text-ink-700">
+            A mensagem vai para <strong className="font-semibold">{selectedClients.length}</strong> cliente
+            {selectedClients.length === 1 ? "" : "s"}, aos poucos (cerca de{" "}
+            {Math.max(1, Math.ceil((selectedClients.length * 12) / 60))} min no total), pelo WhatsApp do negócio.
+          </p>
+          <p className="text-xs text-ink-400">
+            Quem pediu para sair, não tem celular válido ou não autorizou fica de fora automaticamente. Cada mensagem leva no
+            final: &ldquo;Para não receber mais mensagens, responda SAIR.&rdquo;
+          </p>
+          {sendError && (
+            <p className="text-sm text-danger" role="alert">
+              {sendError}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setSendOpen(false)} disabled={sending}>
+              Cancelar
+            </Button>
+            <Button className="flex-1" onClick={sendCampaign} loading={sending}>
+              Enviar
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={consentOpen} onClose={() => !savingConsent && setConsentOpen(false)} title="Registrar autorização">
         <div className="space-y-4">
@@ -447,5 +542,36 @@ function StepTitle({ n, title }: { n: number; title: string }) {
       </span>
       {title}
     </h2>
+  );
+}
+
+type CampaignView = {
+  campaign_id: string;
+  queued: number;
+  waiting: number;
+  sent: number;
+  read: number;
+  failed: number;
+  canceled: number;
+  skipped: Record<string, number>;
+};
+
+function CampaignProgress({ c }: { c: CampaignView }) {
+  const done = c.waiting === 0;
+  const skippedTotal = Object.values(c.skipped ?? {}).reduce((a, b) => a + b, 0);
+  return (
+    <Card tone="sand" className="space-y-2" data-testid="campaign-progress">
+      <p className="flex items-center gap-2 text-sm font-semibold text-ink-800">
+        {done ? <CheckCircle2 className="size-4 text-success" /> : <Send className="size-4 text-gold-700" />}
+        {done ? "Envio concluído" : `Enviando: ${c.sent + c.failed + c.canceled} de ${c.queued}`}
+      </p>
+      <p className="text-xs text-ink-500">
+        {c.sent} enviada{c.sent === 1 ? "" : "s"}
+        {c.read > 0 ? ` · ${c.read} lida${c.read === 1 ? "" : "s"}` : ""}
+        {c.canceled > 0 ? ` · ${c.canceled} cancelada${c.canceled === 1 ? "" : "s"} (pediram para sair)` : ""}
+        {c.failed > 0 ? ` · ${c.failed} sem WhatsApp ou com falha` : ""}
+        {skippedTotal > 0 ? ` · ${skippedTotal} fora do envio (sem autorização ou contato válido)` : ""}
+      </p>
+    </Card>
   );
 }

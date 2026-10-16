@@ -421,3 +421,62 @@ test("U18 dashboard: 'Pendências' saiu; 'Próximos atendimentos' aparece com o 
   await page.screenshot({ path: join(SHOTS, "31-kit-390.png"), fullPage: true });
   await page.close();
 });
+
+// ============================================================ Mensagem de confirmação: sistema x própria (0027)
+async function openTpl({ get, set: setReply = { data: { mode: "custom" }, error: null } } = {}) {
+  const page = await browser.newPage();
+  await page.setViewport({ width: 390, height: 1100, deviceScaleFactor: 1 });
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.evaluateOnNewDocument((cfg) => {
+    window.__auto = { calls: [], ...cfg };
+    window.__rpc = async (fn, args) => {
+      window.__auto.calls.push({ fn, args });
+      await new Promise((r) => setTimeout(r, 20));
+      return fn === "wa_get_message_settings" ? window.__auto.get : window.__auto.set;
+    };
+  }, { get, set: setReply });
+  await page.goto(`${PAGE}?view=msgtpl`);
+  await page.waitForSelector('[data-testid="wa-confirmation-template"]', { timeout: 6000 });
+  page.__errors = errors;
+  return page;
+}
+const tplCard = (page) => page.$eval('[data-testid="wa-confirmation-template"]', (e) => e.innerText);
+
+test("U19 mensagem de confirmação: padrão = sistema; minha mensagem com prévia ao vivo; variável errada impede salvar; salva certo", async () => {
+  const page = await openTpl({ get: { data: { mode: "system", template: null, can_manage: true }, error: null } });
+  assert.match(await tplCard(page), /Prévia \(um dos textos variados\)/);
+  assert.match(await tplCard(page), /Oi, Ana/);
+  const radios = await page.$$('input[name="confirmation-mode"]');
+  await radios[1].click();
+  await page.waitForSelector("textarea");
+  assert.match(await tplCard(page), /Olá, Ana! Seu agendamento de Manicure está confirmado para sexta-feira, 16\/10, às 14h30\./);
+  await page.click("textarea", { clickCount: 3 });
+  await page.$eval("textarea", (e) => { e.focus(); e.select(); });
+  await page.keyboard.type("Oi {nome}, {data} às {horario} {cupom}");
+  await waitText(page, "Variável desconhecida: {cupom}.");
+  const saveBtn = async () => page.$$eval("button", (bs) => bs.find((b) => b.innerText.trim() === "Salvar")?.disabled);
+  assert.equal(await saveBtn(), true, "salvar desligado com variável desconhecida");
+  for (let i = 0; i < " {cupom}".length; i++) await page.keyboard.press("Backspace");
+  await sleep(100);
+  assert.equal(await saveBtn(), false);
+  assert.match(await tplCard(page), /Oi Ana, 16\/10 às 14h30/);
+  await page.$$eval("button", (bs) => bs.find((b) => b.innerText.trim() === "Salvar").click());
+  await waitText(page, "Salvo.");
+  const sets = (await page.evaluate(() => window.__auto.calls)).filter((c) => c.fn === "wa_set_message_settings");
+  assert.equal(sets.length, 1);
+  assert.equal(sets[0].args.p_mode, "custom");
+  assert.equal(sets[0].args.p_template.trim(), "Oi {nome}, {data} às {horario}");
+  await page.screenshot({ path: join(SHOTS, "40-mensagem-propria.png"), fullPage: true });
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("U20 mensagem de confirmação: profissional só vê (sem editar nem salvar)", async () => {
+  const page = await openTpl({ get: { data: { mode: "custom", template: "Oi {nome}, {data} {horario}", can_manage: false }, error: null } });
+  assert.equal(await page.$$eval('input[name="confirmation-mode"]', (r) => r.every((x) => x.disabled)), true);
+  assert.equal(await page.$eval("textarea", (e) => e.disabled), true);
+  assert.match(await tplCard(page), /Só a administração da empresa pode mudar/);
+  assert.equal(await page.$$eval("button", (bs) => bs.some((b) => b.innerText.trim() === "Salvar")), false);
+  await page.close();
+});

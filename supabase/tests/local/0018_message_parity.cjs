@@ -10,6 +10,7 @@ const { load } = require(path.join(ROOT, "tests/load-ts.cjs"));
 const msg = load(path.join(ROOT, "lib/hive/appointment-message.ts"));
 const names = load(path.join(ROOT, "lib/hive/display-name.ts"));
 const DB = process.argv[2];
+const tplmod = load(path.join(ROOT, "lib/hive/message-template.ts"));
 if (!DB) throw new Error("informe o banco local");
 
 const clients = ["Ana Maria Lima", "  Beatriz  ", "José", "Ana", "Maria  das   Dores", "Ágata Ñuñez", "Lu 💅 Silva", "x"];
@@ -19,6 +20,14 @@ const displays = [null, "Paty", "  Dra.   Ju  ", "", "Nome de exibição com qua
 const fulls = [null, "Patrícia Souza", "Carla", "  Joana   Dark "];
 const businesses = ["Studio Bella", "studio bella", "Espaço Áurea", "Carla"];
 // instantes (UTC) e "agora" relativos: mesmo dia, véspera, longe; inclui virada de dia em SP
+// opção 2 (mensagem própria): em parte dos casos; a última é INVÁLIDA (deve cair nas variações nos dois lados)
+const templates = [
+  null,
+  "Olá {nome}! Seu horário de {servico} está confirmado para {dia_semana}, {data}, às {horario}.\n\nPara remarcações, o prazo mínimo é de 24h.\n\nObrigada!",
+  "Oi {Nome} , tudo certo: {SERVIÇO} em {data} às {HORÁRIO} ({negocio}) !",
+  "{nome}\r\n{data}   {horario}  ;  {dia_semana}",
+  "Oi {nome}, {data} {horario} {cupom}",
+];
 const starts = ["2026-10-15T17:00:00Z", "2026-10-16T02:30:00Z", "2026-10-15T12:05:00Z", "2026-12-31T23:45:00Z", "2027-01-01T03:00:00Z", "2026-11-02T10:00:00Z"];
 const nowsFor = (iso) => {
   const t = Date.parse(iso);
@@ -37,6 +46,7 @@ for (const s of starts) for (const now of nowsFor(s)) {
       client: pick(clients), service: pick(services), duration: durations[(seq + k) % durations.length],
       display: displays[(seq + 2 * k) % displays.length], full: fulls[(seq + k) % fulls.length],
       business: businesses[(seq * 3 + k) % businesses.length], start: s, now,
+      template: templates[(seq + 2 * k) % templates.length],
     });
   }
 }
@@ -54,6 +64,7 @@ for (const c of cases) {
   insert into clients (company_id, name) values (co, ${lit(c.client)}) returning id into cl;
   insert into appointments (id, company_id, client_id, service_id, professional_member_id, scheduled_start, scheduled_end, price)
     values ('${c.id}', co, cl, sv, m, '${c.start}', timestamptz '${c.start}' + interval '${c.duration} minutes', 10);
+  ${c.template === null ? "" : `insert into whatsapp_private.message_templates (company_id, confirmation_mode, confirmation_template) values (co, 'custom', ${lit(c.template)});`}
   insert into zz_out values (${c.n}, whatsapp_private.confirmation_text('${c.id}', '${c.now}'));
 end $$;\n`;
 }
@@ -74,6 +85,7 @@ for (const c of cases) {
     businessName: c.business,
     now: new Date(c.now),
     variantSeed: c.id,
+    customTemplate: c.template,
   });
   variants.add(msg.confirmationVariant(c.id));
   if (bySeq.get(c.n) === expected) pass++;
@@ -83,7 +95,10 @@ for (const c of cases) {
   }
 }
 const ok = (cond, label) => { if (cond) { pass++; console.log(`PASS ${label}`); } else { fail++; console.log(`FAIL ${label}`); } };
+const customValid = cases.filter((c) => c.template && tplmod.confirmationTemplateProblems(c.template).length === 0).length;
+const customInvalid = cases.filter((c) => c.template && tplmod.confirmationTemplateProblems(c.template).length > 0).length;
+ok(customValid >= 60 && customInvalid >= 20, `P-tpl mensagens próprias exercitadas: ${customValid} válidas e ${customInvalid} inválidas (caem nas variações)`);
 ok(variants.size === msg.CONFIRMATION_VARIANTS, `P-var as ${msg.CONFIRMATION_VARIANTS} variações aparecem nos casos (${[...variants].sort().join(",")})`);
-console.log(`${fail === 0 ? "INFO" : "FAIL"} ${cases.length} casos comparados; divergentes: ${cases.length - (pass - (variants.size === msg.CONFIRMATION_VARIANTS ? 1 : 0))}`);
+console.log(`${fail === 0 ? "INFO" : "FAIL"} ${cases.length} casos comparados; divergentes: ${cases.length - (pass - 2)}`);
 console.log(`RESULTADO paridade 0018: PASS=${pass} FAIL=${fail}`);
 process.exit(fail ? 1 : 0);

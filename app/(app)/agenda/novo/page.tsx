@@ -186,7 +186,12 @@ export default function NovoAgendamentoPage() {
     const names = displayNames.get(professionalId);
     const professionalName =
       resolveSignatureName({ displayName: names?.display, fullName: names?.full ?? prof?.name }) ?? null;
+    // Formato escolhido pela empresa (0027): mensagens do sistema ou mensagem própria.
+    // Ausente (0027 não aplicada) ou erro => mensagens do sistema, como antes.
+    const { data: msgSettings } = await supabase.rpc("wa_get_message_settings", { p_company_id: companyId });
+    const ms = (msgSettings ?? null) as { mode?: string; template?: string | null } | null;
     const message = buildConfirmationMessage({
+      customTemplate: ms?.mode === "custom" ? ms.template ?? null : null,
       clientName: client?.name ?? "",
       startsAt: scheduledStart,
       durationMinutes: duration,
