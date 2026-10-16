@@ -29,7 +29,7 @@ import {
   type RecipientBlock,
 } from "@/lib/hive/communication";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, Info, AlertCircle, MessageSquareText, ShieldCheck, Send, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, AlertCircle, MessageSquareText, ShieldCheck, Send, CheckCircle2 } from "lucide-react";
 
 const SEGMENTS: { value: ClientSegment; label: string }[] = [
   { value: "todas", label: "Todas" },
@@ -233,15 +233,7 @@ export default function ComunicacaoPage() {
 
       <div>
         <h1 className="page-title">Central de comunicação</h1>
-        <p className="mt-0.5 text-sm text-ink-400">Prepare uma mensagem e veja quem a receberia.</p>
-      </div>
-
-      <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-ink-50/60 px-4 py-3 text-sm text-ink-600">
-        <Info className="mt-0.5 size-4 shrink-0 text-ink-400" />
-        <span>
-          Esta tela só prepara a mensagem e a lista. <strong className="font-semibold">Nada é enviado</strong> — o envio pelo
-          WhatsApp ainda não está disponível.
-        </span>
+        <p className="mt-0.5 text-sm text-ink-400">Prepare uma mensagem, escolha quem recebe e envie pelo WhatsApp do negócio.</p>
       </div>
 
       {loading ? (
@@ -486,8 +478,8 @@ export default function ComunicacaoPage() {
             {Math.max(1, Math.ceil((selectedClients.length * 12) / 60))} min no total), pelo WhatsApp do negócio.
           </p>
           <p className="text-xs text-ink-400">
-            Quem pediu para sair, não tem celular válido ou não autorizou fica de fora automaticamente. Cada mensagem leva no
-            final: &ldquo;Para não receber mais mensagens, responda SAIR.&rdquo;
+            Quem pediu para sair, não tem celular válido ou não autorizou fica de fora automaticamente. A mensagem sai exatamente
+            como na prévia.
           </p>
           {sendError && (
             <p className="text-sm text-danger" role="alert">

@@ -125,13 +125,13 @@ export function findUnknownVariables(body: string): string[] {
   return [...found];
 }
 
-// --- Envio pelo WhatsApp (migration 0028) -------------------------------------
-// Rodapé fixo de saída em TODO envio da central. Mesma regra no banco
-// (whatsapp_private.campaign_text): o texto da prévia é exatamente o enviado.
-export const OPT_OUT_FOOTER = "Para não receber mais mensagens, responda SAIR.";
-
+// --- Envio pelo WhatsApp (migrations 0028/0029) --------------------------------
+// O texto enviado é EXATAMENTE a mensagem da profissional (com {nome}/{negocio}
+// trocados) — nenhum rodapé é acrescentado. Mesma regra no banco
+// (whatsapp_private.campaign_text): a prévia é exatamente o que sai.
+// O bloqueio de quem responde SAIR/PARAR/STOP continua valendo (record_inbound).
 export function campaignMessage(body: string, ctx: TemplateContext): string {
-  return `${renderTemplate(body.trim(), ctx)}\n\n${OPT_OUT_FOOTER}`;
+  return renderTemplate(body.trim(), ctx);
 }
 
 // Por que o botão está desligado (null = pode enviar).
