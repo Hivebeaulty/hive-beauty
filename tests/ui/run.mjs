@@ -480,3 +480,29 @@ test("U20 mensagem de confirmação: profissional só vê (sem editar nem salvar
   assert.equal(await page.$$eval("button", (bs) => bs.some((b) => b.innerText.trim() === "Salvar")), false);
   await page.close();
 });
+
+// ============================================================ Relatórios: rankings
+test("U21 rankings: 4 listas, top 5, nomes longos cortados com elegância, sem rolagem lateral (320–1024 px)", async () => {
+  for (const w of [320, 390, 768, 1024]) {
+    const page = await browser.newPage();
+    await page.setViewport({ width: w, height: 1400, deviceScaleFactor: 1 });
+    await page.goto(`${PAGE}?view=rankings`);
+    await page.waitForSelector('[data-testid="rank-clientes-frequencia"]', { timeout: 6000 });
+    const r = await page.evaluate(() => {
+      const ids = ["rank-servicos-realizados", "rank-servicos-faturamento", "rank-clientes-gasto", "rank-clientes-frequencia"];
+      return ids.map((id) => {
+        const card = document.querySelector(`[data-testid="${id}"]`);
+        const cr = card.getBoundingClientRect();
+        const lis = [...card.querySelectorAll("li")];
+        const escapes = lis.filter((li) => [...li.querySelectorAll("p")].some((p) => p.getBoundingClientRect().right > cr.right - 8 || p.scrollWidth > p.clientWidth + 1 && !p.classList.contains("truncate"))).length;
+        return { id, n: lis.length, first: lis[0]?.innerText.split("\n")[0], escapes };
+      });
+    });
+    for (const x of r) { assert.equal(x.n, 5, `${w}px ${x.id} top 5`); assert.equal(x.escapes, 0, `${w}px ${x.id} conteúdo saindo do cartão`); }
+    assert.match(r[0].first, /^1\.\s*Manicure/, "mais realizado = Manicure (31)");
+    assert.match(r[1].first, /^1\.\s*Alongamento/, "mais faturamento = Alongamento (9 × 180 = 1.620 > Manicure 31 × 50 = 1.550)");
+    assert.ok(await noHorizontalScroll(page), `${w}px rolagem lateral`);
+    if (w === 390) await page.screenshot({ path: join(SHOTS, "50-rankings-390.png"), fullPage: true });
+    await page.close();
+  }
+});

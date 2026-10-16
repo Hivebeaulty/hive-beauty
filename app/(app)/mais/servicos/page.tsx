@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonListItem } from "@/components/ui/skeleton";
 import { formatMoney, formatDuration } from "@/lib/hive/format";
-import { Search, Plus, Scissors } from "lucide-react";
+import { Search, Plus, Scissors, ChevronRight } from "lucide-react";
 
 type Service = {
   id: string;
@@ -77,6 +77,7 @@ export default function ServicosPage() {
     <div className="space-y-5 pb-4">
       <PageHeader
         title="Serviços"
+        description="Toque em um serviço para editar ou desativar. O histórico de atendimentos é sempre mantido."
         actions={
           <Link href="/mais/servicos/novo">
             <Button size="sm">
@@ -131,8 +132,9 @@ export default function ServicosPage() {
                         <p className="text-xs text-ink-400">{formatDuration(s.duration_minutes)}</p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        {!s.active && <Badge tone="neutral">Inativo</Badge>}
+                        {!s.active && <Badge tone="muted">Inativo</Badge>}
                         <span className="font-semibold text-ink-800">{formatMoney(s.price)}</span>
+                        <ChevronRight className="size-4 text-ink-300" aria-label="Editar serviço" />
                       </div>
                     </Card>
                   </Link>
