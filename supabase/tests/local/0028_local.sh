@@ -62,7 +62,7 @@ STATE="select md5(string_agg(d, '|' order by d)) from (
   union all select grantee || privilege_type || table_schema || table_name from information_schema.role_table_grants where table_schema in ('public','whatsapp_private')) z"
 [[ "$(B B0)" == "t|f|f" ]] && ok "B0 antes: $(B B0)" || ko "B0: $(B B0)"
 S0="$(Q "$STATE")"
-for f in 0027_whatsapp_confirmation_choice.sql 0028_whatsapp_campaigns.sql; do
+for f in 0027_whatsapp_confirmation_choice.sql 0028_whatsapp_campaigns.sql 0029_whatsapp_campaign_no_footer.sql; do
   psql -X -q -1 -v ON_ERROR_STOP=1 -d "$DB" -f "$ROOT/migrations/$f" >/dev/null 2>&1 && ok "B2 $f aplicada" || ko "B2 $f"
 done
 B3="$(B B3)"; [[ "$B3" == "t|t|t|13|0|"* ]] && ok "B3 depois: $B3" || ko "B3: $B3"
@@ -110,8 +110,8 @@ r="$(send "$OWN" "'$K_OK','$K_OK2','$K_UNK','$K_BL','$K_NP','$K_AR','$K_B'" 'Oi 
 [[ "$r" == *'"queued": 2'* ]] && ok "C2 só as 2 com autorização e celular válido entram" || ko "C2 $r"
 check "C3 puladas com motivo: sem autorização, saiu, sem telefone, arquivada, outra empresa" \
   "(select skipped = '{\"blocked\": 1, \"no_phone\": 1, \"archived\": 1, \"not_found\": 1, \"consent_unknown\": 1}'::jsonb from whatsapp_private.campaigns where id = '$R1')"
-check "C4 texto: {nome} = 1º nome, {negocio}, e o rodapé de saída" \
-  "(select body = 'Oi Ana! Novidades no Studio Bella.' || E'\\n\\n' || 'Para não receber mais mensagens, responda SAIR.'
+check "C4 texto: {nome} = 1º nome, {negocio}; SEM rodapé (0029)" \
+  "(select body = 'Oi Ana! Novidades no Studio Bella.'
      from whatsapp_private.outbox where campaign_id = '$R1' and client_id = '$K_OK')"
 EXP="$(node -e '
 const { load } = require("/home/claude/hive-beauty/tests/load-ts.cjs");

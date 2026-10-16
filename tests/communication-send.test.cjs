@@ -6,9 +6,15 @@ const assert = require("node:assert/strict");
 const { load } = require("./load-ts.cjs");
 const c = load("lib/hive/communication.ts");
 
-test("prévia = texto enviado: variáveis + rodapé de saída", () => {
+test("prévia = texto enviado: só a mensagem da profissional, com as variáveis trocadas", () => {
   assert.equal(c.campaignMessage("  Oi {Nome}! Novidades no {negocio}.  ", { clientName: "Ana Maria", companyName: "Studio Bella" }),
-    "Oi Ana! Novidades no Studio Bella.\n\nPara não receber mais mensagens, responda SAIR.");
+    "Oi Ana! Novidades no Studio Bella.");
+});
+
+test("NENHUM rodapé é acrescentado (exemplo do pedido, texto sem variáveis)", () => {
+  const texto = "Oi Tainá, se vc recebeu essa mensagem vc é trouxa";
+  assert.equal(c.campaignMessage(texto, { clientName: "Tainá do Carmo", companyName: "Studio" }), texto);
+  assert.doesNotMatch(c.campaignMessage("Oi {nome}\n\nLinha 2", { clientName: "Ana", companyName: "X" }), /SAIR|não receber/i);
 });
 
 test("botão de envio: explica por que está desligado; só libera quando tudo está certo", () => {
@@ -29,4 +35,14 @@ test("erros do envio: claros e sempre dizendo que nada foi enviado", () => {
   }
   assert.match(c.campaignErrorMessage("AUW03", "Limite diário: 4."), /Limite diário: 4\./);
   assert.match(c.campaignErrorMessage("42501", ""), /administração/);
+});
+
+test("tela da central: sem o aviso fixo de 'envio indisponível' nem menção ao rodapé de SAIR", () => {
+  const fs = require("node:fs");
+  const page = fs.readFileSync(require("node:path").join(__dirname, "../app/(app)/clientes/comunicacao/page.tsx"), "utf8");
+  assert.doesNotMatch(page, /ainda não está disponível|Envio indisponível|Nada é enviado/);
+  assert.doesNotMatch(page, /responda SAIR/);
+  // avisos legítimos continuam: WhatsApp desconectado e falha no envio
+  assert.match(c.sendBlockReason(true, false, 1, "Oi", 0), /Conecte o WhatsApp/);
+  assert.match(c.campaignErrorMessage("AUW01", ""), /não está conectado/);
 });
