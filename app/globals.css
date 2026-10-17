@@ -59,3 +59,23 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* iPhone (Safari iOS): campos de data/hora têm largura mínima própria e
+   centralizam o texto — estouravam a coluna e invadiam o campo ao lado
+   ("Data" sobre "Duração"). @supports (-webkit-touch-callout) só existe no
+   iOS: Android e computador não mudam. */
+@supports (-webkit-touch-callout: none) {
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+    display: block;
+  }
+  input[type="date"]::-webkit-date-and-time-value,
+  input[type="time"]::-webkit-date-and-time-value {
+    text-align: left;
+  }
+}
