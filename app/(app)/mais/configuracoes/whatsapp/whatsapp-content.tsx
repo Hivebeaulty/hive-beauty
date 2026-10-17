@@ -6,6 +6,7 @@ import { useCompany } from "@/components/company-provider";
 import { WhatsappPanel } from "@/components/settings/whatsapp-panel";
 import { WhatsappAutoConfirmation } from "@/components/settings/whatsapp-auto-confirmation";
 import { WhatsappConfirmationTemplate } from "@/components/settings/whatsapp-confirmation-template";
+import { WhatsappBirthdayMessage } from "@/components/settings/whatsapp-birthday-message";
 
 export function WhatsappContent() {
   const { companyId, companyName, role } = useCompany();
@@ -30,6 +31,8 @@ export function WhatsappContent() {
       <WhatsappAutoConfirmation companyId={companyId} />
 
       <WhatsappConfirmationTemplate companyId={companyId} companyName={companyName ?? ""} />
+
+      <WhatsappBirthdayMessage companyId={companyId} companyName={companyName ?? ""} />
     </div>
   );
 }
