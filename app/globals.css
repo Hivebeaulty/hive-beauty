@@ -2,6 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---- Temas: Claro (padrão) e Grafite — design system "Áurea" ---- */
+:root {
+  color-scheme: light;
+  --c-cream-DEFAULT: 250 246 241;
+  --c-cream-50: 253 251 249;
+  --c-cream-100: 250 246 241;
+  --c-surface: 255 255 255;
+  --c-ink-50: 243 237 230;
+  --c-ink-100: 233 224 214;
+  --c-ink-200: 214 202 190;
+  --c-ink-300: 176 160 147;
+  --c-ink-400: 122 102 86;
+  --c-ink-500: 111 91 76;
+  --c-ink-600: 92 74 61;
+  --c-ink-700: 68 64 60;
+  --c-ink-800: 44 44 46;
+  --c-ink-900: 31 31 33;
+  --c-gold-50: 251 243 231;
+  --c-gold-100: 243 228 204;
+  --c-gold-300: 227 203 160;
+  --c-gold-500: 201 168 118;
+  --c-gold-600: 176 143 94;
+  --c-gold-700: 126 99 56;
+  --c-wine-50: 245 238 243;
+  --c-wine-100: 234 220 230;
+  --c-wine-300: 185 147 174;
+  --c-wine-500: 106 62 92;
+  --c-wine-700: 78 44 68;
+  --c-sand-DEFAULT: 243 234 223;
+  --c-sand-200: 232 217 198;
+  --c-success: 79 122 82;
+  --c-warning: 168 100 42;
+  --c-danger: 162 68 63;
+  --c-feature-DEFAULT: 58 42 34;
+  --c-primary: 58 42 34;
+  --c-primary-hover: 42 29 22;
+  --c-primary-ink: 250 246 241;
+  --c-feature-line: 74 56 46;
+  --c-feature-ink: 250 246 241;
+  --c-feature-muted: 233 224 214;
+  --c-feature-soft: 214 202 190;
+  --c-feature-accent: 227 203 160;
+  --c-feature-border: 58 42 34;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --c-cream-DEFAULT: 28 28 30;
+  --c-cream-50: 35 35 37;
+  --c-cream-100: 28 28 30;
+  --c-surface: 44 44 46;
+  --c-ink-50: 48 48 50;
+  --c-ink-100: 58 58 60;
+  --c-ink-200: 74 74 77;
+  --c-ink-300: 122 116 110;
+  --c-ink-400: 166 158 149;
+  --c-ink-500: 185 177 168;
+  --c-ink-600: 206 197 186;
+  --c-ink-700: 227 219 209;
+  --c-ink-800: 242 237 230;
+  --c-ink-900: 247 242 235;
+  --c-gold-50: 46 42 36;
+  --c-gold-100: 58 52 40;
+  --c-gold-300: 227 203 160;
+  --c-gold-500: 201 168 118;
+  --c-gold-600: 211 181 131;
+  --c-gold-700: 217 190 143;
+  --c-wine-50: 58 46 54;
+  --c-wine-100: 70 52 63;
+  --c-wine-300: 142 109 132;
+  --c-wine-500: 199 160 188;
+  --c-wine-700: 224 196 216;
+  --c-sand-DEFAULT: 52 52 54;
+  --c-sand-200: 63 63 66;
+  --c-success: 141 187 143;
+  --c-warning: 224 164 107;
+  --c-danger: 230 138 128;
+  --c-feature-DEFAULT: 36 36 38;
+  --c-primary: 230 211 179;
+  --c-primary-hover: 240 226 200;
+  --c-primary-ink: 28 28 30;
+  --c-feature-line: 58 58 60;
+  --c-feature-ink: 242 237 230;
+  --c-feature-muted: 206 197 186;
+  --c-feature-soft: 185 177 168;
+  --c-feature-accent: 217 190 143;
+  --c-feature-border: 140 118 82;
+}
+
+
 /* ============================================================================
    Design System — Áurea
    Tokens espelham tailwind.config.ts. Mantidos como CSS vars para uso fora

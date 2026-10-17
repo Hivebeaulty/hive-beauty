@@ -24,8 +24,8 @@ export interface TodaySummaryProps {
 function Placeholder({ wide }: { wide?: boolean }) {
   return (
     <div className="space-y-2" aria-hidden="true">
-      <div className={cn("h-8 animate-pulse rounded bg-ink-700", wide ? "w-40" : "w-12")} />
-      <div className="h-3 w-20 animate-pulse rounded bg-ink-700" />
+      <div className={cn("h-8 animate-pulse rounded bg-feature-line", wide ? "w-40" : "w-12")} />
+      <div className="h-3 w-20 animate-pulse rounded bg-feature-line" />
     </div>
   );
 }
@@ -34,8 +34,8 @@ export function TodaySummary({ loading, canSeeFinance, received, appointmentsTod
   return (
     <Card tone="feature" className="p-5 sm:p-6" data-testid="today-summary">
       <div className="mb-5 flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold text-cream">Hoje</h2>
-        <span className="truncate text-xs text-ink-200">{dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}</span>
+        <h2 className="text-sm font-semibold text-feature-ink">Hoje</h2>
+        <span className="truncate text-xs text-feature-soft">{dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}</span>
       </div>
 
       <div
@@ -45,7 +45,7 @@ export function TodaySummary({ loading, canSeeFinance, received, appointmentsTod
         )}
       >
         {canSeeFinance && (
-          <div className="col-span-2 min-w-0 border-b border-ink-700 pb-5 sm:col-span-1 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-5">
+          <div className="col-span-2 min-w-0 border-b border-feature-line pb-5 sm:col-span-1 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-5">
             {loading ? <Placeholder wide /> : <Stat size="lg" onDark accent value={formatMoney(received)} label="Recebido hoje" />}
           </div>
         )}

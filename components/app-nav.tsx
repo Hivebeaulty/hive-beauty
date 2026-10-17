@@ -29,8 +29,10 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
       {/* Desktop — sidebar fixa à esquerda */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-ink-100 bg-surface p-6 md:sticky md:top-0 md:flex md:h-screen md:self-start md:overflow-y-auto">
         <div className="mb-8 flex items-center gap-2">
-          <Image src="/logo-icon.png" alt="" width={26} height={26} priority />
-          <Image src="/logo-wordmark.png" alt="Áurea" width={72} height={17} priority className="mt-0.5" />
+          <Image src="/logo-icon.png" alt="" width={26} height={26} priority className="dark:hidden" />
+          <Image src="/logo-icon-dark.png" alt="" width={26} height={26} priority className="hidden dark:block" />
+          <Image src="/logo-wordmark.png" alt="Áurea" width={72} height={17} priority className="mt-0.5 dark:hidden" />
+          <Image src="/logo-wordmark-dark.png" alt="Áurea" width={72} height={17} priority className="mt-0.5 hidden dark:block" />
         </div>
         <p className="mb-6 -mt-5 truncate pl-[34px] text-xs text-ink-400">{companyName}</p>
         <nav className="space-y-0.5">

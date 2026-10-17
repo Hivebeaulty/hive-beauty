@@ -251,6 +251,7 @@ export default function InicioPage() {
             </>
           ) : activeAppointments.length === 0 ? (
             <EmptyState
+              art
               icon={CalendarX}
               title="Nenhum atendimento hoje"
               description="Aproveite para organizar a agenda dos próximos dias."

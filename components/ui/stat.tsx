@@ -28,14 +28,14 @@ export function Stat({ value, label, hint, size = "md", onDark, accent, valueCla
           size === "lg" && "text-[2rem] sm:text-[2.25rem]",
           size === "md" && "text-[1.625rem]",
           size === "sm" && "text-xl",
-          onDark ? (accent ? "text-gold-300" : "text-cream") : accent ? "text-gold-700" : "text-ink-800",
+          onDark ? (accent ? "text-feature-accent" : "text-feature-ink") : accent ? "text-gold-700" : "text-ink-800",
           valueClassName
         )}
       >
         {value}
       </p>
-      <p className={cn("mt-1.5 text-xs font-medium", onDark ? "text-ink-100" : "text-ink-500")}>{label}</p>
-      {hint && <p className={cn("text-[11px]", onDark ? "text-ink-200" : "text-ink-400")}>{hint}</p>}
+      <p className={cn("mt-1.5 text-xs font-medium", onDark ? "text-feature-muted" : "text-ink-500")}>{label}</p>
+      {hint && <p className={cn("text-[11px]", onDark ? "text-feature-soft" : "text-ink-400")}>{hint}</p>}
     </div>
   );
 }

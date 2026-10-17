@@ -6,74 +6,25 @@ import type { Config } from "tailwindcss";
 // Ver docs/design-system.md para a justificativa de cada decisão.
 // ============================================================================
 const config: Config = {
+  // tema escuro (Grafite) por atributo no <html>, escolhido pela usuária
+  darkMode: ["selector", '[data-theme="dark"]'],
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        // Fundo de app (creme quente do logo). Cards continuam brancos
-        // (bg-surface) para manter a camada de profundidade que já existia.
-        cream: {
-          DEFAULT: "#FAF6F1",
-          50: "#FDFBF9",
-          100: "#FAF6F1",
-        },
-        surface: "#FFFFFF",
-
-        // Escala neutra derivada do marrom-café do wordmark (#3A2A22),
-        // substitui "charcoal" (cinza frio) por uma família quente coerente
-        // com fundo e tipografia. ink-800 é a cor primária aprovada.
-        ink: {
-          50: "#F3EDE6",
-          100: "#E9E0D6",
-          200: "#D6CABE",
-          300: "#B0A093",
-          // texto secundário: escurecido de #8C7A6B (3,8:1 sobre o creme, abaixo
-          // do mínimo de leitura) para 5,1:1 — principal causa da tela "pálida"
-          400: "#7A6656",
-          500: "#6F5B4C",
-          600: "#5C4A3D",
-          700: "#4A382E",
-          800: "#3A2A22", // primária aprovada
-          900: "#2A1D16",
-        },
-
-        // Dourado do brilho do logo. Uso pontual — nunca como fundo grande.
-        gold: {
-          50: "#FBF3E7",
-          100: "#F3E4CC",
-          300: "#E3CBA0",
-          500: "#C9A876", // accent aprovado
-          600: "#B08F5E",
-          700: "#7E6338", // texto dourado legível (5,2:1 sobre o creme)
-        },
-
-        // Cor de apoio: ameixa. Detalhes de destaque (indicadores, avisos
-        // de atenção suave) — nunca fundo grande, nunca botão principal.
-        wine: {
-          50: "#F5EEF3",
-          100: "#EADCE6",
-          300: "#B993AE",
-          500: "#6A3E5C", // ameixa — distinta do vermelho de alerta (danger)
-          700: "#4E2C44",
-        },
-
-        // Areia: superfície tingida para agrupar conteúdo sem usar branco puro.
-        sand: {
-          DEFAULT: "#F3EADF",
-          200: "#E8D9C6",
-        },
-
-        // Semânticas — mesmos tons terrosos, aprofundados para serem legíveis
-        // como texto (antes 2,9:1 / 2,7:1 / 4,1:1 sobre o creme).
-        success: "#4F7A52", // sálvia — 4,6:1
-        warning: "#A8642A", // âmbar — 4,3:1
-        danger: "#A2443F", // vinho-rosado — 5,7:1
-
-        // --- LEGADO (Hive Beauty) -------------------------------------
-        // Mantido de propósito para não quebrar telas que ainda não foram
-        // migradas para os tokens novos acima. Cada uso de blush/plum/
-        // charcoal deve ser trocado por cream/ink/gold na Etapa 2 —
-        // depois disso, remover este bloco inteiro.
+        // TEMAS (claro e Grafite): cada cor é uma variável definida em app/globals.css
+        // (:root = claro; [data-theme="dark"] = Grafite). Valores e contraste: design system "Áurea".
+        cream: { DEFAULT: "rgb(var(--c-cream-DEFAULT) / <alpha-value>)", 50: "rgb(var(--c-cream-50) / <alpha-value>)", 100: "rgb(var(--c-cream-100) / <alpha-value>)" },
+        surface: "rgb(var(--c-surface) / <alpha-value>)",
+        ink: { 50: "rgb(var(--c-ink-50) / <alpha-value>)", 100: "rgb(var(--c-ink-100) / <alpha-value>)", 200: "rgb(var(--c-ink-200) / <alpha-value>)", 300: "rgb(var(--c-ink-300) / <alpha-value>)", 400: "rgb(var(--c-ink-400) / <alpha-value>)", 500: "rgb(var(--c-ink-500) / <alpha-value>)", 600: "rgb(var(--c-ink-600) / <alpha-value>)", 700: "rgb(var(--c-ink-700) / <alpha-value>)", 800: "rgb(var(--c-ink-800) / <alpha-value>)", 900: "rgb(var(--c-ink-900) / <alpha-value>)" },
+        gold: { 50: "rgb(var(--c-gold-50) / <alpha-value>)", 100: "rgb(var(--c-gold-100) / <alpha-value>)", 300: "rgb(var(--c-gold-300) / <alpha-value>)", 500: "rgb(var(--c-gold-500) / <alpha-value>)", 600: "rgb(var(--c-gold-600) / <alpha-value>)", 700: "rgb(var(--c-gold-700) / <alpha-value>)" },
+        wine: { 50: "rgb(var(--c-wine-50) / <alpha-value>)", 100: "rgb(var(--c-wine-100) / <alpha-value>)", 300: "rgb(var(--c-wine-300) / <alpha-value>)", 500: "rgb(var(--c-wine-500) / <alpha-value>)", 700: "rgb(var(--c-wine-700) / <alpha-value>)" },
+        sand: { DEFAULT: "rgb(var(--c-sand-DEFAULT) / <alpha-value>)", 200: "rgb(var(--c-sand-200) / <alpha-value>)" },
+        success: "rgb(var(--c-success) / <alpha-value>)",
+        warning: "rgb(var(--c-warning) / <alpha-value>)",
+        danger: "rgb(var(--c-danger) / <alpha-value>)",
+        primary: { DEFAULT: "rgb(var(--c-primary) / <alpha-value>)", hover: "rgb(var(--c-primary-hover) / <alpha-value>)", ink: "rgb(var(--c-primary-ink) / <alpha-value>)" },
+        feature: { DEFAULT: "rgb(var(--c-feature-DEFAULT) / <alpha-value>)", line: "rgb(var(--c-feature-line) / <alpha-value>)", ink: "rgb(var(--c-feature-ink) / <alpha-value>)", muted: "rgb(var(--c-feature-muted) / <alpha-value>)", soft: "rgb(var(--c-feature-soft) / <alpha-value>)", accent: "rgb(var(--c-feature-accent) / <alpha-value>)", border: "rgb(var(--c-feature-border) / <alpha-value>)" },
         blush: { 50: "#FBF1EA", 100: "#F5DDCF", 200: "#EFCBB8" },
         plum: { 400: "#9C6E7B", 500: "#885563", 600: "#6E4451", 700: "#563441" },
         charcoal: { 500: "#6B6570", 700: "#524C54", 900: "#464248" },
