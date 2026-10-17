@@ -23,7 +23,7 @@ export function Switch({ checked, onChange, disabled, label }: SwitchProps) {
     >
       <span
         className={cn(
-          "absolute top-0.5 size-4 rounded-full bg-cream transition-transform",
+          "absolute left-0 top-0.5 size-4 rounded-full bg-cream transition-transform",
           checked ? "translate-x-[18px]" : "translate-x-0.5"
         )}
       />

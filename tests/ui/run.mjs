@@ -506,3 +506,22 @@ test("U21 rankings: 4 listas, top 5, nomes longos cortados com elegância, sem r
     await page.close();
   }
 });
+
+test("U22 interruptor: a bolinha fica DENTRO do trilho, ligado e desligado (320 e 1024 px)", async () => {
+  for (const w of [320, 1024]) {
+    const page = await browser.newPage();
+    await page.setViewport({ width: w, height: 600, deviceScaleFactor: 1 });
+    await page.goto(`${PAGE}?view=switch`);
+    await page.waitForSelector('[role="switch"]', { timeout: 6000 });
+    const r = await page.$$eval('[role="switch"]', (els) => els.map((b) => {
+      const t = b.getBoundingClientRect(); const k = b.querySelector("span").getBoundingClientRect();
+      return { on: b.getAttribute("aria-checked") === "true", inside: k.left >= t.left && k.right <= t.right, nearRight: t.right - k.right < 4, nearLeft: k.left - t.left < 4 };
+    }));
+    for (const x of r) {
+      assert.equal(x.inside, true, `${w}px ${x.on ? "ligado" : "desligado"}: bolinha fora do trilho`);
+      assert.equal(x.on ? x.nearRight : x.nearLeft, true, `${w}px: bolinha no lado errado`);
+    }
+    if (w === 320) await page.screenshot({ path: join(SHOTS, "60-interruptor.png") });
+    await page.close();
+  }
+});

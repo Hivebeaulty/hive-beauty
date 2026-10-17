@@ -434,17 +434,22 @@ export default function NovoAgendamentoPage() {
         </div>
 
         {canManageConcluded(role) && (
-          <div className="rounded-lg border border-ink-100 bg-sand/60 px-4 py-3">
-            <Switch
-              checked={retro}
-              onChange={(v) => { setRetro(v); setTime(""); setError(null); }}
-              label="Lançamento retroativo (atendimento que já aconteceu)"
-            />
-            {retro && (
-              <p className="mt-1.5 text-xs text-ink-500">
-                Fica registrado como concluído, com o recebimento na data do atendimento. Nenhuma mensagem é enviada para a cliente.
+          <div className="flex items-start justify-between gap-4 rounded-lg border border-ink-100 bg-sand/60 px-4 py-3" data-testid="retro-toggle">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-ink-800">Atendimento que já aconteceu</p>
+              <p className="mt-0.5 text-xs text-ink-500">
+                {retro
+                  ? "Fica registrado como concluído, com o recebimento na data do atendimento. Nenhuma mensagem é enviada para a cliente."
+                  : "Ligue para lançar um atendimento passado que não foi registrado, ou corrigir um lançamento. Não envia mensagem para a cliente."}
               </p>
-            )}
+            </div>
+            <div className="pt-0.5">
+              <Switch
+                checked={retro}
+                onChange={(v) => { setRetro(v); setTime(""); setError(null); }}
+                label="Atendimento que já aconteceu (lançamento retroativo)"
+              />
+            </div>
           </div>
         )}
 
