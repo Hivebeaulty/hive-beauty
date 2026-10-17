@@ -1,3 +1,4 @@
+import * as React from "react";
 // Palco de testes: o painel REAL da tela de WhatsApp com uma API simulada que o
 // teste controla (window.__wa). Só o cliente do Supabase é trocado.
 import { createRoot } from "react-dom/client";
@@ -19,6 +20,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CalendarX } from "lucide-react";
 import { WhatsappConfirmationTemplate } from "@/components/settings/whatsapp-confirmation-template";
 import { Switch } from "@/components/ui/switch";
+import { ExtraServicesEditor } from "@/components/agenda/extra-services-editor";
+import { totals, type ExtraItem } from "@/lib/hive/extra-services";
 import { WhatsappBirthdayMessage } from "@/components/settings/whatsapp-birthday-message";
 import { Rankings } from "@/components/reports/rankings";
 import { buildRankings } from "@/lib/hive/rankings";
@@ -53,7 +56,9 @@ createRoot(document.getElementById("root")!).render(
           <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">WhatsApp</h1>
           <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Áurea.</p>
         </div>
-        {view === "birthday" ? (
+        {view === "extras" ? (
+          <ExtrasStage />
+        ) : view === "birthday" ? (
           <WhatsappBirthdayMessage companyId="00000000-0000-0000-0000-000000000001" companyName="Studio Bella" />
         ) : view === "switch" ? (
           <div className="space-y-3">
@@ -161,3 +166,13 @@ createRoot(document.getElementById("root")!).render(
     </main>
   </div>
 );
+
+function ExtrasStage() {
+  const [extras, setExtras] = React.useState<ExtraItem[]>([]);
+  const services = [
+    { id: "s1", name: "Manicure", duration_minutes: 60, price: 50 },
+    { id: "s2", name: "Pedicure com nome bem comprido para testar", duration_minutes: 45, price: 60 },
+    { id: "s3", name: "Esmaltação", duration_minutes: 15, price: 20 },
+  ];
+  return <ExtraServicesEditor services={services} value={extras} onChange={setExtras} total={totals({ price: 50, minutes: 60 }, extras)} />;
+}

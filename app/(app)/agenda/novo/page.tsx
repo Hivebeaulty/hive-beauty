@@ -15,6 +15,8 @@ import { WhatsappConfirmationStatus } from "@/components/whatsapp-confirmation-s
 import { canManageConcluded, concludedErrorMessage, isRetroactive } from "@/lib/hive/appointment-edit";
 import { PAYMENT_METHOD_LABEL, SELECTABLE_PAYMENT_METHODS } from "@/lib/hive/payment-methods";
 import { Switch } from "@/components/ui/switch";
+import { ExtraServicesEditor } from "@/components/agenda/extra-services-editor";
+import { extraItemsProblem, servicesLabel, totals, type ExtraItem } from "@/lib/hive/extra-services";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
@@ -58,6 +60,8 @@ export default function NovoAgendamentoPage() {
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState(60);
   const [price, setPrice] = useState(0);
+  // Serviços adicionais (0033): valor e duração do atendimento = soma
+  const [extras, setExtras] = useState<ExtraItem[]>([]);
   const [notes, setNotes] = useState("");
   // Lançamento retroativo (0030): atendimento que JÁ aconteceu, só administração
   const [retro, setRetro] = useState(false);
@@ -133,13 +137,13 @@ export default function NovoAgendamentoPage() {
       companyId,
       professionalId,
       dateStr: date,
-      durationMinutes: duration,
+      durationMinutes: totals({ price: 0, minutes: duration }, extras).minutes,
     });
     setSlots(list);
     setSlotsLoading(false);
     // no lançamento retroativo o horário é digitado (já passou): não está na grade
     if (!retro) setTime((t) => (list.includes(t) ? t : ""));
-  }, [companyId, professionalId, date, duration, retro]);
+  }, [companyId, professionalId, date, duration, retro, extras]);
 
   useEffect(() => {
     reloadSlots();
@@ -165,8 +169,8 @@ export default function NovoAgendamentoPage() {
       p_service_id: serviceId,
       p_professional_member_id: professionalId,
       p_scheduled_start: start.toISOString(),
-      p_scheduled_end: new Date(start.getTime() + duration * 60000).toISOString(),
-      p_price: price,
+      p_scheduled_end: new Date(start.getTime() + totals({ price, minutes: duration }, extras).minutes * 60000).toISOString(),
+      p_price: totals({ price, minutes: duration }, extras).price,
       p_payment_status: payStatus,
       p_method: payMethod,
       p_notes: notes || null,
@@ -176,11 +180,19 @@ export default function NovoAgendamentoPage() {
       setError(concludedErrorMessage(err.code, err.message).message);
       return;
     }
+    if (extras.length > 0) {
+      await createClient().rpc("set_appointment_extra_services", { p_appointment_id: data as string, p_items: extras });
+    }
     router.push(`/agenda/${data as string}`);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const extrasProblem = extraItemsProblem(extras);
+    if (extrasProblem) {
+      setError(extrasProblem);
+      return;
+    }
     if (retro) {
       await saveRetroactive();
       return;
@@ -192,20 +204,29 @@ export default function NovoAgendamentoPage() {
     setSaving(true);
     setError(null);
 
+    const tot = totals({ price, minutes: duration }, extras);
     const scheduledStart = new Date(`${date}T${time}:00`);
-    const scheduledEnd = new Date(scheduledStart.getTime() + duration * 60000);
+    const scheduledEnd = new Date(scheduledStart.getTime() + tot.minutes * 60000);
 
     const supabase = createClient();
-    // .select("id").single(): só seguimos (e só oferecemos o WhatsApp) quando o
-    // banco CONFIRMOU a gravação e devolveu o registro.
-    const { data: inserted, error } = await supabase.from("appointments").insert({
+    // Com serviços adicionais: atendimento + adicionais numa ÚNICA operação (0033).
+    // Sem adicionais: a gravação direta de sempre.
+    const { data: inserted, error } = extras.length > 0
+      ? await supabase.rpc("create_appointment_with_extras", {
+          p_company_id: companyId, p_client_id: clientId, p_service_id: serviceId, p_professional_member_id: professionalId,
+          p_scheduled_start: scheduledStart.toISOString(), p_scheduled_end: scheduledEnd.toISOString(),
+          p_price: tot.price, p_notes: notes || null, p_extras: extras,
+        }).then((r) => ({ data: r.data ? { id: r.data as string } : null, error: r.error }))
+      // .select("id").single(): só seguimos (e só oferecemos o WhatsApp) quando o
+      // banco CONFIRMOU a gravação e devolveu o registro.
+      : await supabase.from("appointments").insert({
       company_id: companyId,
       client_id: clientId,
       service_id: serviceId,
       professional_member_id: professionalId,
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: scheduledEnd.toISOString(),
-      price,
+      price: tot.price,
       notes: notes || null,
       status: "agendado",
     }).select("id").single();
@@ -218,9 +239,16 @@ export default function NovoAgendamentoPage() {
       if (error.code === "23P01") {
         setError("Esse horário acabou de ser ocupado por outro atendimento. Escolha outro horário.");
         reloadSlots();
+      } else if (error.code === "AUE04" || error.code === "AUE06") {
+        setError(error.message);
       } else {
         setError("Não foi possível criar o agendamento. Tente novamente.");
       }
+      return;
+    }
+
+    if (!inserted) {
+      setError("Não foi possível confirmar a gravação do agendamento. Confira na agenda antes de tentar de novo.");
       return;
     }
 
@@ -241,7 +269,7 @@ export default function NovoAgendamentoPage() {
       clientName: client?.name ?? "",
       startsAt: scheduledStart,
       durationMinutes: duration,
-      serviceName: service?.name ?? "",
+      serviceName: servicesLabel([service?.name, ...extras.map((e) => services.find((x) => x.id === e.service_id)?.name)]),
       professionalName,
       businessName: companyName,
       variantSeed: inserted.id,
@@ -263,7 +291,7 @@ export default function NovoAgendamentoPage() {
       confirmation,
       clientId,
       clientName: client?.name ?? "",
-      serviceName: service?.name ?? "",
+      serviceName: servicesLabel([service?.name, ...extras.map((e) => services.find((x) => x.id === e.service_id)?.name)]),
       startsAt: scheduledStart,
       professionalName,
       whatsappUrl: whatsappChatLink(client?.phone, client?.phone_normalized, message),
@@ -497,6 +525,13 @@ export default function NovoAgendamentoPage() {
         )}
 
         <NumberInput label="Valor (R$)" required value={price} onChange={setPrice} />
+
+        <ExtraServicesEditor
+          services={services}
+          value={extras}
+          onChange={setExtras}
+          total={totals({ price, minutes: duration }, extras)}
+        />
 
         {retro && (
           <div className="grid grid-cols-2 gap-3">

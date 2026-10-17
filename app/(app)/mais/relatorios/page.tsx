@@ -70,7 +70,7 @@ export default function RelatoriosPage() {
     for (let from = 0; from < 20000; from += 1000) {
       const { data: page, error } = await supabase
         .from("appointments")
-        .select("id, scheduled_start, scheduled_end, price, client_id, service_id, clients(name), services(name)")
+        .select("id, scheduled_start, scheduled_end, price, client_id, service_id, clients(name), services(name), appointment_extra_services(service_id, price, duration_minutes, services(name))")
         .eq("company_id", companyId)
         .eq("status", "concluido")
         .gte("scheduled_start", bounds.from)

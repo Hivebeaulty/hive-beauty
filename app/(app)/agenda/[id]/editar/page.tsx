@@ -25,6 +25,8 @@ import {
 } from "@/lib/hive/appointment-edit";
 import { describeChangeNotice, parseChangeNotice, type ChangeNoticeView } from "@/lib/hive/whatsapp-change-notice";
 import { PAYMENT_METHOD_LABEL, SELECTABLE_PAYMENT_METHODS } from "@/lib/hive/payment-methods";
+import { ExtraServicesEditor } from "@/components/agenda/extra-services-editor";
+import { extraItemsProblem, sameExtras, totals, type ExtraItem } from "@/lib/hive/extra-services";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
@@ -63,6 +65,10 @@ export default function EditarAgendamentoPage() {
   const [origPay, setOrigPay] = useState<{ status: string; method: string } | null>(null);
   const [payStatus, setPayStatus] = useState("pago");
   const [payMethod, setPayMethod] = useState("pix");
+  // serviços adicionais (0033): a tela edita o PRINCIPAL + a lista; grava o total
+  const [extras, setExtras] = useState<ExtraItem[]>([]);
+  const [origExtras, setOrigExtras] = useState<ExtraItem[]>([]);
+  const [primaryOrig, setPrimaryOrig] = useState({ minutes: 60, price: 0 });
 
   const [slots, setSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -86,8 +92,19 @@ export default function EditarAgendamentoPage() {
     setProfessionalId(a.professional_member_id);
     setDate(format(start, "yyyy-MM-dd"));
     setTime(format(start, "HH:mm"));
-    setDuration(durationMinutesOf(a));
-    setPrice(a.price);
+    const { data: ex } = await supabase
+      .from("appointment_extra_services")
+      .select("service_id, price, duration_minutes")
+      .eq("appointment_id", id)
+      .order("position");
+    const exs = ((ex ?? []) as ExtraItem[]).map((e) => ({ service_id: e.service_id, price: Number(e.price), duration_minutes: e.duration_minutes }));
+    const exTot = totals({ price: 0, minutes: 0 }, exs);
+    const prim = { minutes: Math.max(5, durationMinutesOf(a) - exTot.minutes), price: Math.max(0, Math.round((a.price - exTot.price) * 100) / 100) };
+    setExtras(exs);
+    setOrigExtras(exs);
+    setPrimaryOrig(prim);
+    setDuration(prim.minutes);
+    setPrice(prim.price);
     setNotes(a.notes ?? "");
     if (a.status === "concluido") {
       const { data: pay } = await supabase.from("payments").select("status, method").eq("appointment_id", id).maybeSingle();
@@ -133,8 +150,8 @@ export default function EditarAgendamentoPage() {
       setDuration(svc.duration_minutes);
       setPrice(Number(svc.price));
     } else if (original && newId === original.service_id) {
-      setDuration(durationMinutesOf(original));
-      setPrice(original.price);
+      setDuration(primaryOrig.minutes);
+      setPrice(primaryOrig.price);
     }
   }
 
@@ -150,12 +167,12 @@ export default function EditarAgendamentoPage() {
       companyId,
       professionalId,
       dateStr: date,
-      durationMinutes: duration,
+      durationMinutes: totals({ price: 0, minutes: duration }, extras).minutes,
       excludeAppointmentId: id,
     });
     setSlots(list);
     setSlotsLoading(false);
-  }, [companyId, professionalId, date, duration, id]);
+  }, [companyId, professionalId, date, duration, id, extras]);
 
   useEffect(() => {
     reloadSlots();
@@ -167,7 +184,7 @@ export default function EditarAgendamentoPage() {
     !!original &&
     date === format(new Date(original.scheduled_start), "yyyy-MM-dd") &&
     professionalId === original.professional_member_id &&
-    duration === durationMinutesOf(original);
+    totals({ price: 0, minutes: duration }, extras).minutes === durationMinutesOf(original);
   const timeOptions = keepsOriginalSlot && !slots.includes(originalTime) ? [originalTime, ...slots].sort() : slots;
 
   const concluded = original?.status === "concluido";
@@ -175,36 +192,57 @@ export default function EditarAgendamentoPage() {
     if (!concluded && time && !timeOptions.includes(time)) setTime("");
   }, [timeOptions, time, concluded]);
 
+  // Serviços adicionais (0033): troca a lista de uma vez; false = deu erro (mensagem na tela).
+  async function saveExtras(): Promise<boolean> {
+    const { error: e } = await createClient().rpc("set_appointment_extra_services", { p_appointment_id: id, p_items: extras });
+    if (e) {
+      setSaving(false);
+      setError(
+        e.code === "AUE04" || e.code === "AUE06" || e.code === "42501"
+          ? e.message
+          : "Os dados principais foram salvos, mas a lista de serviços não. Tente salvar de novo."
+      );
+      await loadAppointment();
+      return false;
+    }
+    return true;
+  }
+
   // Concluído (0030): atendimento + recebimento juntos; nenhuma mensagem sai.
   async function saveConcluded(start: Date) {
     if (!original || !origPay) return;
-    const form = { clientId, serviceId, professionalId, start, durationMinutes: duration, price, notes };
-    if (!hasChanges(original, form) && payStatus === origPay.status && payMethod === origPay.method) {
+    const tot = totals({ price, minutes: duration }, extras);
+    const form = { clientId, serviceId, professionalId, start, durationMinutes: tot.minutes, price: tot.price, notes };
+    const extrasChanged = !sameExtras(extras, origExtras);
+    const mainChanged = hasChanges(original, form) || payStatus !== origPay.status || payMethod !== origPay.method;
+    if (!mainChanged && !extrasChanged) {
       setDone({ changed: false, notice: null, clientChanged: false, concluded: true });
       return;
     }
     setSaving(true);
     setError(null);
-    const { data, error: err } = await createClient().rpc("edit_concluded_appointment", {
+    const { data, error: err } = !mainChanged ? { data: { changed: false }, error: null } : await createClient().rpc("edit_concluded_appointment", {
       p_appointment_id: id,
       p_service_id: serviceId,
       p_professional_member_id: professionalId,
       p_scheduled_start: start.toISOString(),
-      p_scheduled_end: new Date(start.getTime() + duration * 60000).toISOString(),
-      p_price: price,
+      p_scheduled_end: new Date(start.getTime() + tot.minutes * 60000).toISOString(),
+      p_price: tot.price,
       p_payment_status: payStatus,
       p_method: payMethod,
       p_notes: notes,
       p_expected: concludedExpectedFrom(original, origPay.status),
     });
-    setSaving(false);
     if (err) {
+      setSaving(false);
       const m = concludedErrorMessage(err.code, err.message);
       setError(m.message);
       if (m.reload) await loadAppointment();
       return;
     }
-    setDone({ changed: !!(data as { changed?: boolean } | null)?.changed, notice: null, clientChanged: false, concluded: true });
+    if (extrasChanged && !(await saveExtras())) return;
+    setSaving(false);
+    setDone({ changed: !!(data as { changed?: boolean } | null)?.changed || extrasChanged, notice: null, clientChanged: false, concluded: true });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -214,27 +252,35 @@ export default function EditarAgendamentoPage() {
       setError("Escolha um horário disponível.");
       return;
     }
+    const problem = extraItemsProblem(extras);
+    if (problem) {
+      setError(problem);
+      return;
+    }
     const start = new Date(`${date}T${time}:00`);
-    const form = { clientId, serviceId, professionalId, start, durationMinutes: duration, price, notes };
+    const tot = totals({ price, minutes: duration }, extras);
+    const form = { clientId, serviceId, professionalId, start, durationMinutes: tot.minutes, price: tot.price, notes };
     if (concluded) {
       await saveConcluded(start);
       return;
     }
-    if (!hasChanges(original, form)) {
+    const extrasChanged = !sameExtras(extras, origExtras);
+    const mainChanged = hasChanges(original, form);
+    if (!mainChanged && !extrasChanged) {
       setDone({ changed: false, notice: null, clientChanged: false });
       return;
     }
     setSaving(true);
     setError(null);
     const supabase = createClient();
-    const { data, error: err } = await supabase.rpc("update_appointment", {
+    const { data, error: err } = !mainChanged ? { data: { changed: false }, error: null } : await supabase.rpc("update_appointment", {
       p_appointment_id: id,
       p_client_id: clientId,
       p_service_id: serviceId,
       p_professional_member_id: professionalId,
       p_scheduled_start: start.toISOString(),
-      p_scheduled_end: new Date(start.getTime() + duration * 60000).toISOString(),
-      p_price: price,
+      p_scheduled_end: new Date(start.getTime() + tot.minutes * 60000).toISOString(),
+      p_price: tot.price,
       p_notes: notes,
       p_expected: expectedFrom(original),
     });
@@ -246,6 +292,7 @@ export default function EditarAgendamentoPage() {
       if (m.reloadSlots) reloadSlots();
       return;
     }
+    if (extrasChanged && !(await saveExtras())) return;
     const r = (data ?? {}) as { changed?: boolean; client_changed?: boolean };
     // Aviso à cliente (remarcação), decidido pelo banco junto com a alteração.
     // Ausente (migration não aplicada) ou erro => nada é mostrado.
@@ -255,7 +302,7 @@ export default function EditarAgendamentoPage() {
       if (!nErr) notice = describeChangeNotice(parseChangeNotice(n), "reschedule");
     }
     setSaving(false);
-    setDone({ changed: !!r.changed, notice, clientChanged: !!r.client_changed });
+    setDone({ changed: !!r.changed || extrasChanged, notice, clientChanged: !!r.client_changed });
   }
 
   if (notFound) {
@@ -408,6 +455,8 @@ export default function EditarAgendamentoPage() {
         )}
 
         <NumberInput label="Valor (R$)" required value={price} onChange={setPrice} />
+
+        <ExtraServicesEditor services={services} value={extras} onChange={setExtras} total={totals({ price, minutes: duration }, extras)} />
 
         {concluded && (
           <div className="grid grid-cols-2 gap-3">
