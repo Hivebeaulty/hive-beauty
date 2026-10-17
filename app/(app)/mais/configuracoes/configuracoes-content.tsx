@@ -8,6 +8,7 @@ import { BusinessHoursCard } from "@/components/settings/business-hours-card";
 import { TeamCard } from "@/components/settings/team-card";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
+import { AppearanceCard } from "@/components/settings/appearance-card";
 
 export function ConfiguracoesContent({ isAdmin }: { isAdmin: boolean }) {
   const { companyId, memberId } = useCompany();
@@ -20,6 +21,8 @@ export function ConfiguracoesContent({ isAdmin }: { isAdmin: boolean }) {
       </Link>
 
       <h1 className="page-title">Configurações</h1>
+
+      <AppearanceCard />
 
       <ProfileNameCard />
 

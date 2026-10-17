@@ -19,7 +19,7 @@ export function Card({ className, padding = "md", interactive, tone = "default",
       className={cn(
         tone === "default" && "rounded-lg border border-ink-100 bg-surface shadow-card",
         tone === "sand" && "rounded-lg border border-sand-200 bg-sand",
-        tone === "feature" && "rounded-xl border border-ink-800 bg-ink-800 text-cream shadow-feature",
+        tone === "feature" && "rounded-xl border border-feature-border bg-feature text-feature-ink shadow-feature",
         padding === "md" && "p-5",
         padding === "sm" && "p-3.5",
         interactive &&

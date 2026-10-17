@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Fraunces } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
+import { THEME_BOOT_SCRIPT } from "@/lib/hive/theme";
+import { ThemeSync } from "@/components/theme-sync";
 
 // Fonte de UI — corpo, labels, botões, tabelas. Domina a interface.
 const sans = Plus_Jakarta_Sans({
@@ -46,8 +48,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${sans.variable} ${serif.variable}`}>
+    <html lang="pt-BR" className={`${sans.variable} ${serif.variable}`} data-theme="light" suppressHydrationWarning>
+      <head>
+        {/* aplica o tema escolhido ANTES de pintar (sem "piscar" claro no escuro) */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
       <body className="min-h-screen bg-cream font-sans text-ink-800 antialiased">
+        <ThemeSync />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

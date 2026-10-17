@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { ExtraServicesEditor } from "@/components/agenda/extra-services-editor";
 import { totals, type ExtraItem } from "@/lib/hive/extra-services";
 import { WhatsappBirthdayMessage } from "@/components/settings/whatsapp-birthday-message";
+import { AppearanceCard } from "@/components/settings/appearance-card";
 import { Rankings } from "@/components/reports/rankings";
 import { buildRankings } from "@/lib/hive/rankings";
 
@@ -48,6 +49,9 @@ w.__wa = { sc, calls };
 
 const role = new URLSearchParams(location.search).get("role") || "owner";
 const view = new URLSearchParams(location.search).get("view") || "";
+// tema do palco: ?theme=dark aplica o Grafite (mesmo atributo do app)
+const __theme = new URLSearchParams(location.search).get("theme");
+if (__theme) document.documentElement.setAttribute("data-theme", __theme);
 createRoot(document.getElementById("root")!).render(
   <div className="min-h-screen bg-cream">
     <main className="mx-auto max-w-3xl px-4 py-6 md:px-8">
@@ -113,6 +117,8 @@ createRoot(document.getElementById("root")!).render(
           })()
         ) : view === "kit" ? (
           <div className="space-y-5">
+            <AppearanceCard />
+            <EmptyState art icon={CalendarX} title="Nenhum atendimento hoje" description="Aproveite para organizar a agenda dos próximos dias." />
             <PageHeader title="Clientes" description="Acompanhe quem volta e quem sumiu." actions={<Button size="sm">Nova cliente</Button>} />
             <Card>
               <div className="flex flex-wrap gap-2">

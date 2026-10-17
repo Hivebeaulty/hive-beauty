@@ -605,3 +605,37 @@ test("U25 serviços adicionais: adicionar, escolher (valor/duração do cadastro
   assert.deepEqual(errors, []);
   await page.close();
 });
+
+// ============================================================ Temas: Claro / Grafite / Automático
+test("U26 aparência: escolher Grafite aplica o tema na hora e guarda no aparelho; Automático segue o celular", async () => {
+  const page = await browser.newPage();
+  await page.setViewport({ width: 390, height: 900, deviceScaleFactor: 1 });
+  await page.goto(`${PAGE}?view=kit`);
+  await page.waitForSelector('[data-testid="appearance"]', { timeout: 6000 });
+  const pick = (t) => page.$$eval('[data-testid="appearance"] [role="radio"]', (bs, t) => bs.find((b) => b.innerText.startsWith(t)).click(), t);
+  await pick("Grafite");
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "dark");
+  assert.equal(await page.evaluate(() => localStorage.getItem("aurea-theme")), "dark");
+  const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  assert.equal(bg, "rgb(28, 28, 30)", "fundo grafite #1C1C1E");
+  await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "light" }]);
+  await pick("Automático");
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");
+  await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "dark" }]);
+  await pick("Automático");
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "dark");
+  await pick("Claro");
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");
+  assert.ok(await noHorizontalScroll(page));
+  await page.close();
+});
+
+test("U27 tema Grafite: painel do início sem sobreposição em 320–1024 px", async () => {
+  for (const w of [320, 390, 768, 1024]) {
+    const { page, r } = await dashboardGeometry(w, "money=123456.78&today=12&up=148&theme=dark");
+    assert.deepEqual(r.overlaps, [], `${w}px escuro: sobreposição`);
+    assert.deepEqual(r.escapes, [], `${w}px escuro: fora do espaço`);
+    assert.equal(r.hscroll, false);
+    await page.close();
+  }
+});
