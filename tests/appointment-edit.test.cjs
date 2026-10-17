@@ -58,3 +58,20 @@ test("mensagens de erro claras e sem jargão para cada recusa do banco", () => {
     assert.doesNotMatch(e.editErrorMessage(c).message, /AUE|23P01|constraint|exception/i);
   }
 });
+
+test("concluído/retroativo: só dona e administração; retroativo = horário que já passou", () => {
+  assert.equal(e.canManageConcluded("owner"), true);
+  assert.equal(e.canManageConcluded("admin"), true);
+  for (const r of ["professional", "reception", null, undefined]) assert.equal(e.canManageConcluded(r), false, String(r));
+  const now = new Date("2026-10-16T15:00:00Z");
+  assert.equal(e.isRetroactive(new Date("2026-10-16T14:59:00Z"), now), true);
+  assert.equal(e.isRetroactive(new Date("2026-10-16T15:00:00Z"), now), false);
+});
+
+test("concluído: conferência inclui o status do recebimento; mensagens claras", () => {
+  assert.equal(e.concludedExpectedFrom({ ...appt, status: "concluido" }, "pendente").payment_status, "pendente");
+  assert.match(e.concludedErrorMessage("AUR03").message, /parcial/);
+  assert.match(e.concludedErrorMessage("AUE06", "Atendimento concluído não pode ficar com horário no futuro.").message, /futuro/);
+  assert.match(e.concludedErrorMessage("42501").message, /administração/);
+  assert.match(e.concludedErrorMessage("23P01").message, /ocupado/);
+});
