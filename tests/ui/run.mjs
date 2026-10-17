@@ -525,3 +525,57 @@ test("U22 interruptor: a bolinha fica DENTRO do trilho, ligado e desligado (320 
     await page.close();
   }
 });
+
+// ============================================================ Mensagem de aniversário (0031)
+async function openBday(get) {
+  const page = await browser.newPage();
+  await page.setViewport({ width: 390, height: 1000, deviceScaleFactor: 1 });
+  const errors = []; page.on("pageerror", (e) => errors.push(e.message));
+  await page.evaluateOnNewDocument((g) => {
+    window.__b = { calls: [], get: g };
+    window.__rpc = async (fn, args) => { window.__b.calls.push({ fn, args }); await new Promise((r) => setTimeout(r, 20));
+      return fn === "wa_get_birthday_settings" ? window.__b.get : { data: { enabled: true }, error: null }; };
+  }, get);
+  await page.goto(`${PAGE}?view=birthday`);
+  await page.waitForSelector('[data-testid="wa-birthday"]', { timeout: 6000 });
+  page.__errors = errors;
+  return page;
+}
+
+test("U23 aniversário: nasce desligado; liga + mensagem própria com prévia; variável errada impede salvar; salva certo", async () => {
+  const page = await openBday({ data: { enabled: false, mode: "system", template: null, can_manage: true }, error: null });
+  const card = () => page.$eval('[data-testid="wa-birthday"]', (e) => e.innerText);
+  assert.match(await card(), /Mensagem de aniversário/);
+  assert.match(await card(), /9h do dia do aniversário/);
+  assert.match(await card(), /Ana/);
+  assert.equal(await page.$eval('[role="switch"]', (b) => b.getAttribute("aria-checked")), "false");
+  await page.click('[role="switch"]');
+  const radios = await page.$$('input[name="birthday-mode"]');
+  await radios[1].click();
+  await page.waitForSelector("textarea");
+  await page.$eval("textarea", (e) => { e.focus(); e.select(); });
+  await page.keyboard.type("Parabéns, {nome}! {data}");
+  await waitText(page, "Variável desconhecida: {data}.");
+  const saveDisabled = () => page.$$eval("button", (bs) => bs.find((b) => b.innerText.trim() === "Salvar")?.disabled);
+  assert.equal(await saveDisabled(), true);
+  for (let i = 0; i < " {data}".length; i++) await page.keyboard.press("Backspace");
+  await sleep(100);
+  assert.equal(await saveDisabled(), false);
+  assert.match(await card(), /Parabéns, Ana!/);
+  await page.$$eval("button", (bs) => bs.find((b) => b.innerText.trim() === "Salvar").click());
+  await waitText(page, "As mensagens de aniversário estão ligadas.");
+  const sets = (await page.evaluate(() => window.__b.calls)).filter((c) => c.fn === "wa_set_birthday_settings");
+  assert.equal(sets.length, 1);
+  assert.deepEqual([sets[0].args.p_enabled, sets[0].args.p_mode, sets[0].args.p_template.trim()], [true, "custom", "Parabéns, {nome}!"]);
+  await page.screenshot({ path: join(SHOTS, "70-aniversario.png"), fullPage: true });
+  assert.deepEqual(page.__errors, []);
+  await page.close();
+});
+
+test("U24 aniversário: profissional só vê (interruptor e opções desabilitados, sem salvar)", async () => {
+  const page = await openBday({ data: { enabled: true, mode: "system", template: null, can_manage: false }, error: null });
+  assert.equal(await page.$eval('[role="switch"]', (b) => b.disabled), true);
+  assert.equal(await page.$$eval('input[name="birthday-mode"]', (r) => r.every((x) => x.disabled)), true);
+  assert.equal(await page.$$eval("button", (bs) => bs.some((b) => b.innerText.trim() === "Salvar")), false);
+  await page.close();
+});

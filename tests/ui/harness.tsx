@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CalendarX } from "lucide-react";
 import { WhatsappConfirmationTemplate } from "@/components/settings/whatsapp-confirmation-template";
 import { Switch } from "@/components/ui/switch";
+import { WhatsappBirthdayMessage } from "@/components/settings/whatsapp-birthday-message";
 import { Rankings } from "@/components/reports/rankings";
 import { buildRankings } from "@/lib/hive/rankings";
 
@@ -52,7 +53,9 @@ createRoot(document.getElementById("root")!).render(
           <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">WhatsApp</h1>
           <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Áurea.</p>
         </div>
-        {view === "switch" ? (
+        {view === "birthday" ? (
+          <WhatsappBirthdayMessage companyId="00000000-0000-0000-0000-000000000001" companyName="Studio Bella" />
+        ) : view === "switch" ? (
           <div className="space-y-3">
             {[false, true].map((on) => (
               <div key={String(on)} className="flex items-start justify-between gap-4 rounded-lg border border-ink-100 bg-sand/60 px-4 py-3">
