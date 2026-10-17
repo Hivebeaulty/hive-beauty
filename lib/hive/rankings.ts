@@ -1,5 +1,7 @@
 // Relatórios — rankings de serviços e clientes (lógica PURA).
 // Base: atendimentos CONCLUÍDOS no período (mesma consulta do Financeiro).
+// Vários serviços no atendimento (0033): cada adicional conta no próprio serviço
+// com o valor dele; o principal fica com o restante. O total da cliente não muda.
 // Valor de cada atendimento = o preço gravado nele — a conclusão grava ali o
 // VALOR FINAL (conclude_appointment). É a mesma base da lista "Por serviço" do
 // Financeiro, então os números das duas telas batem. Nada é estimado.
@@ -13,6 +15,13 @@ export type RankingRow = {
   service_id: string;
   clients: { name: string } | { name: string }[] | null;
   services: { name: string } | { name: string }[] | null;
+  /** Serviços adicionais (0033): cada um conta no próprio serviço, com o valor dele. */
+  appointment_extra_services?: {
+    service_id: string;
+    price: number | string;
+    duration_minutes: number;
+    services: { name: string } | { name: string }[] | null;
+  }[] | null;
 };
 
 export type ServiceRank = { id: string; name: string; count: number; revenue: number; minutes: number; avgTicket: number; revenuePerHour: number };
@@ -32,9 +41,17 @@ export function buildRankings(rows: RankingRow[]): { services: ServiceRank[]; cl
   for (const r of rows) {
     const value = appointmentValue(r);
     const minutes = Math.max(0, (new Date(r.scheduled_end).getTime() - new Date(r.scheduled_start).getTime()) / 60000);
-    const s = sv.get(r.service_id) ?? { id: r.service_id, name: one(r.services)?.name ?? "Serviço", count: 0, revenue: 0, minutes: 0, avgTicket: 0, revenuePerHour: 0 };
-    s.count += 1; s.revenue += value; s.minutes += minutes;
-    sv.set(r.service_id, s);
+    // principal fica com o restante do valor/tempo; cada adicional, com o dele
+    const ex = r.appointment_extra_services ?? [];
+    const exValues = ex.map((e) => Math.max(0, Number(e.price) || 0));
+    const exMinutes = ex.reduce((t, e) => t + Math.max(0, e.duration_minutes || 0), 0);
+    const add = (id: string, name: string | undefined, rev: number, min: number) => {
+      const s = sv.get(id) ?? { id, name: name ?? "Serviço", count: 0, revenue: 0, minutes: 0, avgTicket: 0, revenuePerHour: 0 };
+      s.count += 1; s.revenue += rev; s.minutes += min;
+      sv.set(id, s);
+    };
+    add(r.service_id, one(r.services)?.name, Math.max(0, value - exValues.reduce((t, x) => t + x, 0)), Math.max(0, minutes - exMinutes));
+    ex.forEach((e, i) => add(e.service_id, one(e.services)?.name, exValues[i], Math.max(0, e.duration_minutes || 0)));
     const c = cl.get(r.client_id) ?? { id: r.client_id, name: one(r.clients)?.name ?? "Cliente", visits: 0, revenue: 0, lastVisit: r.scheduled_start };
     c.visits += 1; c.revenue += value;
     if (r.scheduled_start > c.lastVisit) c.lastVisit = r.scheduled_start;

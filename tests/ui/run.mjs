@@ -579,3 +579,29 @@ test("U24 aniversário: profissional só vê (interruptor e opções desabilitad
   assert.equal(await page.$$eval("button", (bs) => bs.some((b) => b.innerText.trim() === "Salvar")), false);
   await page.close();
 });
+
+test("U25 serviços adicionais: adicionar, escolher (valor/duração do cadastro), total certo, remover; sem estourar a 320 px", async () => {
+  const page = await browser.newPage();
+  await page.setViewport({ width: 320, height: 900, deviceScaleFactor: 1 });
+  const errors = []; page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto(`${PAGE}?view=extras`);
+  await page.waitForSelector('[data-testid="extra-services"]', { timeout: 6000 });
+  const clickText = (t) => page.$$eval("button", (bs, t) => bs.find((b) => b.innerText.trim() === t).click(), t);
+  await clickText("Adicionar outro serviço");
+  await page.select("select", "s2");
+  await waitText(page, "Total do atendimento");
+  const t1 = await page.$eval('[data-testid="extra-total"]', (e) => e.innerText);
+  assert.match(t1, /R\$\s*110,00/); assert.match(t1, /1h45/);
+  await clickText("Adicionar outro serviço");
+  const sels = await page.$$("select"); await sels[1].select("s3");
+  await sleep(100);
+  assert.match(await page.$eval('[data-testid="extra-total"]', (e) => e.innerText), /R\$\s*130,00.*2h/);
+  assert.ok(await noHorizontalScroll(page), "rolagem lateral a 320 px");
+  await page.screenshot({ path: join(SHOTS, "80-servicos-adicionais.png"), fullPage: true });
+  await page.click('[aria-label="Remover serviço adicional 1"]');
+  await sleep(100);
+  assert.equal((await page.$$("select")).length, 1);
+  assert.match(await page.$eval('[data-testid="extra-total"]', (e) => e.innerText), /R\$\s*70,00/);
+  assert.deepEqual(errors, []);
+  await page.close();
+});

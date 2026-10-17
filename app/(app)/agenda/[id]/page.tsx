@@ -34,6 +34,7 @@ import {
 import { DEFAULT_PAYMENT_METHOD, paymentMethodOptions } from "@/lib/hive/payment-methods";
 import { describeConfirmation, parseConfirmation, type ConfirmationView } from "@/lib/hive/whatsapp-confirmation";
 import { canEditAppointment, canManageConcluded } from "@/lib/hive/appointment-edit";
+import { servicesLabel } from "@/lib/hive/extra-services";
 import { describeChangeNotice, parseChangeNotice, type ChangeNoticeView } from "@/lib/hive/whatsapp-change-notice";
 import { WhatsappConfirmationStatus } from "@/components/whatsapp-confirmation-status";
 import { ChevronLeft, Phone, StickyNote, Info, Wallet, Trash2, AlertTriangle, UserX, MessageCircle } from "lucide-react";
@@ -77,6 +78,7 @@ export default function AgendamentoDetalhePage() {
   const [now, setNow] = useState(() => new Date());
   const [confirmation, setConfirmation] = useState<ConfirmationView | null>(null); // WhatsApp automático (0018)
   const [cancelNotice, setCancelNotice] = useState<ChangeNoticeView | null>(null); // aviso de cancelamento (0023)
+  const [extraNames, setExtraNames] = useState<string[]>([]); // serviços adicionais (0033)
 
   // O botão "Atendimento realizado" aparece quando chega a hora do atendimento,
   // mesmo com a tela já aberta.
@@ -96,6 +98,10 @@ export default function AgendamentoDetalhePage() {
       .maybeSingle();
     const a = data as unknown as AppointmentDetail | null;
     setAppt(a);
+    // serviços adicionais (0033); sem a tabela/erro => só o principal, como antes
+    const { data: ex } = await supabase.from("appointment_extra_services").select("services(name)").eq("appointment_id", id).order("position");
+    setExtraNames(((ex ?? []) as { services: { name: string } | { name: string }[] | null }[]).map((e) =>
+      Array.isArray(e.services) ? e.services[0]?.name ?? "" : e.services?.name ?? ""));
     if (a) setFinalPrice(Number(a.price));
 
     // Recebimento do atendimento concluído, via RPC: a profissional dona do
@@ -310,7 +316,7 @@ export default function AgendamentoDetalhePage() {
           <h1 className="page-title">{appt.clients?.name}</h1>
           <StatusBadge status={appt.status} />
         </div>
-        <p className="text-sm text-ink-400">{appt.services?.name}</p>
+        <p className="text-sm text-ink-400">{servicesLabel([appt.services?.name, ...extraNames])}</p>
       </div>
 
       <Card className="space-y-3">
