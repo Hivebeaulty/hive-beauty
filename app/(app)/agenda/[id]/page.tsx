@@ -33,7 +33,7 @@ import {
 } from "@/lib/hive/appointment-flow";
 import { DEFAULT_PAYMENT_METHOD, paymentMethodOptions } from "@/lib/hive/payment-methods";
 import { describeConfirmation, parseConfirmation, type ConfirmationView } from "@/lib/hive/whatsapp-confirmation";
-import { canEditAppointment } from "@/lib/hive/appointment-edit";
+import { canEditAppointment, canManageConcluded } from "@/lib/hive/appointment-edit";
 import { describeChangeNotice, parseChangeNotice, type ChangeNoticeView } from "@/lib/hive/whatsapp-change-notice";
 import { WhatsappConfirmationStatus } from "@/components/whatsapp-confirmation-status";
 import { ChevronLeft, Phone, StickyNote, Info, Wallet, Trash2, AlertTriangle, UserX, MessageCircle } from "lucide-react";
@@ -461,6 +461,12 @@ export default function AgendamentoDetalhePage() {
       )}
 
       {/* Atendimento concluído: recebimento (alterar forma / marcar recebido) */}
+      {appt.status === "concluido" && canManageConcluded(role) && (
+        <Button variant="secondary" className="w-full" disabled={busy} onClick={() => router.push(`/agenda/${id}/editar`)}>
+          Editar atendimento (serviço, horário, valor, recebimento)
+        </Button>
+      )}
+
       {appt.status === "concluido" && payment && canManagePayment && (
         <Card className="space-y-4">
           <div className="flex items-center justify-between">

@@ -99,3 +99,39 @@ export function editErrorMessage(code: string | null | undefined): { message: st
       return { message: "Não foi possível salvar as alterações. Nada foi alterado. Tente novamente.", reload: false, reloadSlots: true };
   }
 }
+
+// --- Atendimento CONCLUÍDO e LANÇAMENTO RETROATIVO (migration 0030) ----------
+// Só a administração (dona/admin) mexe em atendimento concluído e lança
+// atendimento que já aconteceu — mesma regra do banco. Nenhum dos dois envia
+// mensagem para a cliente.
+
+/** Quem edita atendimento concluído e faz lançamento retroativo. */
+export function canManageConcluded(role: string | null | undefined): boolean {
+  return role === "owner" || role === "admin";
+}
+
+/** Horário escolhido já passou? (então é lançamento retroativo, não agendamento) */
+export function isRetroactive(start: Date, now: Date = new Date()): boolean {
+  return start.getTime() < now.getTime();
+}
+
+/** O que a tela viu de um concluído (o banco recusa se mudou, inclusive o recebimento). */
+export function concludedExpectedFrom(a: AppointmentSnapshot, paymentStatus: string) {
+  return {
+    service_id: a.service_id,
+    professional_member_id: a.professional_member_id,
+    scheduled_start: a.scheduled_start,
+    scheduled_end: a.scheduled_end,
+    price: Number(a.price),
+    status: a.status,
+    payment_status: paymentStatus,
+  };
+}
+
+/** Erros específicos do concluído/retroativo; o resto usa editErrorMessage. */
+export function concludedErrorMessage(code: string | null | undefined, message?: string) {
+  if (code === "AUR03") return { message: "Este recebimento é parcial. Ajuste o valor recebido pelo Financeiro.", reload: false, reloadSlots: false };
+  if (code === "AUE06" && message) return { message, reload: false, reloadSlots: false };
+  if (code === "42501") return { message: "Só a administração da empresa pode fazer isso.", reload: false, reloadSlots: false };
+  return editErrorMessage(code);
+}

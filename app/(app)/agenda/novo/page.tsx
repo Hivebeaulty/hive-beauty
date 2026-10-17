@@ -12,6 +12,9 @@ import { resolveSignatureName } from "@/lib/hive/display-name";
 import { whatsappChatLink, whatsappReach, type WhatsappReach } from "@/lib/hive/phone";
 import { describeConfirmation, parseConfirmation, type ConfirmationView } from "@/lib/hive/whatsapp-confirmation";
 import { WhatsappConfirmationStatus } from "@/components/whatsapp-confirmation-status";
+import { canManageConcluded, concludedErrorMessage, isRetroactive } from "@/lib/hive/appointment-edit";
+import { PAYMENT_METHOD_LABEL, SELECTABLE_PAYMENT_METHODS } from "@/lib/hive/payment-methods";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
@@ -42,7 +45,7 @@ type ServiceOption = { id: string; name: string; duration_minutes: number; price
 export default function NovoAgendamentoPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { companyId, companyName, memberId } = useCompany();
+  const { companyId, companyName, memberId, role } = useCompany();
 
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
@@ -56,6 +59,10 @@ export default function NovoAgendamentoPage() {
   const [duration, setDuration] = useState(60);
   const [price, setPrice] = useState(0);
   const [notes, setNotes] = useState("");
+  // Lançamento retroativo (0030): atendimento que JÁ aconteceu, só administração
+  const [retro, setRetro] = useState(false);
+  const [payStatus, setPayStatus] = useState("pago");
+  const [payMethod, setPayMethod] = useState("pix");
 
   const [slots, setSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -130,15 +137,54 @@ export default function NovoAgendamentoPage() {
     });
     setSlots(list);
     setSlotsLoading(false);
-    setTime((t) => (list.includes(t) ? t : ""));
-  }, [companyId, professionalId, date, duration]);
+    // no lançamento retroativo o horário é digitado (já passou): não está na grade
+    if (!retro) setTime((t) => (list.includes(t) ? t : ""));
+  }, [companyId, professionalId, date, duration, retro]);
 
   useEffect(() => {
     reloadSlots();
   }, [reloadSlots]);
 
+  // Atendimento que já aconteceu: registrado como CONCLUÍDO, com o recebimento
+  // na data do atendimento. Nenhuma mensagem é oferecida nem enviada.
+  async function saveRetroactive() {
+    if (!time || !date) {
+      setError("Informe a data e o horário em que o atendimento aconteceu.");
+      return;
+    }
+    const start = new Date(`${date}T${time}:00`);
+    if (!isRetroactive(start)) {
+      setError("Lançamento retroativo é para atendimento que já aconteceu. Escolha uma data ou horário no passado.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    const { data, error: err } = await createClient().rpc("create_retroactive_appointment", {
+      p_company_id: companyId,
+      p_client_id: clientId,
+      p_service_id: serviceId,
+      p_professional_member_id: professionalId,
+      p_scheduled_start: start.toISOString(),
+      p_scheduled_end: new Date(start.getTime() + duration * 60000).toISOString(),
+      p_price: price,
+      p_payment_status: payStatus,
+      p_method: payMethod,
+      p_notes: notes || null,
+    });
+    setSaving(false);
+    if (err) {
+      setError(concludedErrorMessage(err.code, err.message).message);
+      return;
+    }
+    router.push(`/agenda/${data as string}`);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (retro) {
+      await saveRetroactive();
+      return;
+    }
     if (!time) {
       setError("Escolha um horário disponível.");
       return;
@@ -376,13 +422,38 @@ export default function NovoAgendamentoPage() {
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Input type="date" label="Data" required value={date} onChange={(e) => setDate(e.target.value)} />
+          <Input
+            type="date"
+            label="Data"
+            required
+            value={date}
+            max={retro ? format(new Date(), "yyyy-MM-dd") : undefined}
+            onChange={(e) => setDate(e.target.value)}
+          />
           <NumberInput integer label="Duração (min)" required value={duration} onChange={setDuration} />
         </div>
 
-        {/* Grade de horários disponíveis — o aviso antecipado que o
+        {canManageConcluded(role) && (
+          <div className="rounded-lg border border-ink-100 bg-sand/60 px-4 py-3">
+            <Switch
+              checked={retro}
+              onChange={(v) => { setRetro(v); setTime(""); setError(null); }}
+              label="Lançamento retroativo (atendimento que já aconteceu)"
+            />
+            {retro && (
+              <p className="mt-1.5 text-xs text-ink-500">
+                Fica registrado como concluído, com o recebimento na data do atendimento. Nenhuma mensagem é enviada para a cliente.
+              </p>
+            )}
+          </div>
+        )}
+
+        {retro ? (
+          <Input type="time" label="Horário em que aconteceu" required value={time} onChange={(e) => setTime(e.target.value)} />
+        ) : (
+        /* Grade de horários disponíveis — o aviso antecipado que o
             briefing pediu, calculado a partir de business_hours +
-            blocked_times + agendamentos existentes da profissional. */}
+            blocked_times + agendamentos existentes da profissional. */
         <div>
           <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-ink-700">
             <Clock className="size-3.5" />
@@ -418,8 +489,25 @@ export default function NovoAgendamentoPage() {
             </div>
           )}
         </div>
+        )}
 
         <NumberInput label="Valor (R$)" required value={price} onChange={setPrice} />
+
+        {retro && (
+          <div className="grid grid-cols-2 gap-3">
+            <Select label="Recebimento" required value={payStatus} onChange={(e) => setPayStatus(e.target.value)}>
+              <option value="pago">Pago</option>
+              <option value="pendente">Pendente</option>
+            </Select>
+            <Select label="Forma de pagamento" required value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+              {SELECTABLE_PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {PAYMENT_METHOD_LABEL[m]}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
 
         <Textarea
           label="Observação (opcional)"

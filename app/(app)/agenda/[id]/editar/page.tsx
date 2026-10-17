@@ -14,6 +14,9 @@ import { getActiveProfessionals, getAvailableSlots, type Professional } from "@/
 import { formatDuration } from "@/lib/hive/format";
 import {
   canEditAppointment,
+  canManageConcluded,
+  concludedErrorMessage,
+  concludedExpectedFrom,
   durationMinutesOf,
   editErrorMessage,
   expectedFrom,
@@ -21,6 +24,7 @@ import {
   type AppointmentSnapshot,
 } from "@/lib/hive/appointment-edit";
 import { describeChangeNotice, parseChangeNotice, type ChangeNoticeView } from "@/lib/hive/whatsapp-change-notice";
+import { PAYMENT_METHOD_LABEL, SELECTABLE_PAYMENT_METHODS } from "@/lib/hive/payment-methods";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
@@ -32,14 +36,14 @@ import { CheckCircle2, Clock, Info, MessageCircle } from "lucide-react";
 
 type Option = { id: string; name: string };
 type ServiceOption = { id: string; name: string; duration_minutes: number; price: number; active: boolean };
-type Done = { changed: boolean; notice: ChangeNoticeView | null; clientChanged: boolean };
+type Done = { changed: boolean; notice: ChangeNoticeView | null; clientChanged: boolean; concluded?: boolean };
 
 const SELECT = "client_id, service_id, professional_member_id, scheduled_start, scheduled_end, price, status, notes";
 
 export default function EditarAgendamentoPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { companyId } = useCompany();
+  const { companyId, role } = useCompany();
 
   const [original, setOriginal] = useState<AppointmentSnapshot | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -55,6 +59,10 @@ export default function EditarAgendamentoPage() {
   const [duration, setDuration] = useState(60);
   const [price, setPrice] = useState(0);
   const [notes, setNotes] = useState("");
+  // atendimento concluído (0030): recebimento junto
+  const [origPay, setOrigPay] = useState<{ status: string; method: string } | null>(null);
+  const [payStatus, setPayStatus] = useState("pago");
+  const [payMethod, setPayMethod] = useState("pix");
 
   const [slots, setSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -81,6 +89,15 @@ export default function EditarAgendamentoPage() {
     setDuration(durationMinutesOf(a));
     setPrice(a.price);
     setNotes(a.notes ?? "");
+    if (a.status === "concluido") {
+      const { data: pay } = await supabase.from("payments").select("status, method").eq("appointment_id", id).maybeSingle();
+      const pp = (pay as { status: string; method: string } | null) ?? null;
+      setOrigPay(pp);
+      if (pp) {
+        setPayStatus(pp.status);
+        setPayMethod(pp.method);
+      }
+    }
     return a;
   }, [id]);
 
@@ -153,9 +170,42 @@ export default function EditarAgendamentoPage() {
     duration === durationMinutesOf(original);
   const timeOptions = keepsOriginalSlot && !slots.includes(originalTime) ? [originalTime, ...slots].sort() : slots;
 
+  const concluded = original?.status === "concluido";
   useEffect(() => {
-    if (time && !timeOptions.includes(time)) setTime("");
-  }, [timeOptions, time]);
+    if (!concluded && time && !timeOptions.includes(time)) setTime("");
+  }, [timeOptions, time, concluded]);
+
+  // Concluído (0030): atendimento + recebimento juntos; nenhuma mensagem sai.
+  async function saveConcluded(start: Date) {
+    if (!original || !origPay) return;
+    const form = { clientId, serviceId, professionalId, start, durationMinutes: duration, price, notes };
+    if (!hasChanges(original, form) && payStatus === origPay.status && payMethod === origPay.method) {
+      setDone({ changed: false, notice: null, clientChanged: false, concluded: true });
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    const { data, error: err } = await createClient().rpc("edit_concluded_appointment", {
+      p_appointment_id: id,
+      p_service_id: serviceId,
+      p_professional_member_id: professionalId,
+      p_scheduled_start: start.toISOString(),
+      p_scheduled_end: new Date(start.getTime() + duration * 60000).toISOString(),
+      p_price: price,
+      p_payment_status: payStatus,
+      p_method: payMethod,
+      p_notes: notes,
+      p_expected: concludedExpectedFrom(original, origPay.status),
+    });
+    setSaving(false);
+    if (err) {
+      const m = concludedErrorMessage(err.code, err.message);
+      setError(m.message);
+      if (m.reload) await loadAppointment();
+      return;
+    }
+    setDone({ changed: !!(data as { changed?: boolean } | null)?.changed, notice: null, clientChanged: false, concluded: true });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -166,6 +216,10 @@ export default function EditarAgendamentoPage() {
     }
     const start = new Date(`${date}T${time}:00`);
     const form = { clientId, serviceId, professionalId, start, durationMinutes: duration, price, notes };
+    if (concluded) {
+      await saveConcluded(start);
+      return;
+    }
     if (!hasChanges(original, form)) {
       setDone({ changed: false, notice: null, clientChanged: false });
       return;
@@ -210,13 +264,17 @@ export default function EditarAgendamentoPage() {
   if (!original) {
     return <p className="py-10 text-center text-sm text-ink-400">Carregando...</p>;
   }
-  if (!canEditAppointment(original.status)) {
+  if (!canEditAppointment(original.status) && !(concluded && canManageConcluded(role) && origPay)) {
     return (
       <div className="space-y-4">
         <h1 className="page-title">Editar agendamento</h1>
         <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-ink-50/60 px-4 py-3 text-sm text-ink-600">
           <Info className="mt-0.5 size-4 shrink-0 text-ink-400" />
-          <span>Só agendamentos em aberto podem ser editados. Este já foi concluído, cancelado ou marcado como falta.</span>
+          <span>
+            {concluded
+              ? "Atendimento concluído: só a administração da empresa pode editar."
+              : "Só agendamentos em aberto ou concluídos podem ser editados. Este foi cancelado ou marcado como falta."}
+          </span>
         </div>
         <Button variant="secondary" className="w-full" onClick={() => router.push(`/agenda/${id}`)}>
           Voltar
@@ -232,6 +290,12 @@ export default function EditarAgendamentoPage() {
           <CheckCircle2 className="size-10 text-success" />
           <h1 className="text-xl font-semibold text-ink-800">{done.changed ? "Agendamento atualizado" : "Nada foi alterado"}</h1>
         </div>
+        {done.concluded && done.changed && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-ink-50/60 px-4 py-3 text-sm text-ink-600" role="status">
+            <Info className="mt-0.5 size-4 shrink-0 text-ink-400" />
+            <span>O Financeiro já reflete a mudança. Nenhuma mensagem foi enviada para a cliente.</span>
+          </div>
+        )}
         {done.notice && (
           <Card>
             <div className="flex items-start gap-2.5 text-sm" role="status" data-testid="wa-change-notice">
@@ -257,8 +321,15 @@ export default function EditarAgendamentoPage() {
     <div className="space-y-5 pb-4">
       <h1 className="page-title">Editar agendamento</h1>
 
+      {concluded && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-sand px-4 py-3 text-sm text-ink-700">
+          <Info className="mt-0.5 size-4 shrink-0 text-gold-700" />
+          <span>Atendimento concluído: as mudanças atualizam também o Financeiro. Nenhuma mensagem é enviada para a cliente.</span>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Select label="Cliente" required value={clientId} onChange={(e) => setClientId(e.target.value)}>
+        <Select label="Cliente" required value={clientId} disabled={concluded} onChange={(e) => setClientId(e.target.value)}>
           {clients.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -291,10 +362,20 @@ export default function EditarAgendamentoPage() {
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Input type="date" label="Data" required value={date} onChange={(e) => setDate(e.target.value)} />
+          <Input
+            type="date"
+            label="Data"
+            required
+            value={date}
+            max={concluded ? format(new Date(), "yyyy-MM-dd") : undefined}
+            onChange={(e) => setDate(e.target.value)}
+          />
           <NumberInput integer label="Duração (min)" required value={duration} onChange={setDuration} />
         </div>
 
+        {concluded ? (
+          <Input type="time" label="Horário" required value={time} onChange={(e) => setTime(e.target.value)} />
+        ) : (
         <div>
           <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-ink-700">
             <Clock className="size-3.5" />
@@ -324,7 +405,29 @@ export default function EditarAgendamentoPage() {
           )}
         </div>
 
+        )}
+
         <NumberInput label="Valor (R$)" required value={price} onChange={setPrice} />
+
+        {concluded && (
+          <div className="grid grid-cols-2 gap-3">
+            <Select label="Recebimento" required value={payStatus} onChange={(e) => setPayStatus(e.target.value)}>
+              <option value="pago">Pago</option>
+              <option value="pendente">Pendente</option>
+              {payStatus === "parcial" && <option value="parcial" disabled>Parcial (ajuste no Financeiro)</option>}
+            </Select>
+            <Select label="Forma de pagamento" required value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+              {!SELECTABLE_PAYMENT_METHODS.includes(payMethod as (typeof SELECTABLE_PAYMENT_METHODS)[number]) && (
+                <option value={payMethod}>{PAYMENT_METHOD_LABEL[payMethod] ?? payMethod}</option>
+              )}
+              {SELECTABLE_PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {PAYMENT_METHOD_LABEL[m]}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
 
         <Textarea label="Observação (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
 
