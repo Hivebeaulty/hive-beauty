@@ -199,6 +199,7 @@ export default function ClientesPage() {
         />
       ) : filtered.length === 0 ? (
         <EmptyState
+          art="pensativa"
           icon={query || view !== "todas" ? Search : Users}
           title={
             emptyBase && view === "arquivadas"

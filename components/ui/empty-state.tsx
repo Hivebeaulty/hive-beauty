@@ -1,10 +1,10 @@
 import type { LucideIcon } from "lucide-react";
-import { LineIllustration } from "@/components/ui/line-illustration";
+import { LineIllustration, type IllustrationKind } from "@/components/ui/line-illustration";
 
 export interface EmptyStateProps {
   icon: LucideIcon;
   /** Ilustração em traço fino da marca no lugar do ícone (uma por tela). */
-  art?: boolean;
+  art?: boolean | IllustrationKind;
   title: string;
   description?: string;
   action?: React.ReactNode;
@@ -16,7 +16,7 @@ export function EmptyState({ icon: Icon, title, description, action, art }: Empt
   return (
     <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-ink-200 px-6 py-10 text-center">
       {art ? (
-        <LineIllustration />
+        <LineIllustration kind={art === true ? "perfil" : art} className="h-28 animate-rise" />
       ) : (
         <div className="flex size-11 items-center justify-center rounded-full bg-sand ring-1 ring-sand-200">
           <Icon className="size-5 text-gold-700" aria-hidden="true" />

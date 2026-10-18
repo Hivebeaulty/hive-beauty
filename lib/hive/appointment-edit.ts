@@ -118,6 +118,7 @@ export function isRetroactive(start: Date, now: Date = new Date()): boolean {
 /** O que a tela viu de um concluído (o banco recusa se mudou, inclusive o recebimento). */
 export function concludedExpectedFrom(a: AppointmentSnapshot, paymentStatus: string) {
   return {
+    client_id: a.client_id,
     service_id: a.service_id,
     professional_member_id: a.professional_member_id,
     scheduled_start: a.scheduled_start,

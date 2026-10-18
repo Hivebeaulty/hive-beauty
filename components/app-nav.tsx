@@ -81,9 +81,9 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
               {/* indicador do item ativo: traço dourado no topo + ícone sobre areia */}
               <span
                 aria-hidden="true"
-                className={cn("absolute inset-x-5 top-0 h-[3px] rounded-b-full", active ? "bg-gold-500" : "bg-transparent")}
+                className={cn("absolute inset-x-5 top-0 h-[3px] rounded-b-full transition-[background-color,transform] duration-200 ease-out", active ? "scale-x-100 bg-gold-500" : "scale-x-50 bg-transparent")}
               />
-              <span className={cn("flex h-7 w-11 items-center justify-center rounded-full", active && "bg-sand")}>
+              <span className={cn("flex h-7 w-11 items-center justify-center rounded-full transition-colors duration-200 active:scale-95", active && "bg-sand")}>
                 <Icon className="size-5" strokeWidth={active ? 2.25 : 2} />
               </span>
               {item.label}

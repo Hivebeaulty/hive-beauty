@@ -75,3 +75,7 @@ test("concluído: conferência inclui o status do recebimento; mensagens claras"
   assert.match(e.concludedErrorMessage("42501").message, /administração/);
   assert.match(e.concludedErrorMessage("23P01").message, /ocupado/);
 });
+
+test("concluído: a conferência inclui a cliente (correção de lançamento recusa se outra pessoa mudou)", () => {
+  assert.equal(e.concludedExpectedFrom({ ...appt, status: "concluido" }, "pago").client_id, "c1");
+});

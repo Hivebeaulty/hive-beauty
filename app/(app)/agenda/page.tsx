@@ -222,12 +222,13 @@ export default function AgendaPage() {
         ) : view === "dia" ? (
           activeDayAppointments.length === 0 ? (
             <EmptyState
+              art="perfil"
               icon={CalendarX}
               title="Nenhum atendimento neste dia"
               description="Que tal aproveitar para organizar a agenda da semana?"
               action={
                 <Link href={`/agenda/novo?data=${format(refDate, "yyyy-MM-dd")}`}>
-                  <Button variant="secondary" size="sm">
+                  <Button variant="accent" size="sm" className="rounded-full px-5">
                     Criar agendamento
                   </Button>
                 </Link>

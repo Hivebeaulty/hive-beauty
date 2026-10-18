@@ -39,6 +39,9 @@
   --c-primary: 58 42 34;
   --c-primary-hover: 42 29 22;
   --c-primary-ink: 250 246 241;
+  --c-accent: 147 99 58;
+  --c-accent-hover: 127 84 48;
+  --c-accent-ink: 255 251 246;
   --c-feature-line: 74 56 46;
   --c-feature-ink: 250 246 241;
   --c-feature-muted: 233 224 214;
@@ -47,47 +50,51 @@
   --c-feature-border: 58 42 34;
 }
 [data-theme="dark"] {
+  /* Café: marrom profundo e quente, sem preto (referência visual oficial) */
   color-scheme: dark;
-  --c-cream-DEFAULT: 28 28 30;
-  --c-cream-50: 35 35 37;
-  --c-cream-100: 28 28 30;
-  --c-surface: 44 44 46;
-  --c-ink-50: 48 48 50;
-  --c-ink-100: 58 58 60;
-  --c-ink-200: 74 74 77;
-  --c-ink-300: 122 116 110;
-  --c-ink-400: 166 158 149;
-  --c-ink-500: 185 177 168;
-  --c-ink-600: 206 197 186;
-  --c-ink-700: 227 219 209;
-  --c-ink-800: 242 237 230;
-  --c-ink-900: 247 242 235;
-  --c-gold-50: 46 42 36;
-  --c-gold-100: 58 52 40;
-  --c-gold-300: 227 203 160;
-  --c-gold-500: 201 168 118;
-  --c-gold-600: 211 181 131;
-  --c-gold-700: 217 190 143;
-  --c-wine-50: 58 46 54;
-  --c-wine-100: 70 52 63;
+  --c-cream-DEFAULT: 26 21 18;
+  --c-cream-50: 32 26 22;
+  --c-cream-100: 26 21 18;
+  --c-surface: 36 29 25;
+  --c-ink-50: 44 36 32;
+  --c-ink-100: 54 45 39;
+  --c-ink-200: 74 63 55;
+  --c-ink-300: 133 118 105;
+  --c-ink-400: 175 161 150;
+  --c-ink-500: 194 181 169;
+  --c-ink-600: 214 202 190;
+  --c-ink-700: 231 220 208;
+  --c-ink-800: 244 236 227;
+  --c-ink-900: 250 244 236;
+  --c-gold-50: 46 37 28;
+  --c-gold-100: 58 46 33;
+  --c-gold-300: 230 204 160;
+  --c-gold-500: 207 174 124;
+  --c-gold-600: 216 184 138;
+  --c-gold-700: 220 193 147;
+  --c-wine-50: 53 38 46;
+  --c-wine-100: 65 48 57;
   --c-wine-300: 142 109 132;
-  --c-wine-500: 199 160 188;
-  --c-wine-700: 224 196 216;
-  --c-sand-DEFAULT: 52 52 54;
-  --c-sand-200: 63 63 66;
-  --c-success: 141 187 143;
-  --c-warning: 224 164 107;
-  --c-danger: 230 138 128;
-  --c-feature-DEFAULT: 36 36 38;
-  --c-primary: 230 211 179;
-  --c-primary-hover: 240 226 200;
-  --c-primary-ink: 28 28 30;
-  --c-feature-line: 58 58 60;
-  --c-feature-ink: 242 237 230;
-  --c-feature-muted: 206 197 186;
-  --c-feature-soft: 185 177 168;
-  --c-feature-accent: 217 190 143;
-  --c-feature-border: 140 118 82;
+  --c-wine-500: 205 166 193;
+  --c-wine-700: 227 201 220;
+  --c-sand-DEFAULT: 47 38 33;
+  --c-sand-200: 59 48 42;
+  --c-success: 147 192 149;
+  --c-warning: 227 169 113;
+  --c-danger: 235 143 133;
+  --c-feature-DEFAULT: 33 26 22;
+  --c-feature-line: 59 48 42;
+  --c-feature-ink: 244 236 227;
+  --c-feature-muted: 214 202 190;
+  --c-feature-soft: 194 181 169;
+  --c-feature-accent: 220 193 147;
+  --c-feature-border: 126 106 78;
+  --c-primary: 221 191 142;
+  --c-primary-hover: 232 207 164;
+  --c-primary-ink: 26 21 18;
+  --c-accent: 210 165 116;
+  --c-accent-hover: 221 180 136;
+  --c-accent-ink: 26 21 18;
 }
 
 
@@ -168,3 +175,20 @@ body {
     text-align: left;
   }
 }
+
+/* ---- Ícones (Lucide): traço fino e consistente em todo o app ---- */
+.lucide { stroke-width: 1.75; }
+
+/* ---- Microinterações: cartões clicáveis ganham elevação sutil (hover) e
+   resposta ao toque (active); 200 ms. "Reduzir movimento" já zera as durações. ---- */
+a .rounded-lg.shadow-card, button.rounded-lg.shadow-card {
+  transition: box-shadow 200ms ease-out, transform 200ms ease-out;
+}
+@media (hover: hover) {
+  a:hover > .rounded-lg.shadow-card { box-shadow: 0 2px 4px rgba(58, 42, 34, 0.05), 0 10px 24px -12px rgba(58, 42, 34, 0.22); transform: translateY(-1px); }
+}
+a:active > .rounded-lg.shadow-card { transform: scale(0.99); }
+
+/* ---- Tema café: profundidade vem de tons e fios (sombra marrom some no escuro) ---- */
+[data-theme="dark"] .shadow-card, [data-theme="dark"] .shadow-lift { box-shadow: 0 0 0 1px rgb(var(--c-ink-100) / 0.6); }
+[data-theme="dark"] .shadow-float, [data-theme="dark"] .shadow-elevated { box-shadow: 0 0 0 1px rgb(var(--c-ink-200) / 0.7), 0 18px 40px -16px rgba(0, 0, 0, 0.55); }

@@ -232,6 +232,8 @@ export default function EditarAgendamentoPage() {
       p_method: payMethod,
       p_notes: notes,
       p_expected: concludedExpectedFrom(original, origPay.status),
+      // correção da cliente (0034): atendimento e recebimento mudam juntos
+      p_client_id: clientId,
     });
     if (err) {
       setSaving(false);
@@ -371,12 +373,12 @@ export default function EditarAgendamentoPage() {
       {concluded && (
         <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-sand px-4 py-3 text-sm text-ink-700">
           <Info className="mt-0.5 size-4 shrink-0 text-gold-700" />
-          <span>Atendimento concluído: as mudanças atualizam também o Financeiro. Nenhuma mensagem é enviada para a cliente.</span>
+          <span>Atendimento concluído: as mudanças (inclusive trocar a cliente, para corrigir um lançamento) atualizam também o Financeiro. Nenhuma mensagem é enviada.</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Select label="Cliente" required value={clientId} disabled={concluded} onChange={(e) => setClientId(e.target.value)}>
+        <Select label="Cliente" required value={clientId} onChange={(e) => setClientId(e.target.value)}>
           {clients.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
