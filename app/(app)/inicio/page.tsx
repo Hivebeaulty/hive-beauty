@@ -257,7 +257,7 @@ export default function InicioPage() {
               description="Aproveite para organizar a agenda dos próximos dias."
               action={
                 <Link href="/agenda/novo">
-                  <Button variant="secondary" size="sm">
+                  <Button variant="accent" size="sm" className="rounded-full px-5">
                     Criar agendamento
                   </Button>
                 </Link>

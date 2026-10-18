@@ -129,7 +129,7 @@ export function ReceitasContent() {
           <SkeletonListItem />
         </div>
       ) : rows.length === 0 ? (
-        <EmptyState icon={Receipt} title="Nenhum recebimento neste período" description="Ajuste o período ou o filtro de status." />
+        <EmptyState art="ramo" icon={Receipt} title="Nenhum recebimento neste período" description="Ajuste o período ou o filtro de status." />
       ) : (
         <div className="space-y-2">
           {rows.map((r) => (

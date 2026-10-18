@@ -24,6 +24,7 @@ const config: Config = {
         warning: "rgb(var(--c-warning) / <alpha-value>)",
         danger: "rgb(var(--c-danger) / <alpha-value>)",
         primary: { DEFAULT: "rgb(var(--c-primary) / <alpha-value>)", hover: "rgb(var(--c-primary-hover) / <alpha-value>)", ink: "rgb(var(--c-primary-ink) / <alpha-value>)" },
+        accent: { DEFAULT: "rgb(var(--c-accent) / <alpha-value>)", hover: "rgb(var(--c-accent-hover) / <alpha-value>)", ink: "rgb(var(--c-accent-ink) / <alpha-value>)" },
         feature: { DEFAULT: "rgb(var(--c-feature-DEFAULT) / <alpha-value>)", line: "rgb(var(--c-feature-line) / <alpha-value>)", ink: "rgb(var(--c-feature-ink) / <alpha-value>)", muted: "rgb(var(--c-feature-muted) / <alpha-value>)", soft: "rgb(var(--c-feature-soft) / <alpha-value>)", accent: "rgb(var(--c-feature-accent) / <alpha-value>)", border: "rgb(var(--c-feature-border) / <alpha-value>)" },
         blush: { 50: "#FBF1EA", 100: "#F5DDCF", 200: "#EFCBB8" },
         plum: { 400: "#9C6E7B", 500: "#885563", 600: "#6E4451", 700: "#563441" },
@@ -51,11 +52,17 @@ const config: Config = {
         elevated:
           "0 8px 24px -4px rgba(42, 29, 22, 0.12), 0 2px 8px -2px rgba(42, 29, 22, 0.08)",
         // Cartões: borda quente + sombra curta e quente (não a sombra cinza genérica).
-        card: "0 1px 0 rgba(58, 42, 34, 0.04), 0 2px 6px -2px rgba(58, 42, 34, 0.08)",
+        card: "0 1px 2px rgba(58, 42, 34, 0.04), 0 4px 14px -6px rgba(58, 42, 34, 0.10)",
+        // camada flutuante (modais, notificações, menus): difusa e quente, nunca pesada
+        float: "0 2px 6px rgba(58, 42, 34, 0.06), 0 18px 40px -16px rgba(58, 42, 34, 0.28)",
+        // elevação ao passar o cursor em itens clicáveis
+        lift: "0 2px 4px rgba(58, 42, 34, 0.05), 0 10px 24px -12px rgba(58, 42, 34, 0.22)",
         // Painel em destaque (cartão "Hoje"): profundidade só onde está o foco.
         feature: "0 12px 28px -12px rgba(42, 29, 22, 0.45)",
       },
       keyframes: {
+        // entrada discreta: opacidade + 4px de deslocamento (ilustrações, modais, conteúdo)
+        rise: { "0%": { opacity: "0", transform: "translateY(4px)" }, "100%": { opacity: "1", transform: "translateY(0)" } },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
@@ -74,6 +81,7 @@ const config: Config = {
         },
       },
       animation: {
+        rise: "rise 200ms cubic-bezier(0.2, 0.7, 0.2, 1) both",
         shimmer: "shimmer 1.6s ease-in-out infinite",
         "fade-in": "fade-in 0.15s ease-out",
         "slide-up": "slide-up 0.18s ease-out",

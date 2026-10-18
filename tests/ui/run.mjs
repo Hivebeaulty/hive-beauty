@@ -617,7 +617,7 @@ test("U26 aparência: escolher Grafite aplica o tema na hora e guarda no aparelh
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "dark");
   assert.equal(await page.evaluate(() => localStorage.getItem("aurea-theme")), "dark");
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  assert.equal(bg, "rgb(28, 28, 30)", "fundo grafite #1C1C1E");
+  assert.equal(bg, "rgb(26, 21, 18)", "fundo café #1A1512");
   await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "light" }]);
   await pick("Automático");
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");

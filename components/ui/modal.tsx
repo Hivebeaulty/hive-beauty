@@ -42,7 +42,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div
-        className="absolute inset-0 animate-fade-in bg-ink-900/30"
+        className="absolute inset-0 animate-fade-in bg-ink-900/30 backdrop-blur-[2px]"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -53,7 +53,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         aria-label={title}
         tabIndex={-1}
         className={cn(
-          "relative z-10 max-h-[90vh] w-full animate-slide-up overflow-y-auto rounded-t-xl bg-surface p-5 shadow-elevated sm:max-w-md sm:rounded-xl",
+          "relative z-10 max-h-[90vh] w-full animate-slide-up overflow-y-auto rounded-t-xl border border-ink-100 bg-surface p-5 shadow-float sm:max-w-md sm:rounded-xl",
           className
         )}
       >

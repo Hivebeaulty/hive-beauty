@@ -1,3 +1,4 @@
+import { LineIllustration } from "@/components/ui/line-illustration";
 import * as React from "react";
 // Palco de testes: o painel REAL da tela de WhatsApp com uma API simulada que o
 // teste controla (window.__wa). Só o cliente do Supabase é trocado.
@@ -60,7 +61,13 @@ createRoot(document.getElementById("root")!).render(
           <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">WhatsApp</h1>
           <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Áurea.</p>
         </div>
-        {view === "extras" ? (
+        {view === "illus" ? (
+          <div className="grid grid-cols-3 gap-2 bg-cream p-2">
+            <LineIllustration kind="perfil" className="h-40" />
+            <LineIllustration kind="pensativa" className="h-40" />
+            <LineIllustration kind="ramo" className="h-40" />
+          </div>
+        ) : view === "extras" ? (
           <ExtrasStage />
         ) : view === "birthday" ? (
           <WhatsappBirthdayMessage companyId="00000000-0000-0000-0000-000000000001" companyName="Studio Bella" />
@@ -103,6 +110,12 @@ createRoot(document.getElementById("root")!).render(
                 </div>
                 <TodaySummary loading={q.get("loading") === "1"} canSeeFinance={fin} received={money}
                   appointmentsToday={Number(q.get("today") ?? "12")} upcoming={Number(q.get("up") ?? "148")} dateLabel="quinta-feira, 15 de outubro" />
+                <Card>
+                  <h2 className="mb-1 text-sm font-semibold text-ink-700">Agenda de hoje</h2>
+                  {/* Agenda de hoje (palco) */}
+                  <EmptyState art="perfil" icon={CalendarX} title="Nenhum atendimento hoje" description="Aproveite para organizar a agenda dos próximos dias."
+                    action={<Button variant="accent" size="sm" className="rounded-full px-5">Criar agendamento</Button>} />
+                </Card>
                 <Card data-testid="month">
                   <h2 className="mb-4 text-sm font-semibold text-ink-700">Negócio no mês</h2>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
