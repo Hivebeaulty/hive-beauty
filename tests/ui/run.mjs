@@ -673,3 +673,37 @@ test("U28 tema PERSISTE: Grafite → fechar → (iPhone apaga o armazenamento lo
     srv.close();
   }
 });
+
+test("U29 mensagens automáticas: 6 datas; liga na hora; personalizar com prévia ({anos}); variável errada bloqueia; 320 px", async () => {
+  const page = await browser.newPage();
+  await page.setViewport({ width: 320, height: 1100, deviceScaleFactor: 1 });
+  await page.evaluateOnNewDocument(() => {
+    window.__a = { calls: [] };
+    const items = {}; for (const k of ["new_year","womens_day","selfcare_day","customer_day","christmas","client_anniversary"]) items[k] = { enabled: false, mode: "system", template: null };
+    window.__rpc = async (fn, args) => { window.__a.calls.push({ fn, args }); await new Promise((r) => setTimeout(r, 20));
+      if (fn === "wa_set_auto_message") items[args.p_kind] = { enabled: args.p_enabled, mode: args.p_mode, template: args.p_template };
+      return { data: { can_manage: true, items }, error: null }; };
+  });
+  await page.goto(`${PAGE}?view=automsgs`);
+  await page.waitForSelector('[data-testid="wa-auto"]', { timeout: 6000 });
+  const text = await page.$eval('[data-testid="wa-auto"]', (e) => e.innerText);
+  for (const t of ["Ano-Novo", "01/01", "Dia da Mulher", "08/03", "Dia do Autocuidado", "24/07", "Dia do Cliente", "15/09", "Natal", "25/12", "Aniversário de cliente"]) assert.ok(text.includes(t), t);
+  const sw = await page.$$('[data-testid="wa-auto"] [role="switch"]'); assert.equal(sw.length, 6);
+  await sw[4].click(); await waitText(page, "Natal: mensagem ligada.");
+  const set = (await page.evaluate(() => window.__a.calls)).filter((c) => c.fn === "wa_set_auto_message");
+  assert.deepEqual([set[0].args.p_kind, set[0].args.p_enabled], ["christmas", true]);
+  const pers = await page.$$('[data-testid="wa-auto"] li button.text-xs'); await pers[5].click();
+  await page.$$eval('[role="radio"]', (bs) => bs.find((b) => b.innerText === "Minha mensagem").click());
+  await page.waitForSelector("textarea");
+  await page.$eval("textarea", (e) => { e.focus(); e.select(); });
+  await page.keyboard.type("Parabéns, {nome}! Hoje faz {anos} juntas. {cupom}");
+  await waitText(page, "Variável desconhecida: {cupom}.");
+  const saveDisabled = () => page.$$eval("button", (bs) => bs.find((b) => b.innerText.trim() === "Salvar")?.disabled);
+  assert.equal(await saveDisabled(), true);
+  for (let i = 0; i < " {cupom}".length; i++) await page.keyboard.press("Backspace");
+  await waitText(page, "Parabéns, Ana! Hoje faz 2 anos juntas.");
+  assert.equal(await saveDisabled(), false);
+  assert.ok(await noHorizontalScroll(page), "rolagem lateral a 320 px");
+  await page.screenshot({ path: join(SHOTS, "98-auto-mensagens.png"), fullPage: true });
+  await page.close();
+});

@@ -96,7 +96,10 @@ sleep 0.5
    select update_appointment('$c2', '$K2', '$SA', '$MA', $T0 + interval '1 day 5 hours 30 minutes', $T0 + interval '1 day 6 hours 30 minutes', 50, null, '$e2'::jsonb); commit;" > /tmp/e2e_c2.out 2>&1
 wait
 n="$(Q "select count(*) from appointments where professional_member_id = '$MA' and tstzrange(scheduled_start, scheduled_end) && tstzrange($T0 + interval '1 day 5 hours', $T0 + interval '1 day 6 hours 30 minutes')")"
-grep -q "23P01" /tmp/e2e_c2.out && [[ "$n" == 1 ]] && ok "C3 duas edições SIMULTÂNEAS para o mesmo horário: uma vence, a outra é recusada (23P01)" || ko "C3 n=$n $(head -c 200 /tmp/e2e_c2.out)"
+# qual das duas vence depende do agendador do sistema operacional; o que importa:
+# EXATAMENTE uma é recusada por conflito (23P01) e só UM atendimento fica no horário
+refused=$(( $(grep -c "23P01" /tmp/e2e_c1.out) + $(grep -c "23P01" /tmp/e2e_c2.out) ))
+[[ "$refused" == 1 && "$n" == 1 ]] && ok "C3 duas edições SIMULTÂNEAS para o mesmo horário: uma vence, a outra é recusada (23P01)" || ko "C3 n=$n recusadas=$refused"
 # a MESMA ficha editada em dois aparelhos ao mesmo tempo
 e1="$(expected "$c1")"
 ( "${PSQL[@]}" -c "begin; set local \"request.jwt.claim.sub\" = '$OWN'; set local role authenticated;

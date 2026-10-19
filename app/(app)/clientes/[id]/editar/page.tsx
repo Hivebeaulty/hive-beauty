@@ -25,6 +25,7 @@ export default async function EditarClientePage({ params }: { params: Promise<{ 
           phone: client.phone ?? "",
           instagram: client.instagram ?? "",
           birth_date: client.birth_date ?? "",
+          client_since: client.client_since ?? "",
           preferences: client.preferences ?? "",
           notes: client.notes ?? "",
           comm_status: client.comm_status ?? "unknown",

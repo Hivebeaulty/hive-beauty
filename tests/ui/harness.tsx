@@ -1,3 +1,4 @@
+import { ToastProvider } from "@/components/ui/toast";
 import { LineIllustration } from "@/components/ui/line-illustration";
 import * as React from "react";
 // Palco de testes: o painel REAL da tela de WhatsApp com uma API simulada que o
@@ -25,6 +26,7 @@ import { ExtraServicesEditor } from "@/components/agenda/extra-services-editor";
 import { totals, type ExtraItem } from "@/lib/hive/extra-services";
 import { WhatsappBirthdayMessage } from "@/components/settings/whatsapp-birthday-message";
 import { AppearanceCard } from "@/components/settings/appearance-card";
+import { WhatsappAutoMessages } from "@/components/settings/whatsapp-auto-messages";
 import { Rankings } from "@/components/reports/rankings";
 import { buildRankings } from "@/lib/hive/rankings";
 
@@ -54,6 +56,7 @@ const view = new URLSearchParams(location.search).get("view") || "";
 const __theme = new URLSearchParams(location.search).get("theme");
 if (__theme) document.documentElement.setAttribute("data-theme", __theme);
 createRoot(document.getElementById("root")!).render(
+  <ToastProvider>
   <div className="min-h-screen bg-cream">
     <main className="mx-auto max-w-3xl px-4 py-6 md:px-8">
       <div className="space-y-5 pb-4">
@@ -61,7 +64,9 @@ createRoot(document.getElementById("root")!).render(
           <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">WhatsApp</h1>
           <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Áurea.</p>
         </div>
-        {view === "illus" ? (
+        {view === "automsgs" ? (
+          <WhatsappAutoMessages companyId="00000000-0000-0000-0000-000000000001" companyName="Studio Bella" />
+        ) : view === "illus" ? (
           <div className="grid grid-cols-3 gap-2 bg-cream p-2">
             <LineIllustration kind="perfil" className="h-40" />
             <LineIllustration kind="pensativa" className="h-40" />
@@ -184,6 +189,7 @@ createRoot(document.getElementById("root")!).render(
       </div>
     </main>
   </div>
+  </ToastProvider>
 );
 
 function ExtrasStage() {
