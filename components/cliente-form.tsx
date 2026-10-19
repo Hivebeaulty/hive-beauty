@@ -19,6 +19,7 @@ type ClientFormData = {
   phone: string;
   instagram: string;
   birth_date: string;
+  client_since?: string;
   preferences: string;
   notes: string;
   comm_status: CommStatus;
@@ -45,6 +46,8 @@ export function ClienteForm({ initial }: { initial?: ClientFormData }) {
   const [phone, setPhone] = useState(initial?.phone ?? "");
   const [instagram, setInstagram] = useState(initial?.instagram ?? "");
   const [birthDate, setBirthDate] = useState(initial?.birth_date ?? "");
+  // data do PRIMEIRO ATENDIMENTO (0035): base do "aniversário de cliente"
+  const [clientSince, setClientSince] = useState(initial?.client_since ?? "");
   const [preferences, setPreferences] = useState(initial?.preferences ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [commStatus, setCommStatus] = useState<CommStatus>(initial?.comm_status ?? "unknown");
@@ -110,6 +113,7 @@ export function ClienteForm({ initial }: { initial?: ClientFormData }) {
       phone: phoneValue ? (phoneChanged && parsed?.ok ? formatBrazilPhone(phoneValue) : phoneValue) : null,
       instagram: instagram || null,
       birth_date: birthDate || null,
+      client_since: clientSince || null,
       preferences: preferences || null,
       notes: notes || null,
     };
@@ -188,12 +192,17 @@ export function ClienteForm({ initial }: { initial?: ClientFormData }) {
         </div>
       )}
 
-      <Input
-        type="date"
-        label="Data de nascimento"
-        value={birthDate}
-        onChange={(e) => setBirthDate(e.target.value)}
-      />
+      <div className="grid grid-cols-2 gap-3">
+        <Input type="date" label="Data de nascimento" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+        <Input
+          type="date"
+          label="Cliente desde"
+          hint="Primeiro atendimento"
+          value={clientSince}
+          max={new Date().toISOString().slice(0, 10)}
+          onChange={(e) => setClientSince(e.target.value)}
+        />
+      </div>
 
       <div className="space-y-1.5">
         <p className="text-sm font-medium text-ink-700">Mensagens pelo WhatsApp</p>
