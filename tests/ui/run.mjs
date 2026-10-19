@@ -617,7 +617,7 @@ test("U26 aparência: escolher Grafite aplica o tema na hora e guarda no aparelh
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "dark");
   assert.equal(await page.evaluate(() => localStorage.getItem("aurea-theme")), "dark");
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  assert.equal(bg, "rgb(26, 21, 18)", "fundo café #1A1512");
+  assert.equal(bg, "rgb(28, 28, 30)", "fundo grafite #1C1C1E");
   await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "light" }]);
   await pick("Automático");
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");
@@ -637,5 +637,39 @@ test("U27 tema Grafite: painel do início sem sobreposição em 320–1024 px", 
     assert.deepEqual(r.escapes, [], `${w}px escuro: fora do espaço`);
     assert.equal(r.hscroll, false);
     await page.close();
+  }
+});
+
+// ============================================================ Persistência do tema (fechar e reabrir)
+test("U28 tema PERSISTE: Grafite → fechar → (iPhone apaga o armazenamento local) → reabrir = Grafite; depois Claro idem", async () => {
+  const http = await import("node:http"); const fs = await import("node:fs"); const path = await import("node:path");
+  const root = path.join(process.cwd(), "dist");
+  const srv = http.createServer((req, res) => {
+    const f = path.join(root, decodeURIComponent(new URL(req.url, "http://x").pathname).replace(/^\/$/, "/index.html"));
+    if (req.url.startsWith("/api/theme")) { res.writeHead(404); return res.end(); } // sem servidor real aqui: o cookie do navegador basta
+    fs.readFile(f, (e, d) => { if (e) { res.writeHead(404); return res.end(); } res.writeHead(200, { "Content-Type": f.endsWith(".html") ? "text/html" : f.endsWith(".css") ? "text/css" : "text/javascript" }); res.end(d); });
+  });
+  await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+  const url = `http://127.0.0.1:${srv.address().port}/?view=kit`;
+  const open = async () => { const p = await browser.newPage(); await p.setViewport({ width: 390, height: 800 }); await p.goto(url); await p.waitForSelector('[data-testid="appearance"]'); return p; };
+  const theme = (p) => p.evaluate(() => document.documentElement.getAttribute("data-theme"));
+  const pick = (p, t) => p.$$eval('[data-testid="appearance"] [role="radio"]', (bs, t) => bs.find((b) => b.innerText.startsWith(t)).click(), t);
+  try {
+    let p = await open();
+    assert.equal(await theme(p), "light", "nunca escolheu: claro");
+    await pick(p, "Grafite");
+    assert.equal(await theme(p), "dark");
+    await p.evaluate(() => localStorage.clear());           // o iPhone apagou o armazenamento local
+    await p.close();                                        // fechou o app
+    p = await open();                                       // reabriu
+    assert.equal(await theme(p), "dark", "reabriu no Grafite (cookie)");
+    assert.equal(await p.$eval('[aria-checked="true"]', (b) => b.innerText.split("\n")[0]), "Grafite", "a opção marcada é a salva");
+    await pick(p, "Claro");
+    await p.close();
+    p = await open();
+    assert.equal(await theme(p), "light", "reabriu no Claro");
+    await p.close();
+  } finally {
+    srv.close();
   }
 });

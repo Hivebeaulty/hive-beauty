@@ -18,7 +18,7 @@ const TONE_ICON: Record<ToastTone, React.ElementType> = {
 };
 
 const TONE_ICON_CLASS: Record<ToastTone, string> = {
-  success: "text-success",
+  success: "text-gold-700",
   error: "text-danger",
   info: "text-ink-500",
 };
@@ -51,10 +51,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           return (
             <div
               key={t.id}
-              className="flex animate-slide-in-right items-start gap-2.5 rounded-lg border border-ink-100 bg-surface p-3.5 shadow-float"
+              className={cn(
+                "flex animate-slide-in-right items-center gap-3 rounded-xl border bg-surface p-3 pr-3.5 shadow-float",
+                t.tone === "success" ? "border-gold-100" : t.tone === "error" ? "border-danger/25" : "border-ink-100"
+              )}
             >
-              <Icon className={cn("mt-0.5 size-4.5 shrink-0", TONE_ICON_CLASS[t.tone])} />
-              <p className="flex-1 text-sm text-ink-800">{t.message}</p>
+              <span
+                className={cn(
+                  "flex size-9 shrink-0 items-center justify-center rounded-full",
+                  t.tone === "success" ? "bg-gold-50 ring-1 ring-gold-100" : t.tone === "error" ? "bg-danger/10" : "bg-sand"
+                )}
+              >
+                <Icon className={cn("size-[18px] animate-rise", TONE_ICON_CLASS[t.tone])} />
+              </span>
+              <p className="flex-1 text-sm font-medium text-ink-800">{t.message}</p>
               <button
                 onClick={() => dismiss(t.id)}
                 aria-label="Fechar aviso"

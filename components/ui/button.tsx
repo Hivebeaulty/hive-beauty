@@ -8,9 +8,9 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "accent";
 type Size = "sm" | "md" | "lg";
 
 const VARIANT_CLASSES: Record<Variant, string> = {
-  primary: "bg-primary text-primary-ink shadow-card hover:bg-primary-hover hover:shadow-lift active:bg-primary-hover",
+  primary: "btn-gold",
   // ação em destaque (caramelo da referência): CTAs de estados vazios e ações prioritárias
-  accent: "bg-accent text-accent-ink shadow-card hover:bg-accent-hover hover:shadow-lift active:bg-accent-hover",
+  accent: "btn-gold",
   secondary:
     "bg-surface text-ink-800 border border-ink-200 hover:bg-ink-50 active:bg-ink-100",
   ghost: "bg-transparent text-ink-700 hover:bg-ink-50 active:bg-ink-100",
@@ -38,7 +38,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          "inline-flex items-center justify-center rounded font-semibold transition-[background-color,color,box-shadow,transform] duration-200 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-cream disabled:active:scale-100",
+          "inline-flex items-center justify-center rounded font-semibold transition-[background-color,color,box-shadow,transform,filter] duration-200 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-cream disabled:active:scale-100",
           "disabled:cursor-not-allowed disabled:opacity-50",
           VARIANT_CLASSES[variant],
           SIZE_CLASSES[size],
