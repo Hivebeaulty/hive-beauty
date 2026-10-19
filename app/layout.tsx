@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Fraunces } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
-import { THEME_BOOT_SCRIPT } from "@/lib/hive/theme";
+import { THEME_BOOT_SCRIPT, THEME_KEY, parseThemePref } from "@/lib/hive/theme";
+import { cookies } from "next/headers";
 import { ThemeSync } from "@/components/theme-sync";
 
 // Fonte de UI — corpo, labels, botões, tabelas. Domina a interface.
@@ -46,9 +47,11 @@ export const viewport: Viewport = {
   themeColor: "#FAF6F1",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // o servidor já desenha no tema salvo (cookie); "auto" decide no aparelho (script)
+  const pref = parseThemePref((await cookies()).get(THEME_KEY)?.value);
   return (
-    <html lang="pt-BR" className={`${sans.variable} ${serif.variable}`} data-theme="light" suppressHydrationWarning>
+    <html lang="pt-BR" className={`${sans.variable} ${serif.variable}`} data-theme={pref === "dark" ? "dark" : "light"} suppressHydrationWarning>
       <head>
         {/* aplica o tema escolhido ANTES de pintar (sem "piscar" claro no escuro) */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />

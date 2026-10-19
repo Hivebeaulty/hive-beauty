@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Clock, AlertTriangle, CheckCircle2, MessageCircle, Info } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 type ClientOption = { id: string; name: string; phone: string | null; phone_normalized: string | null };
 
@@ -48,6 +49,7 @@ export default function NovoAgendamentoPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { companyId, companyName, memberId, role } = useCompany();
+  const toast = useToast();
 
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
@@ -286,6 +288,7 @@ export default function NovoAgendamentoPage() {
     } catch {
       confirmation = null;
     }
+    toast.success("Agendamento criado com sucesso."); // só depois que o banco confirmou a gravação
     setCreated({
       id: inserted.id,
       confirmation,

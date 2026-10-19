@@ -1,7 +1,7 @@
 // Monta o palco: CSS do app (Tailwind do próprio projeto) + JS do painel REAL.
 import { build } from "esbuild";
 import { execSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -33,9 +33,13 @@ await build({
   ],
 });
 
+const THEME_SRC = readFileSync(new URL("../../lib/hive/theme.ts", import.meta.url), "utf8");
+const THEME_KEY = THEME_SRC.match(/THEME_KEY = "([^"]+)"/)[1];
+const bootExpr = THEME_SRC.match(/export const THEME_BOOT_SCRIPT =([\s\S]*?);\n/)[1];
+const THEME_BOOT_SCRIPT = new Function("THEME_KEY", "return (" + bootExpr + ")")(THEME_KEY);
 writeFileSync(
   join(DIST, "index.html"),
-  `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><script>${THEME_BOOT_SCRIPT}</script>
 <link rel="stylesheet" href="app.css"><style>/* next/font não carrega offline: aproximação sem serifa, só no palco */:root{--font-sans:ui-sans-serif,system-ui,"DejaVu Sans",sans-serif;--font-serif:Georgia,serif}</style></head><body class="min-h-screen bg-cream font-sans text-ink-800 antialiased"><div id="root"></div><script src="bundle.js"></script></body></html>`
 );
 console.log("palco montado em", DIST);

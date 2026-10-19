@@ -35,6 +35,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, Clock, Info, MessageCircle } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 type Option = { id: string; name: string };
 type ServiceOption = { id: string; name: string; duration_minutes: number; price: number; active: boolean };
@@ -46,6 +47,7 @@ export default function EditarAgendamentoPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { companyId, role } = useCompany();
+  const toast = useToast();
 
   const [original, setOriginal] = useState<AppointmentSnapshot | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -244,7 +246,9 @@ export default function EditarAgendamentoPage() {
     }
     if (extrasChanged && !(await saveExtras())) return;
     setSaving(false);
-    setDone({ changed: !!(data as { changed?: boolean } | null)?.changed || extrasChanged, notice: null, clientChanged: false, concluded: true });
+    const changedC = !!(data as { changed?: boolean } | null)?.changed || extrasChanged;
+    if (changedC) toast.success("Alterações salvas. O Financeiro já reflete a mudança.");
+    setDone({ changed: changedC, notice: null, clientChanged: false, concluded: true });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -304,6 +308,7 @@ export default function EditarAgendamentoPage() {
       if (!nErr) notice = describeChangeNotice(parseChangeNotice(n), "reschedule");
     }
     setSaving(false);
+    if (r.changed || extrasChanged) toast.success("Alterações salvas.");
     setDone({ changed: !!r.changed || extrasChanged, notice, clientChanged: !!r.client_changed });
   }
 

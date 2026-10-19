@@ -18,10 +18,10 @@ test("resolução: Grafite sempre escuro; Automático segue o celular", () => {
 });
 
 test("script do <head>: aplica a MESMA regra antes de pintar", () => {
-  const run = (stored, systemDark) => {
+  const run = (stored, systemDark, cookie = "") => {
     const attrs = {};
     const ctx = { localStorage: { getItem: () => stored }, window: { matchMedia: () => ({ matches: systemDark }) },
-      document: { documentElement: { setAttribute: (k, v) => { attrs[k] = v; } } } };
+      document: { cookie, documentElement: { setAttribute: (k, v) => { attrs[k] = v; } } } };
     new Function("localStorage", "window", "document", t.THEME_BOOT_SCRIPT)(ctx.localStorage, ctx.window, ctx.document);
     return attrs["data-theme"];
   };
@@ -40,4 +40,22 @@ test("applyTheme: escolher Claro / Automático com celular claro deixa CLARO (n�
     assert.equal(attrs["data-theme"], want, `${pref} / celular ${sysDark ? "escuro" : "claro"}`);
   }
   delete global.document; delete global.window;
+});
+
+test("PERSISTÊNCIA: iPhone apagou o armazenamento local, mas o cookie guarda a escolha", () => {
+  const run = (stored, cookie, systemDark = false) => {
+    const attrs = {};
+    new Function("localStorage", "window", "document", t.THEME_BOOT_SCRIPT)(
+      { getItem: () => stored }, { matchMedia: () => ({ matches: systemDark }) },
+      { cookie, documentElement: { setAttribute: (k, v) => { attrs[k] = v; } } });
+    return attrs["data-theme"];
+  };
+  assert.equal(run(null, "sb-x=1; aurea-theme=dark; outro=2"), "dark", "reabriu sem armazenamento local: continua escuro");
+  assert.equal(run(null, "aurea-theme=light"), "light");
+  assert.equal(run(null, "aurea-theme=auto", true), "dark");
+  assert.equal(run("light", "aurea-theme=dark"), "light", "o armazenamento local, quando existe, vale");
+  assert.equal(run(null, ""), "light", "nunca escolheu: claro (padrão)");
+  assert.equal(run(null, "xaurea-theme=dark"), "light", "não confunde com outro cookie");
+  assert.equal(t.themeFromCookie("a=1; aurea-theme=dark"), "dark");
+  assert.equal(t.themeFromCookie("aurea-theme=roxo"), null);
 });

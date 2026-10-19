@@ -168,6 +168,11 @@ export default function AgendamentoDetalhePage() {
       const { data: n, error: nErr } = await supabase.rpc("wa_get_change_notice", { p_appointment_id: id });
       setCancelNotice(nErr ? null : describeChangeNotice(parseChangeNotice(n), "cancel"));
     }
+    // confirmação SÓ depois que o banco gravou; texto da ação real
+    toast.success(
+      ({ confirmado: "Agendamento confirmado.", em_atendimento: "Atendimento iniciado.", cancelado: "Agendamento cancelado.", agendado: "Agendamento voltou para agendado." } as Record<string, string>)[status] ??
+        "Status atualizado."
+    );
     load();
   }
 
@@ -197,6 +202,7 @@ export default function AgendamentoDetalhePage() {
       return;
     }
     setShowConclude(false);
+    toast.success(pending ? "Atendimento concluído. O recebimento ficou pendente." : "Atendimento concluído e recebimento registrado.");
     load();
   }
 

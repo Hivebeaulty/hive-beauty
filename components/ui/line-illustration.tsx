@@ -5,7 +5,7 @@
 // Use só em estados vazios / boas-vindas, uma por tela.
 import { cn } from "@/lib/utils";
 
-export type IllustrationKind = "perfil" | "pensativa" | "ramo";
+export type IllustrationKind = "oficial" | "perfil" | "pensativa" | "ramo";
 
 // rosto de perfil (testa, nariz, lábios, queixo) e pescoço/ombro — base comum
 const FACE =
@@ -52,9 +52,9 @@ export function LineIllustration({
         cx="80"
         cy="72"
         r="54"
-        className={cn(kind === "ramo" ? "fill-[#F3E2D3]" : "fill-[#F1DFD8]", "dark:fill-[#2E241F]")}
+        className={cn(kind === "ramo" ? "fill-[#F3E2D3]" : "fill-[#F1DFD8]", "dark:fill-[#3A3A3C]")}
       />
-      <g fill="none" className="stroke-[#9C7048] dark:stroke-[#D8B88A]" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
+      <g fill="none" className="stroke-[#A97842] dark:stroke-[#E2BE8A]" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
         {hair.map((d) => (
           <path key={d} d={d} />
         ))}
@@ -80,11 +80,27 @@ export function LineIllustration({
           </>
         )}
       </g>
-      <g className="fill-[#C9A876] dark:fill-[#D8B88A]">
+      <g className="fill-[#C9A26C] dark:fill-[#E2BE8A]">
         <path d={SPARK(106, 28, 7)} />
         <path d={SPARK(38, 52, 4)} />
         <path d={SPARK(122, 54, 2.6)} className="opacity-70" />
       </g>
     </svg>
+  );
+}
+
+/**
+ * Ilustração OFICIAL aprovada (arquivos em /public/illustrations): uma versão por
+ * tema; só a do tema ativo aparece (a outra, escondida e com loading="lazy", nem
+ * é baixada).
+ */
+export function OfficialIllustration({ className }: { className?: string }) {
+  return (
+    <span className={cn("block size-36 shrink-0", className)} data-illustration="oficial">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/illustrations/agenda-vazia-claro.webp" alt="" width={144} height={144} loading="lazy" decoding="async" className="size-full dark:hidden" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/illustrations/agenda-vazia-escuro.webp" alt="" width={144} height={144} loading="lazy" decoding="async" className="hidden size-full dark:block" />
+    </span>
   );
 }
