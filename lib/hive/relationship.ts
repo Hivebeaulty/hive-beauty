@@ -74,22 +74,35 @@ export type ClientSegment =
   | "todas"
   | "novas"
   | "recorrentes"
-  | "inativas"
+  | "sumidas"
   | "fora_do_padrao"
   | "aniversariantes";
 
+// ATENÇÃO — dois conceitos que NÃO são a mesma coisa:
+//   "Sumidas"  = segmento CALCULADO pelo app: a cliente passou do tempo esperado
+//                sem voltar. Ela continua ativa e pode ser chamada de volta.
+//   "Inativas" = decisão MANUAL da profissional (clients.archived_at): a cliente
+//                sai da lista principal, dos agendamentos e das mensagens. Não é
+//                um segmento; é a visão "arquivadas" da tela de Clientes.
+//
+// Links e favoritos antigos usavam "?segmento=inativas" para o que hoje se chama
+// "sumidas". Eles continuam abrindo a lista certa.
+export function normalizeSegmentParam(param: string): string {
+  return param === "inativas" ? "sumidas" : param;
+}
+
 // Os segmentos são ETIQUETAS, não grupos exclusivos: uma cliente pode estar em
-// mais de um (ex.: "inativas" e "fora_do_padrao").
-//   inativas        = passou do tempo esperado sem voltar. Usa o ritmo dela quando
+// mais de um (ex.: "sumidas" e "fora_do_padrao").
+//   sumidas         = passou do tempo esperado sem voltar. Usa o ritmo dela quando
 //                     há histórico (>= 2 visitas) e o prazo fixo de 60 dias quando
 //                     não há (comportamento original, preservado).
-//   fora_do_padrao  = subconjunto de "inativas" com histórico SUFICIENTE: já passou
+//   fora_do_padrao  = subconjunto de "sumidas" com histórico SUFICIENTE: já passou
 //                     de 1,5x o intervalo médio entre as visitas DELA. É a lista
 //                     de maior confiança para uma futura mensagem de retorno.
 export function classifySegments(rel: ClientRelationship, daysToNextBirthday: number | null): ClientSegment[] {
   const segs: ClientSegment[] = ["todas"];
   if (rel.isOverdue && rel.hasEnoughHistory) segs.push("fora_do_padrao");
-  if (rel.isOverdue && rel.visitCount > 0) segs.push("inativas");
+  if (rel.isOverdue && rel.visitCount > 0) segs.push("sumidas");
   else if (rel.visitCount >= MIN_VISITS_FOR_FREQUENCY) segs.push("recorrentes");
   else if (rel.visitCount <= 1) segs.push("novas");
   if (daysToNextBirthday !== null && daysToNextBirthday <= 30) segs.push("aniversariantes");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -13,12 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonListItem } from "@/components/ui/skeleton";
-import { birthdayLabel, type ClientSegment } from "@/lib/hive/relationship";
+import { birthdayLabel, normalizeSegmentParam, type ClientSegment } from "@/lib/hive/relationship";
+import { keepVisibleSelection } from "@/lib/hive/bulk-clients";
+import { ClientesBulkActions } from "@/components/clientes-bulk-actions";
 import { loadClientRows, type ClientRow } from "@/lib/hive/clients-data";
 import { phoneDisplay } from "@/lib/hive/phone";
 import { formatDateOnly } from "@/lib/hive/format";
 import { cn } from "@/lib/utils";
-import { Search, UserPlus, Upload, Users, Cake, AlertCircle, Archive, MessageSquareText } from "lucide-react";
+import { Search, UserPlus, Upload, Users, Cake, AlertCircle, Archive, MessageSquareText, ListChecks } from "lucide-react";
 
 type View = ClientSegment | "arquivadas";
 
@@ -26,7 +28,7 @@ const SEGMENT_OPTIONS: { value: ClientSegment; label: string }[] = [
   { value: "todas", label: "Todas" },
   { value: "novas", label: "Novas" },
   { value: "recorrentes", label: "Recorrentes" },
-  { value: "inativas", label: "Inativas" },
+  { value: "sumidas", label: "Sumidas" },
   { value: "fora_do_padrao", label: "Fora do padrão" },
   { value: "aniversariantes", label: "Aniversariantes" },
 ];
@@ -36,10 +38,10 @@ const SEGMENT_OPTIONS: { value: ClientSegment; label: string }[] = [
 const SEGMENT_HELP: Partial<Record<View, string>> = {
   novas: "Clientes com até 1 atendimento concluído.",
   recorrentes: "Clientes que voltam: 2 ou mais atendimentos, dentro do ritmo delas.",
-  inativas: "Passaram do tempo esperado sem voltar (60 dias quando ainda há pouco histórico).",
+  sumidas: "Clientes ativas que passaram do tempo esperado sem voltar (60 dias quando ainda há pouco histórico). Quem você inativou fica na aba Inativas.",
   fora_do_padrao: "Já passaram de 1,5 vez o intervalo médio entre as visitas delas.",
   aniversariantes: "Aniversário nos próximos 30 dias.",
-  arquivadas: "Clientes inativas: não aparecem para agendamentos e não recebem mensagens automáticas. O histórico continua guardado; abra uma para reativar.",
+  arquivadas: "Clientes que você inativou: não aparecem para agendamentos e não recebem mensagens automáticas. O histórico continua guardado; abra uma para reativar.",
 };
 
 const VALID_VIEWS = new Set<string>([...SEGMENT_OPTIONS.map((s) => s.value), "arquivadas"]);
@@ -47,12 +49,23 @@ const VALID_VIEWS = new Set<string>([...SEGMENT_OPTIONS.map((s) => s.value), "ar
 export default function ClientesPage() {
   const { companyId } = useCompany();
   const searchParams = useSearchParams();
-  const param = searchParams.get("segmento") ?? "";
+  const param = normalizeSegmentParam(searchParams.get("segmento") ?? "");
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<View>(VALID_VIEWS.has(param) ? (param as View) : "todas");
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+
+  // Seleção múltipla (exclusão / inativação em massa)
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const reload = useCallback(async () => {
+    const { rows, failed } = await loadClientRows(createClient(), companyId);
+    setClients(rows);
+    setFailed(failed);
+    setLoading(false);
+  }, [companyId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,6 +108,33 @@ export default function ClientesPage() {
   }, [clients, active, query, view]);
 
   const emptyBase = view === "arquivadas" ? archivedCount === 0 : active.length === 0;
+
+  // A seleção só vale para quem está na tela: ao buscar, trocar de filtro ou
+  // recarregar, quem saiu da lista sai da seleção (nada de ação em massa às cegas).
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const next = keepVisibleSelection(prev, filtered.map((c) => c.id));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filtered]);
+
+  const selectedClients = useMemo(() => filtered.filter((c) => selected.has(c.id)), [filtered, selected]);
+  const allSelected = filtered.length > 0 && selectedClients.length === filtered.length;
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function stopSelecting() {
+    setSelecting(false);
+    setSelected(new Set());
+  }
 
   return (
     <div className="space-y-5 pb-4">
@@ -227,40 +267,92 @@ export default function ClientesPage() {
         />
       ) : (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-ink-400">
-            {filtered.length} cliente{filtered.length > 1 ? "s" : ""}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-ink-400">
+              {filtered.length} cliente{filtered.length > 1 ? "s" : ""}
+            </p>
+            {selecting ? (
+              <div className="flex items-center gap-3 text-xs font-medium text-ink-500">
+                <button
+                  onClick={() => setSelected(allSelected ? new Set() : new Set(filtered.map((c) => c.id)))}
+                  className="hover:text-ink-800"
+                >
+                  {allSelected ? "Limpar seleção" : filtered.length === 1 ? "Selecionar" : "Selecionar todas"}
+                </button>
+                <button onClick={stopSelecting} className="hover:text-ink-800">
+                  Concluir
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setSelecting(true)}
+                className="flex items-center gap-1.5 text-xs font-medium text-ink-500 hover:text-ink-800"
+              >
+                <ListChecks className="size-3.5" />
+                Selecionar
+              </button>
+            )}
+          </div>
           {filtered.map((c) => {
             const phoneText = phoneDisplay(c.phone, c.phone_normalized);
-            return (
+            const body = (
+              <Card
+                interactive
+                className={cn("flex items-center gap-3", selecting && selected.has(c.id) && "ring-2 ring-ink-800")}
+                padding="sm"
+              >
+                {selecting && (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(c.id)}
+                    onChange={() => toggle(c.id)}
+                    aria-label={`Selecionar ${c.name}`}
+                    className="size-4 shrink-0 accent-ink-800"
+                  />
+                )}
+                <Avatar name={c.name} size="md" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-ink-800">{c.name}</p>
+                  <p className="truncate text-xs text-ink-400">
+                    {phoneText ?? "Sem telefone"}
+                    {c.last_visit_at && ` · última visita em ${formatDateOnly(c.last_visit_at)}`}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {c.archived_at && <Badge>Inativa</Badge>}
+                  {!c.archived_at && c.isOverdue && (
+                    <span title="Sem retorno dentro do padrão dela">
+                      <AlertCircle className="size-4 text-warning" />
+                    </span>
+                  )}
+                  {!c.archived_at && c.daysToBirthday !== null && c.daysToBirthday <= 7 && (
+                    <span title={birthdayLabel(c.daysToBirthday)}>
+                      <Cake className="size-4 text-gold-500" />
+                    </span>
+                  )}
+                  {c.count > 0 && <span className="text-xs font-medium text-ink-400">{c.count} atend.</span>}
+                </div>
+              </Card>
+            );
+            // Em modo de seleção a linha inteira marca/desmarca (não abre a ficha).
+            return selecting ? (
+              <label key={c.id} className="block cursor-pointer">
+                {body}
+              </label>
+            ) : (
               <Link key={c.id} href={`/clientes/${c.id}`}>
-                <Card interactive className="flex items-center gap-3" padding="sm">
-                  <Avatar name={c.name} size="md" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-ink-800">{c.name}</p>
-                    <p className="truncate text-xs text-ink-400">
-                      {phoneText ?? "Sem telefone"}
-                      {c.last_visit_at && ` · última visita em ${formatDateOnly(c.last_visit_at)}`}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {c.archived_at && <Badge>Inativa</Badge>}
-                    {!c.archived_at && c.isOverdue && (
-                      <span title="Sem retorno dentro do padrão dela">
-                        <AlertCircle className="size-4 text-warning" />
-                      </span>
-                    )}
-                    {!c.archived_at && c.daysToBirthday !== null && c.daysToBirthday <= 7 && (
-                      <span title={birthdayLabel(c.daysToBirthday)}>
-                        <Cake className="size-4 text-gold-500" />
-                      </span>
-                    )}
-                    {c.count > 0 && <span className="text-xs font-medium text-ink-400">{c.count} atend.</span>}
-                  </div>
-                </Card>
+                {body}
               </Link>
             );
           })}
+          {selecting && (
+            <ClientesBulkActions
+              selected={selectedClients}
+              inactiveView={view === "arquivadas"}
+              onClear={stopSelecting}
+              onDone={reload}
+            />
+          )}
         </div>
       )}
     </div>

@@ -347,7 +347,7 @@ export default function InicioPage() {
           <h2 className="mb-4 text-sm font-semibold text-ink-700">Relacionamento</h2>
           <div className="grid grid-cols-2 gap-4">
             {overdueCount > 0 && (
-              <Link href="/clientes?segmento=inativas" className="block rounded-md transition-colors hover:bg-sand/60">
+              <Link href="/clientes?segmento=sumidas" className="block rounded-md transition-colors hover:bg-sand/60">
                 <Stat size="sm" value={overdueCount} label="sem retorno recente" valueClassName="text-wine-500" />
               </Link>
             )}
