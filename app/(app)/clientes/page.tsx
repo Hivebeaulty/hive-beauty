@@ -39,7 +39,7 @@ const SEGMENT_HELP: Partial<Record<View, string>> = {
   inativas: "Passaram do tempo esperado sem voltar (60 dias quando ainda há pouco histórico).",
   fora_do_padrao: "Já passaram de 1,5 vez o intervalo médio entre as visitas delas.",
   aniversariantes: "Aniversário nos próximos 30 dias.",
-  arquivadas: "Clientes arquivadas. O histórico delas continua guardado; abra uma para reativar.",
+  arquivadas: "Clientes inativas: não aparecem para agendamentos e não recebem mensagens automáticas. O histórico continua guardado; abra uma para reativar.",
 };
 
 const VALID_VIEWS = new Set<string>([...SEGMENT_OPTIONS.map((s) => s.value), "arquivadas"]);
@@ -159,7 +159,7 @@ export default function ClientesPage() {
             )}
           >
             <Archive className="size-3.5" />
-            Arquivadas{archivedCount > 0 && ` (${archivedCount})`}
+            Inativas{archivedCount > 0 && ` (${archivedCount})`}
           </button>
         </div>
         {SEGMENT_HELP[view] && <p className="text-xs text-ink-400">{SEGMENT_HELP[view]}</p>}
@@ -203,14 +203,14 @@ export default function ClientesPage() {
           icon={query || view !== "todas" ? Search : Users}
           title={
             emptyBase && view === "arquivadas"
-              ? "Nenhuma cliente arquivada"
+              ? "Nenhuma cliente inativa"
               : emptyBase
                 ? "Ainda não há clientes cadastradas"
                 : "Nenhuma cliente encontrada"
           }
           description={
             view === "arquivadas" && emptyBase
-              ? "Quando você arquivar uma cliente com histórico, ela aparece aqui."
+              ? "Quando você inativar uma cliente, ela aparece aqui."
               : emptyBase
                 ? "Cadastre a primeira cliente para começar a preencher a agenda."
                 : "Tente ajustar a busca ou o filtro."
@@ -244,7 +244,7 @@ export default function ClientesPage() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    {c.archived_at && <Badge>Arquivada</Badge>}
+                    {c.archived_at && <Badge>Inativa</Badge>}
                     {!c.archived_at && c.isOverdue && (
                       <span title="Sem retorno dentro do padrão dela">
                         <AlertCircle className="size-4 text-warning" />

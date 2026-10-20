@@ -170,7 +170,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
         <div className="flex items-start gap-2.5 rounded-lg border border-ink-200 bg-ink-50/70 px-4 py-3 text-sm text-ink-600">
           <Archive className="mt-0.5 size-4 shrink-0 text-ink-400" />
           <span>
-            Cliente arquivada em {new Date(client.archived_at).toLocaleDateString("pt-BR", { timeZone: TZ })}. Ela não aparece na lista
+            Cliente inativa desde {new Date(client.archived_at).toLocaleDateString("pt-BR", { timeZone: TZ })}. Ela não aparece na lista
             principal nem nos agendamentos novos, e o histórico continua preservado.
           </span>
         </div>
