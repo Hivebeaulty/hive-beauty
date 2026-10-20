@@ -183,7 +183,7 @@ export function ClienteForm({ initial }: { initial?: ClientFormData }) {
               <Link href={`/clientes/${duplicate.id}`} className="font-semibold underline underline-offset-2">
                 {duplicate.name}
               </Link>
-              {duplicate.archived && " (arquivada)"}.
+              {duplicate.archived && " (inativa)"}.
             </p>
             <Button type="button" variant="secondary" size="sm" loading={saving} onClick={() => void save(true)}>
               Salvar mesmo assim

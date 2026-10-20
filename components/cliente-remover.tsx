@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { Archive, ArchiveRestore, Trash2, AlertTriangle } from "lucide-react";
+import { Archive, ArchiveRestore, Trash2, AlertTriangle, UserX } from "lucide-react";
 
 type Summary = { appointments: number; upcoming: number; payments: number };
 
@@ -30,6 +30,9 @@ export function ClienteRemover({
   const [working, setWorking] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // inativar (0 histórico ou não): confirmação própria, separada da exclusão
+  const [inactivateOpen, setInactivateOpen] = useState(false);
+  const [upcoming, setUpcoming] = useState<number | null>(null);
 
   const hasHistory = summary ? summary.appointments > 0 || summary.payments > 0 : false;
 
@@ -63,11 +66,13 @@ export function ClienteRemover({
       .select("id");
     setWorking(false);
     if (error || !data || data.length === 0) {
-      toast.error("Não foi possível arquivar. Tente novamente.");
+      toast.error("Não foi possível inativar. Tente novamente.");
       return;
     }
-    toast.success(`${clientName} foi arquivada.`);
+    toast.success(`${clientName} foi inativada. Ela não recebe mais mensagens automáticas e não aparece para novos agendamentos.`);
     setOpen(false);
+    setInactivateOpen(false);
+    router.refresh(); // a tela mostra na hora que ela está inativa
     router.push("/clientes");
     router.refresh();
   }
@@ -118,16 +123,59 @@ export function ClienteRemover({
             Reativar cliente
           </Button>
         )}
+        {!archived && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              setInactivateOpen(true);
+              setUpcoming(null);
+              const { data } = await createClient().rpc("get_client_history_summary", { p_client_id: clientId });
+              setUpcoming(Number((data as { upcoming?: number } | null)?.upcoming ?? 0));
+            }}
+          >
+            <UserX className="size-4" />
+            Inativar cliente
+          </Button>
+        )}
         <Button variant="ghost" size="sm" onClick={openModal} className="text-ink-500">
           <Trash2 className="size-4" />
-          {archived ? "Excluir cliente" : "Excluir ou arquivar"}
+          Excluir cliente
         </Button>
       </div>
+
+      <Modal open={inactivateOpen} onClose={() => !working && setInactivateOpen(false)} title="Inativar cliente">
+        <div className="space-y-4" data-testid="inativar">
+          <p className="text-sm text-ink-600">
+            <strong className="font-semibold text-ink-800">{clientName}</strong> vai para a lista de <strong className="font-semibold">Inativas</strong>:
+          </p>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-ink-600">
+            <li>não aparece para novos agendamentos;</li>
+            <li>não recebe mensagens automáticas (aniversário, datas comemorativas, Central);</li>
+            <li>o histórico e os recebimentos continuam guardados;</li>
+            <li>você pode reativá-la quando quiser.</li>
+          </ul>
+          {upcoming !== null && upcoming > 0 && (
+            <p className="flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              Ela tem {upcoming} agendamento{upcoming > 1 ? "s" : ""} pela frente. Inativar não cancela esses horários, mas os lembretes deixam de ser enviados.
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setInactivateOpen(false)} disabled={working}>
+              Cancelar
+            </Button>
+            <Button onClick={archive} loading={working}>
+              Inativar
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={open}
         onClose={() => !working && setOpen(false)}
-        title={loading || !summary ? "Remover cliente" : hasHistory ? "Arquivar cliente" : "Excluir cliente"}
+        title={loading || !summary ? "Excluir cliente" : hasHistory ? "Inativar cliente" : "Excluir cliente"}
       >
         {loading && <p className="text-sm text-ink-400">Verificando o histórico de {clientName}...</p>}
 
@@ -169,14 +217,14 @@ export function ClienteRemover({
             <ul className="space-y-1.5 text-sm text-ink-500">
               <li>Ela deixa de aparecer na lista principal de clientes.</li>
               <li>O histórico de agenda e o financeiro continuam intactos.</li>
-              <li>Você pode encontrá-la no filtro &ldquo;Arquivadas&rdquo; e reativá-la quando quiser.</li>
+              <li>Você pode encontrá-la no filtro &ldquo;Inativas&rdquo; e reativá-la quando quiser.</li>
             </ul>
             {summary.upcoming > 0 && (
               <div className="flex items-start gap-2.5 rounded-lg border border-gold-300 bg-gold-50 px-3.5 py-3 text-sm text-ink-700">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-gold-700" />
                 <span>
                   Ela tem {summary.upcoming} atendimento{summary.upcoming > 1 ? "s" : ""} agendado
-                  {summary.upcoming > 1 ? "s" : ""} pela frente. Arquivar não cancela esses horários.
+                  {summary.upcoming > 1 ? "s" : ""} pela frente. Inativar não cancela esses horários.
                 </span>
               </div>
             )}
@@ -186,7 +234,7 @@ export function ClienteRemover({
               </Button>
               <Button className="flex-1" onClick={archive} loading={working}>
                 <Archive className="size-4" />
-                Arquivar
+                Inativar
               </Button>
             </div>
           </div>
@@ -195,7 +243,7 @@ export function ClienteRemover({
         {summary && hasHistory && archived && (
           <div className="space-y-4">
             <p className="text-sm text-ink-700">
-              <strong className="font-semibold">{clientName}</strong> já está arquivada e tem histórico ({describeHistory(summary)}),
+              <strong className="font-semibold">{clientName}</strong> já está inativa e tem histórico ({describeHistory(summary)}),
               então não pode ser excluída definitivamente. O histórico fica preservado.
             </p>
             <Button variant="secondary" className="w-full" onClick={() => setOpen(false)}>
