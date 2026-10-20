@@ -28,30 +28,41 @@ test("aniversário: 0 = hoje, conta certo e dá a volta no ano", () => {
 const NOW = new Date(2026, 9, 1);
 const daysAgo = (n) => new Date(NOW.getTime() - n * 86400000);
 
-test("segmentos: fora_do_padrao exige histórico e é subconjunto de inativas", () => {
+test("segmentos: fora_do_padrao exige histórico e é subconjunto de sumidas", () => {
   // Vem a cada ~30 dias, última visita há 80 dias => passou de 1,5x (45)
   const late = rel.computeClientRelationship([daysAgo(140), daysAgo(110), daysAgo(80)], NOW);
   assert.equal(late.isOverdue, true);
   let segs = rel.classifySegments(late, null);
-  assert.ok(segs.includes("fora_do_padrao") && segs.includes("inativas"));
+  assert.ok(segs.includes("fora_do_padrao") && segs.includes("sumidas"));
   assert.ok(!segs.includes("recorrentes"));
 
   // Dentro do ritmo dela
   const ok = rel.computeClientRelationship([daysAgo(100), daysAgo(70), daysAgo(40)], NOW);
   segs = rel.classifySegments(ok, null);
   assert.ok(segs.includes("recorrentes"));
-  assert.ok(!segs.includes("fora_do_padrao") && !segs.includes("inativas"));
+  assert.ok(!segs.includes("fora_do_padrao") && !segs.includes("sumidas"));
 
-  // 1 visita há 90 dias: regra fixa de 60 dias => inativa, mas SEM padrão próprio
+  // 1 visita há 90 dias: regra fixa de 60 dias => sumida, mas SEM padrão próprio
   const one = rel.computeClientRelationship([daysAgo(90)], NOW);
   segs = rel.classifySegments(one, null);
-  assert.ok(segs.includes("inativas"));
+  assert.ok(segs.includes("sumidas"));
   assert.ok(!segs.includes("fora_do_padrao"));
 
   // Sem histórico: nova
   const none = rel.computeClientRelationship([], NOW);
   segs = rel.classifySegments(none, null);
   assert.deepEqual(segs, ["todas", "novas"]);
+});
+
+test("'inativas' deixou de ser segmento: é só a decisão manual da profissional (arquivada)", () => {
+  const late = rel.computeClientRelationship([daysAgo(140), daysAgo(110), daysAgo(80)], NOW);
+  const segs = rel.classifySegments(late, null);
+  assert.ok(!segs.includes("inativas"));
+  // links/favoritos antigos continuam abrindo a lista de sumidas
+  assert.equal(rel.normalizeSegmentParam("inativas"), "sumidas");
+  assert.equal(rel.normalizeSegmentParam("sumidas"), "sumidas");
+  assert.equal(rel.normalizeSegmentParam("arquivadas"), "arquivadas");
+  assert.equal(rel.normalizeSegmentParam(""), "");
 });
 
 test("aniversariantes: até 30 dias", () => {

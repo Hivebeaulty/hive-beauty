@@ -35,7 +35,7 @@ const SEGMENTS: { value: ClientSegment; label: string }[] = [
   { value: "todas", label: "Todas" },
   { value: "novas", label: "Novas" },
   { value: "recorrentes", label: "Recorrentes" },
-  { value: "inativas", label: "Inativas" },
+  { value: "sumidas", label: "Sumidas" },
   { value: "fora_do_padrao", label: "Fora do padrão" },
   { value: "aniversariantes", label: "Aniversariantes" },
 ];

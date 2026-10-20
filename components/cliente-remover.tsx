@@ -85,7 +85,7 @@ export function ClienteRemover({
       // 23503: ganhou histórico enquanto a janela estava aberta — o banco recusou.
       toast.error(
         error.code === "23503"
-          ? "Esta cliente já tem histórico e não pode ser excluída. Arquive-a."
+          ? "Esta cliente já tem histórico e não pode ser excluída. Inative-a."
           : "Não foi possível excluir. Tente novamente."
       );
       setOpen(false);
@@ -212,7 +212,7 @@ export function ClienteRemover({
           <div className="space-y-4">
             <p className="text-sm text-ink-700">
               <strong className="font-semibold">{clientName}</strong> tem histórico ({describeHistory(summary)}). Por isso
-              ela não pode ser excluída — vamos arquivá-la.
+              ela não pode ser excluída — vamos inativá-la.
             </p>
             <ul className="space-y-1.5 text-sm text-ink-500">
               <li>Ela deixa de aparecer na lista principal de clientes.</li>
