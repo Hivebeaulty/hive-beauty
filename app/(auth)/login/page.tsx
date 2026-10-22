@@ -5,6 +5,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { LANDING_URL } from "@/lib/hive/access";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -59,7 +60,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <a href="/cadastro" className="mt-6 block text-center text-sm font-medium text-ink-600 hover:text-ink-800">
+        <a href={LANDING_URL} className="mt-6 block text-center text-sm font-medium text-ink-600 hover:text-ink-800">
           Ainda não tem conta? Criar conta
         </a>
       </div>
