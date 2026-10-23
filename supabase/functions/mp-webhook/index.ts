@@ -35,16 +35,21 @@ async function validSignature(req: Request, dataId: string) {
 
 // Consulta ao Mercado Pago. "retry" = falha passageira (rede, 429, 5xx, token):
 // responder 500 para o aviso voltar. 404 = id inexistente (ex.: simulação do painel): não volta.
-type MpResult = { ok: true; data: Record<string, unknown> } | { ok: false; status: number; retry: boolean };
+// "detail" = mensagem de erro do Mercado Pago (sem token nem dados de cartão), para o log.
+type MpResult = { ok: true; data: Record<string, unknown> } | { ok: false; status: number; retry: boolean; detail: string };
 async function mp(path: string): Promise<MpResult> {
   try {
     const r = await fetch(`${MP}${path}`, { headers: { Authorization: `Bearer ${token}` } });
     if (r.ok) return { ok: true, data: await r.json() };
-    return { ok: false, status: r.status, retry: r.status !== 404 && r.status !== 400 };
-  } catch {
-    return { ok: false, status: 0, retry: true };
+    const detail = (await r.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 300);
+    return { ok: false, status: r.status, retry: r.status !== 404 && r.status !== 400, detail };
+  } catch (e) {
+    return { ok: false, status: 0, retry: true, detail: e instanceof Error ? e.message.slice(0, 200) : "erro de rede" };
   }
 }
+
+// Tipo do token, sem revelá-lo: produção começa com APP_USR-, teste com TEST-.
+const tokenKind = token.startsWith("APP_USR-") ? "producao" : token.startsWith("TEST-") ? "teste" : token ? "desconhecido" : "ausente";
 
 function mapStatus(p: { status?: string; date_created?: string; auto_recurring?: { free_trial?: unknown } }) {
   if (p.status === "authorized") {
@@ -74,7 +79,7 @@ Deno.serve(async (req) => {
   let preapprovalId = dataId;
   if (type === "subscription_authorized_payment") {
     const pay = await mp(`/authorized_payments/${dataId}`);
-    if (!pay.ok) return reply(pay.retry ? 500 : 200, "pagamento não consultado", { type, dataId, mp: pay.status });
+    if (!pay.ok) return reply(pay.retry ? 500 : 200, "pagamento não consultado", { type, dataId, mp: pay.status, mpDetail: pay.detail, tokenKind });
     preapprovalId = String(pay.data.preapproval_id ?? "");
   } else if (type !== "subscription_preapproval") {
     return reply(200, "ignorado", { type, dataId });
@@ -82,7 +87,7 @@ Deno.serve(async (req) => {
   if (!preapprovalId) return reply(200, "sem assinatura", { type, dataId });
 
   const res = await mp(`/preapproval/${preapprovalId}`);
-  if (!res.ok) return reply(res.retry ? 500 : 200, "assinatura não consultada", { type, preapprovalId, mp: res.status });
+  if (!res.ok) return reply(res.retry ? 500 : 200, "assinatura não consultada", { type, preapprovalId, mp: res.status, mpDetail: res.detail, tokenKind });
   const pre = res.data as { status?: string; payer_email?: string; next_payment_date?: string; date_created?: string; auto_recurring?: { free_trial?: unknown } };
   const email = String(pre.payer_email ?? "").trim().toLowerCase();
   const status = mapStatus(pre);
