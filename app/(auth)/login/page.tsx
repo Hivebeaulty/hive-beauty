@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LANDING_URL } from "@/lib/hive/access";
+import { safeNextPath } from "@/lib/hive/next-path";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -24,7 +25,8 @@ export default function LoginPage() {
       setError("E-mail ou senha inválidos.");
       return;
     }
-    window.location.href = "/inicio";
+    // Volta para a página pedida antes do login (só caminhos deste site).
+    window.location.href = safeNextPath(new URLSearchParams(window.location.search).get("next"));
   }
 
   return (
