@@ -7,10 +7,8 @@ Atualizado em 23/10/2026. O que já está em produção fica no README; aqui só
 - Simulação de aviso no painel do Mercado Pago: ok em 23/10 (assinatura secreta e token de produção conferidos).
 - **Pendente:** assinatura real com e-mail novo (conta criada, e-mail de senha, acesso liberado, cancelamento).
 - ~~Gravar cada pagamento e cada mudança de situação (0039 + `mp-webhook` v4).~~ Pronto, aguardando aplicação.
-- Painel: área de Assinaturas e Financeiro com receita recebida, pendências, recusas, reembolsos, ticket médio,
-  conversão e churn, cada um com a definição documentada. Previsão separada do que já foi recebido.
-- Painel: cancelar a assinatura no Mercado Pago (função no servidor, com auditoria), refletindo o estado real.
-- Conciliação: conferir periodicamente as assinaturas do banco com o Mercado Pago.
+- ~~Painel: Assinaturas e Financeiro, cancelamento pelo painel e conciliação (0040 + `admin-billing`).~~ Pronto.
+- Conciliação automática (agendada) além do botão manual.
 
 ## Pendências curtas
 
@@ -21,8 +19,9 @@ Atualizado em 23/10/2026. O que já está em produção fica no README; aqui só
 
 ## Melhorias visuais do painel administrativo
 
-- Revisão geral de layout e hierarquia.
-- Modo escuro: o topo do painel fica claro e os cartões perdem contraste; ajustar os tokens.
+- ~~Logo, modo escuro e contraste (WCAG) do painel.~~ Pronto.
+- Selos do app (`components/ui/badge.tsx`): tons success/warning/gold abaixo de 4,5:1 no claro e danger no Grafite.
+  O painel usa um selo próprio; avaliar corrigir os do app.
 
 ## Fase 4 — site (Lovable): medição e documentos legais
 

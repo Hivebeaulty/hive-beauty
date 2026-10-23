@@ -2,12 +2,11 @@ import Link from "next/link";
 import { requireSuperadmin } from "@/lib/supabase/require-superadmin";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { PeriodPicker } from "@/components/admin/period-picker";
 import {
   BILLING_LABEL,
   BILLING_ORDER,
-  PERIOD_OPTIONS,
   PLAN_PRICE,
-  businessYmd,
   formatBRL,
   monthLabel,
   pctChange,
@@ -24,7 +23,7 @@ const SEGMENT: Record<BillingStatus, string> = {
   trialing: "bg-gold-500",
   free: "bg-wine-500",
   past_due: "bg-warning",
-  pending: "bg-ink-300",
+  pending: "bg-ink-400",
   canceled: "bg-ink-500",
   none: "bg-danger/70",
 };
@@ -68,45 +67,16 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
   const n = (s: BillingStatus) => ov.by_status[s] ?? 0;
   const change = pctChange(ov.new_in_period, ov.new_prev_period);
   const maxMonth = Math.max(1, ...ov.signups_by_month.map((m) => m.count));
-  const today = businessYmd(new Date());
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="page-title">Visão geral</h1>
-          <p className="text-sm text-ink-400">{period.label}</p>
+          <p className="text-sm text-ink-500">{period.label}</p>
         </div>
-        <nav aria-label="Período" className="flex flex-wrap gap-1">
-          {PERIOD_OPTIONS.map((p) => (
-            <Link
-              key={p.key}
-              href={`/admin?periodo=${p.key}`}
-              aria-current={period.key === p.key ? "true" : undefined}
-              className={cn(
-                "rounded-full px-3 py-1 text-xs font-semibold",
-                period.key === p.key ? "bg-ink-800 text-cream" : "bg-surface text-ink-600 ring-1 ring-ink-100 hover:bg-ink-50"
-              )}
-            >
-              {p.label}
-            </Link>
-          ))}
-        </nav>
+        <PeriodPicker basePath="/admin" period={period} de={sp.de} ate={sp.ate} />
       </div>
-      <form action="/admin" className="flex flex-wrap items-center gap-2 text-sm text-ink-500">
-        <input type="hidden" name="periodo" value="custom" />
-        <label className="flex items-center gap-1.5">
-          De
-          <input type="date" name="de" max={today} defaultValue={sp.de ?? ""} required
-                 className="rounded border border-ink-200 bg-surface px-2 py-1 text-ink-800" />
-        </label>
-        <label className="flex items-center gap-1.5">
-          até
-          <input type="date" name="ate" max={today} defaultValue={sp.ate ?? ""} required
-                 className="rounded border border-ink-200 bg-surface px-2 py-1 text-ink-800" />
-        </label>
-        <button className="rounded px-2.5 py-1 font-semibold text-ink-800 ring-1 ring-ink-200 hover:bg-ink-50">Ver período</button>
-      </form>
 
       {/* A base hoje: o que mais importa, numa leitura só */}
       <Card className="space-y-4">
@@ -115,7 +85,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
             <span className="font-serif text-4xl">{ov.total}</span>{" "}
             <span className="text-sm text-ink-500">{ov.total === 1 ? "profissional na Áurea" : "profissionais na Áurea"} hoje</span>
           </p>
-          <p className="text-xs text-ink-400">
+          <p className="text-xs text-ink-500">
             {ov.demo > 0 && `${ov.demo} de demonstração fora da conta. `}
             {ov.suspended > 0 && `${ov.suspended} com acesso suspenso.`}
           </p>
@@ -150,7 +120,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
         <Card>
           <p className="text-sm text-ink-500">Receita recorrente mensal (estimada)</p>
           <p className="mt-1 text-2xl font-semibold text-ink-800">{formatBRL(ov.mrr_estimated)}</p>
-          <p className="mt-1 text-xs text-ink-400">
+          <p className="mt-1 text-xs text-ink-500">
             {n("active")} {n("active") === 1 ? "assinatura paga ativa" : "assinaturas pagas ativas"} × {formatBRL(PLAN_PRICE)}. Teste,
             cortesia e atrasadas não entram.
           </p>
@@ -158,7 +128,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
         <Card>
           <p className="text-sm text-ink-500">Novas profissionais no período</p>
           <p className="mt-1 text-2xl font-semibold text-ink-800">{ov.new_in_period}</p>
-          <p className="mt-1 text-xs text-ink-400">
+          <p className="mt-1 text-xs text-ink-500">
             {change === null
               ? `Período anterior: ${ov.new_prev_period}.`
               : `${change > 0 ? "+" : ""}${change}% em relação ao período anterior (${ov.new_prev_period}).`}
@@ -167,7 +137,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
         <Card>
           <p className="text-sm text-ink-500">Testes terminando em até 3 dias</p>
           <p className="mt-1 text-2xl font-semibold text-ink-800">{ov.trials_ending_3d}</p>
-          <p className="mt-1 text-xs text-ink-400">
+          <p className="mt-1 text-xs text-ink-500">
             <Link href="/admin/profissionais?assinatura=trialing" className="underline hover:text-ink-700">
               Ver as {n("trialing")} em teste
             </Link>
@@ -177,16 +147,16 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
 
       <Card>
         <h2 className="text-sm font-semibold text-ink-700">Cadastros por mês</h2>
-        <p className="text-xs text-ink-400">Últimos 12 meses, sem contas de demonstração.</p>
+        <p className="text-xs text-ink-500">Últimos 12 meses, sem contas de demonstração.</p>
         <div className="mt-4 flex h-36 items-end gap-1.5 sm:gap-2.5">
           {ov.signups_by_month.map((m) => (
             <div key={m.month} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
               <span className="text-[11px] font-semibold text-ink-600">{m.count || ""}</span>
               <div
-                className={cn("w-full rounded-t", m.count ? "bg-ink-800" : "bg-ink-100")}
+                className={cn("w-full rounded-t", m.count ? "bg-gold-500" : "bg-ink-100")}
                 style={{ height: `${m.count ? Math.max(6, (m.count / maxMonth) * 100) : 2}%` }}
               />
-              <span className="text-[10px] text-ink-400">{monthLabel(m.month)}</span>
+              <span className="text-[10px] text-ink-500">{monthLabel(m.month)}</span>
             </div>
           ))}
         </div>
@@ -195,7 +165,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
       <Card className="space-y-3">
         <div>
           <h2 className="text-sm font-semibold text-ink-700">Ainda sem dados suficientes</h2>
-          <p className="text-xs text-ink-400">
+          <p className="text-xs text-ink-500">
             Estes números não aparecem estimados para não mostrar valores inventados. Cada um passa a ser medido na fase indicada.
           </p>
         </div>

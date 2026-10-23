@@ -282,3 +282,20 @@ interrompidas por ela.
 - A medição começa quando a 0039 é aplicada (sem dados retroativos).
 - Ordem de deploy: aplicar a 0039 **antes** de publicar o `mp-webhook` v4 (a v4 chama `billing_sync`).
 - Testes: `supabase/tests/local/0039_local.sh` e `supabase/tests/local/mp-webhook/run.sh`.
+
+## SuperAdmin — Assinaturas e financeiro (0040 + `admin-billing`)
+
+- `/admin/financeiro`: recebido, líquido após taxas, ticket médio, MRR contratado, pendente, recusado, reembolsos e
+  estornos, previsão para 30 dias, conversão de teste para pago (por coorte) e churn pago. As definições estão na própria
+  tela ("Como cada número é calculado") e no cabeçalho da migration 0040. Medição desde 23/10/2026 (0039).
+- Ficha da profissional: cobranças, total recebido, histórico da assinatura e **Cancelar assinatura**.
+- `admin-billing` (Edge Function, **com** verificação de JWT): `cancel` e `reconcile`. Autoriza com a sessão da
+  superadmin (`admin_cancel_prepare`, `admin_reconcile_targets`: superadmin + MFA) e só então usa o token do Mercado
+  Pago. O cancelamento fica na auditoria como pedido antes da chamada externa e como ok/erro depois; o banco só marca
+  cancelada depois de o Mercado Pago confirmar. A conciliação busca as cobranças de cada assinatura e pega reembolsos e
+  estornos que não geram aviso de assinatura.
+- Ordem de deploy: aplicar a 0040, publicar `admin-billing`, depois publicar o app.
+- Design do painel: topo com o logo da Áurea (versões clara e Grafite), tokens `primary`/`feature` que não se invertem
+  no Grafite e selo de status próprio (`components/admin/status-pill.tsx`). Contraste medido com
+  `python3 scripts/contrast-check.py <arquivos>` (WCAG 4,5:1 para texto; 3:1 para elementos gráficos).
+- Testes: `supabase/tests/local/0040_local.sh`, `supabase/tests/local/admin-billing/run.sh`, `tests/admin-finance.test.cjs`.

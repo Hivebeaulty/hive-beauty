@@ -35,7 +35,7 @@ export default async function AdminAuditoriaPage({ searchParams }: { searchParam
     <div className="space-y-5">
       <div>
         <h1 className="page-title">Auditoria</h1>
-        <p className="text-sm text-ink-400">Cada ação no painel fica registrada aqui e não pode ser alterada nem apagada.</p>
+        <p className="text-sm text-ink-500">Cada ação no painel fica registrada aqui e não pode ser alterada nem apagada.</p>
       </div>
       <form action="/admin/auditoria" className="flex flex-wrap items-center gap-2">
         {conta && <input type="hidden" name="conta" value={conta} />}
@@ -44,7 +44,7 @@ export default async function AdminAuditoriaPage({ searchParams }: { searchParam
           <option value="">Todas as ações</option>
           {Object.entries(AUDIT_ACTION_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <button className="rounded bg-ink-800 px-3.5 py-2 text-sm font-semibold text-cream hover:bg-ink-700">Filtrar</button>
+        <button className="rounded bg-primary px-3.5 py-2 text-sm font-semibold text-primary-ink hover:bg-primary-hover">Filtrar</button>
         {conta && <Link href="/admin/auditoria" className="text-sm text-ink-500 underline">Ver todas as contas</Link>}
       </form>
 
@@ -64,13 +64,13 @@ export default async function AdminAuditoriaPage({ searchParams }: { searchParam
                       <> em <Link href={`/admin/profissionais/${l.company_id}`} className="underline">{l.company_name ?? "conta excluída"}</Link></>
                     )}
                   </p>
-                  <span className="text-xs text-ink-400">{fmtDate(l.at, true)}</span>
+                  <span className="text-xs text-ink-500">{fmtDate(l.at, true)}</span>
                 </div>
                 {l.reason && <p className="mt-0.5 text-xs text-ink-500">Motivo: {l.reason}</p>}
                 {l.action === "export_accounts" && typeof l.details?.rows === "number" && (
                   <p className="mt-0.5 text-xs text-ink-500">{l.details.rows} linhas exportadas</p>
                 )}
-                <p className="mt-0.5 text-[11px] text-ink-300">Registro {l.correlation_id}</p>
+                <p className="mt-0.5 text-[11px] text-ink-500">Registro {l.correlation_id}</p>
               </li>
             ))}
           </ul>
@@ -80,7 +80,7 @@ export default async function AdminAuditoriaPage({ searchParams }: { searchParam
       {pages > 1 && (
         <nav aria-label="Páginas" className="flex items-center justify-between text-sm">
           {pagina > 1 ? <Link href={`/admin/auditoria${qs(pagina - 1)}`} className="font-semibold text-ink-700 hover:underline">Anterior</Link> : <span />}
-          <span className="text-ink-400">Página {pagina} de {pages}</span>
+          <span className="text-ink-500">Página {pagina} de {pages}</span>
           {pagina < pages ? <Link href={`/admin/auditoria${qs(pagina + 1)}`} className="font-semibold text-ink-700 hover:underline">Próxima</Link> : <span />}
         </nav>
       )}
