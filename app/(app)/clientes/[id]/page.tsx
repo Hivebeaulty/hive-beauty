@@ -10,6 +10,8 @@ import { formatMoney, whatsappLink, formatDateOnly } from "@/lib/hive/format";
 import { phoneDisplay } from "@/lib/hive/phone";
 import { COMM_STATUS_LABEL, type CommStatus } from "@/lib/hive/communication";
 import { ClienteRemover } from "@/components/cliente-remover";
+import { ClienteProximosEnviar } from "@/components/cliente-proximos-enviar";
+import { splitAppointments, appointmentServicesLabel } from "@/lib/hive/upcoming-message";
 
 // Este é um Server Component: na Vercel o fuso do servidor é UTC. Todo horário
 // formatado aqui precisa dizer o fuso do negócio, senão o histórico mostra
@@ -31,6 +33,7 @@ import {
   Clock,
   AlertCircle,
   Archive,
+  CalendarClock,
 } from "lucide-react";
 
 type TimelineEntry = {
@@ -55,7 +58,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
 
   const { data: appointments } = await supabase
     .from("appointments")
-    .select("id, scheduled_start, status, price, professional_member_id, services(name)")
+    .select("id, scheduled_start, status, price, professional_member_id, services(name), appointment_extra_services(position, services(name))")
     .eq("client_id", id)
     .order("scheduled_start", { ascending: false });
 
@@ -75,6 +78,22 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
   const nameById = new Map<string, string>(
     ((memberNames as { member_id: string; full_name: string }[]) ?? []).map((n) => [n.member_id, n.full_name])
   );
+
+  // Serviço principal + adicionais (0033), na ordem gravada: "Manicure e Pedicure".
+  type Named = { name: string } | { name: string }[] | null;
+  const nameOf = (s: Named) => (Array.isArray(s) ? s[0]?.name : s?.name);
+  const servicesOf = (a: NonNullable<typeof appointments>[number]) =>
+    appointmentServicesLabel(
+      nameOf(a.services as Named),
+      ((a.appointment_extra_services ?? []) as { position: number | null; services: Named }[]).map((e) => ({
+        position: e.position,
+        name: nameOf(e.services),
+      }))
+    );
+  // Próximos (agendado/confirmado, de agora em diante) x histórico (todo o resto).
+  const { upcoming, past } = splitAppointments(appointments ?? []);
+  const fmtWhen = (iso: string) =>
+    new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: TZ });
 
   const concluded = appointments?.filter((a) => a.status === "concluido") ?? [];
   const totalGasto = concluded.reduce((sum, a) => sum + Number(a.price), 0);
@@ -96,14 +115,14 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
   const commStatus = (client.comm_status ?? "unknown") as CommStatus;
 
   const timeline: TimelineEntry[] = [
-    ...(appointments ?? []).map((a): TimelineEntry => {
-      const svc = Array.isArray(a.services) ? a.services[0]?.name : (a.services as { name: string } | null)?.name;
+    ...past.map((a): TimelineEntry => {
+      const svc = servicesOf(a);
       const prof = nameById.get(a.professional_member_id);
       return {
         key: `appt-${a.id}`,
         date: a.scheduled_start,
         kind: "agendamento",
-        title: svc ?? "Atendimento",
+        title: svc || "Atendimento",
         subtitle: [
           new Date(a.scheduled_start).toLocaleString("pt-BR", {
             day: "2-digit",
@@ -333,8 +352,54 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
           )}
         </div>
 
-        {/* Coluna direita — histórico */}
-        <div>
+        {/* Coluna direita — próximos atendimentos e histórico */}
+        <div className="space-y-5">
+          <section>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-ink-700">
+                <CalendarClock className="size-4 text-ink-400" />
+                Próximos atendimentos
+                {upcoming.length > 0 && <span className="font-normal text-ink-400">({upcoming.length})</span>}
+              </h2>
+              {upcoming.length > 0 && !isArchived && (
+                <ClienteProximosEnviar
+                  clientId={id}
+                  companyId={client.company_id}
+                  clientName={client.name}
+                  phone={client.phone}
+                  phoneNormalized={client.phone_normalized}
+                  blocked={commStatus === "blocked"}
+                  items={upcoming.map((a) => ({ startsAt: a.scheduled_start, serviceName: servicesOf(a) }))}
+                />
+              )}
+            </div>
+            {upcoming.length === 0 ? (
+              <Card>
+                <p className="text-sm text-ink-400">Nenhum atendimento agendado.</p>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {upcoming.map((a) => (
+                  <Link key={a.id} href={`/agenda/${a.id}`}>
+                    <Card interactive padding="sm" className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-ink-800">{servicesOf(a) || "Atendimento"}</p>
+                        <p className="truncate text-xs text-ink-400">
+                          {[fmtWhen(a.scheduled_start), nameById.get(a.professional_member_id)].filter(Boolean).join(" · ")}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2.5">
+                        <span className="text-sm font-semibold text-ink-700">{formatMoney(a.price)}</span>
+                        <StatusBadge status={a.status} />
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section>
           <h2 className="mb-2 text-sm font-semibold text-ink-700">Histórico</h2>
           {timeline.length === 0 ? (
             <Card>
@@ -368,6 +433,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
               })}
             </div>
           )}
+          </section>
         </div>
       </div>
 
