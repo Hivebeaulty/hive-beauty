@@ -53,7 +53,7 @@ export default async function AssinaturaPage() {
 
         <a href="/assinatura"
            className="mt-4 flex h-10 w-full items-center justify-center rounded border border-ink-200 bg-surface text-sm font-semibold text-ink-800 hover:bg-ink-50">
-          {access.status === "error" ? "Tentar de novo" : "Já assinei, conferir de novo"}
+          {access.status === "error" ? "Tentar de novo" : access.status === "suspended" ? "Conferir de novo" : "Já assinei, conferir de novo"}
         </a>
 
         <LogoutButton variant="sidebar" className="mt-4 justify-center" />

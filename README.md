@@ -230,3 +230,40 @@ Ambiente local usado: Postgres 16 com `shared_preload_libraries='pg_cron'`, `cro
   a segurança é a assinatura secreta); (3) testar uma assinatura de ponta a ponta; (4) publicar o app;
   (5) só então desligar "Allow new users to sign up" no Supabase (Authentication → Sign In / Providers).
 - Testes: `npm test` (`tests/access.test.cjs`) e `supabase/tests/local/0037_local.sh`.
+
+## SuperAdmin — 0038 (Fases 1 e 2)
+
+Painel em `/admin`: visão geral, profissionais (lista, ficha, suspensão, observações, CSV) e auditoria.
+
+**Quem entra.** Só quem está na tabela `superadmins` **e** confirmou a verificação em duas etapas (aplicativo
+autenticador, MFA TOTP do Supabase; sessão `aal2`). Não existe cadastro de administradora pelo app, senha padrão
+nem promoção automática. A trava vale em dois lugares: nas telas (`requireSuperadmin` → `admin_whoami`) e no banco
+(toda função `admin_*` chama `admin_assert()` a cada chamada). O painel não usa service role.
+
+**Primeiro acesso (uma vez, manual).**
+1. No Supabase: Authentication → Multi-Factor → deixe **TOTP (App Authenticator)** ativo.
+2. No SQL Editor (roda como `postgres`), com o e-mail da sua conta já existente:
+   `insert into superadmins (user_id) select id from auth.users where email = 'SEU_EMAIL';`
+3. Entre no app com essa conta e abra `/admin`. Você cai em `/admin-mfa`: leia o QR code no Google Authenticator
+   (ou similar) e digite o código. Nos próximos acessos, só o código.
+Para tirar alguém: `delete from superadmins where user_id = (select id from auth.users where email = '...');`
+
+**Segurança.** A superadmin não edita nem apaga empresas e equipes direto pela API (RLS endurecido na 0038); só
+pelas funções auditadas. `admin_audit_log` é somente-inclusão: nem a service role altera ou apaga. Abrir uma ficha,
+suspender, reativar, registrar observação e exportar ficam registrados com responsável, data, motivo e código.
+
+**Suspensão.** Bloqueia a dona e a equipe (`get_company_access` → `suspended`). Não apaga dados, não altera
+`billing_accounts` e não cancela nem cria cobrança no Mercado Pago. Mensagens automáticas de WhatsApp não são
+interrompidas por ela.
+
+**Indicadores (definições).**
+- Situação de cada conta = a mesma regra do app: assinatura do e-mail da dona ativa.
+- Receita recorrente mensal **estimada** = assinaturas `active` × R$ 59,90 (`PLAN_PRICE` em `lib/hive/admin.ts`).
+  Teste (`trialing`), cortesia (`free`), atrasada (`past_due`), pendente e cancelada não entram.
+- Novas profissionais = empresas criadas no período (fuso de Brasília), comparadas ao período anterior de mesmo tamanho.
+- Contas de demonstração (`is_demo`) ficam fora dos números e só aparecem na lista quando filtradas.
+- **Ainda indisponíveis** (a tela diz por quê): receita recebida, pendências, reembolsos, taxas e ticket médio
+  (Fase 3: gravar cada pagamento); conversão e churn (Fase 3: histórico de situação); visitas e funil da landing
+  (Fase 4: instrumentar a landing no Lovable).
+
+**Testes.** `supabase/tests/local/0038_local.sh` (banco) e `tests/admin.test.cjs` (telas).

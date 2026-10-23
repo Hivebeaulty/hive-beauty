@@ -52,3 +52,14 @@ test("links fixos: landing e checkout", () => {
   assert.equal(a.LANDING_URL, "https://aurea-hivebeauty.lovable.app");
   assert.equal(a.CHECKOUT_URL, "https://mpago.la/2gCWhAH");
 });
+
+test("conta suspensa (0038): bloqueia, não oferece assinatura, vale para dona e equipe", () => {
+  assert.deepEqual(a.parseAccess({ status: "suspended", allowed: false, warning: false }, null), { status: "suspended", allowed: false, warning: false });
+  assert.equal(a.parseAccess({ status: "suspended", allowed: true }, null).allowed, false); // banco e app precisam concordar
+  for (const owner of [true, false]) {
+    const c = a.accessCopy("suspended", owner);
+    assert.equal(c.canSubscribe, false);
+    assert.match(c.title, /suspenso/);
+    assert.match(c.text, /nada foi apagado/);
+  }
+});

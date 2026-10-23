@@ -7,10 +7,11 @@
 export const LANDING_URL = "https://aurea-hivebeauty.lovable.app";
 export const CHECKOUT_URL = "https://mpago.la/2gCWhAH";
 
-export type AccessStatus = "free" | "trialing" | "active" | "past_due" | "pending" | "canceled" | "none" | "error";
+// "suspended" (0038): conta suspensa pela administração da Áurea; vence a assinatura.
+export type AccessStatus = "free" | "trialing" | "active" | "past_due" | "pending" | "canceled" | "none" | "suspended" | "error";
 export type Access = { status: AccessStatus; allowed: boolean; warning: boolean };
 
-const KNOWN: AccessStatus[] = ["free", "trialing", "active", "past_due", "pending", "canceled", "none"];
+const KNOWN: AccessStatus[] = ["free", "trialing", "active", "past_due", "pending", "canceled", "none", "suspended"];
 const ALLOWED: AccessStatus[] = ["free", "trialing", "active", "past_due"];
 
 export function parseAccess(data: unknown, error: unknown): Access {
@@ -27,6 +28,14 @@ export type AccessCopy = { title: string; text: string; canSubscribe: boolean };
 /** Texto da tela /assinatura. `isOwner`: só a dona assina; a equipe é orientada a falar com ela. */
 export function accessCopy(status: AccessStatus, isOwner: boolean): AccessCopy {
   const keep = "Seus dados continuam guardados: nada foi apagado.";
+  if (status === "suspended") {
+    // Assinar de novo não resolve: quem libera é o suporte. Vale para dona e equipe.
+    return {
+      title: "Acesso suspenso",
+      text: `O acesso a esta conta foi suspenso pela equipe da Áurea. Fale com o suporte para entender e reativar. ${keep}`,
+      canSubscribe: false,
+    };
+  }
   if (status === "error") {
     return { title: "Não conseguimos conferir sua assinatura", text: "Tente de novo em alguns instantes.", canSubscribe: false };
   }
