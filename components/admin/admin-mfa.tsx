@@ -34,11 +34,17 @@ export function AdminMfa({ email }: { email: string }) {
       for (const f of data.all.filter((x) => x.factor_type === "totp" && x.status !== "verified")) {
         await mfa.unenroll({ factorId: f.id });
       }
-      const { data: en, error: ee } = await mfa.enroll({ factorType: "totp", friendlyName: `Áurea admin (${email})` });
+      // issuer explícito: sem ele o Supabase deriva o nome do Site URL do projeto e
+      // falha ("site url is improperly formatted") se o Site URL estiver sem https://.
+      const { data: en, error: ee } = await mfa.enroll({
+        factorType: "totp",
+        issuer: "Áurea",
+        friendlyName: `Áurea admin (${email})`,
+      });
       if (ee || !en || en.type !== "totp") {
         return setState({
           step: "failed",
-          message: "Não foi possível iniciar o cadastro. Confira se o MFA por aplicativo está ativo no Supabase (Authentication → Multi-Factor).",
+          message: `Não foi possível iniciar o cadastro${ee?.message ? ` (${ee.message})` : ""}. Confira se o MFA por aplicativo está ativo no Supabase (Authentication → Multi-Factor) e se o Site URL começa com https://.`,
         });
       }
       setState({ step: "enroll", factorId: en.id, qr: en.totp.qr_code, secret: en.totp.secret });
