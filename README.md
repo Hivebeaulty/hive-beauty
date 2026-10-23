@@ -215,3 +215,18 @@ Ambiente local usado: Postgres 16 com `shared_preload_libraries='pg_cron'`, `cro
    "Cliente não recebe mensagens" → derrubar o worker, agendar, subir o worker (envia uma vez) → conferir [B4].
 5. Só então trocar para o número definitivo da empresa. Emergência: roteiro 0018 [B6] (desliga e cancela pendentes)
    e/ou `WA_MESSAGING_ENABLED=false`. Reversão completa da 0018: [BR-SQL].
+
+## Assinatura (Mercado Pago) — 0037 + `mp-webhook`
+
+- A conta nasce da assinatura: o Mercado Pago avisa a função `mp-webhook`, que confere o `x-signature`, consulta a
+  assinatura no próprio Mercado Pago, grava a situação (`billing_upsert`) e, se a pessoa é nova, cria a usuária
+  (`auth.admin.createUser`) e envia o e-mail de criar senha. A liberação é pelo **e-mail** de quem pagou.
+- Acesso: `get_company_access` (app, sessão da usuária, nunca service role) e `get_my_access` (onboarding, antes de
+  existir empresa). Libera `free`, `trialing`, `active` e `past_due` (com aviso no topo). Sem acesso → `/assinatura`.
+  Nada é apagado ao bloquear. A cortesia (`free`) nunca é rebaixada por aviso de pagamento.
+- `/cadastro` redireciona para a landing; "Criar conta" no login também. `supabase/functions` fica fora do
+  `tsconfig` do Next (é código Deno; sem isso o build da Vercel quebra).
+- Ordem de deploy: (1) aplicar a 0037; (2) publicar `mp-webhook` **sem exigir JWT** (o Mercado Pago não envia JWT;
+  a segurança é a assinatura secreta); (3) testar uma assinatura de ponta a ponta; (4) publicar o app;
+  (5) só então desligar "Allow new users to sign up" no Supabase (Authentication → Sign In / Providers).
+- Testes: `npm test` (`tests/access.test.cjs`) e `supabase/tests/local/0037_local.sh`.

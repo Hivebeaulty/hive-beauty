@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { parseAccess } from "@/lib/hive/access";
 
 const NICHOS = [
   { slug: "nail_designer", label: "Nail Designer" },
@@ -26,8 +27,25 @@ export default function OnboardingPage() {
   const [niche, setNiche] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Assinatura (0037): antes de existir empresa, a usuária consulta a PRÓPRIA
+  // situação. Sem acesso -> /assinatura. Confere ao abrir e de novo ao concluir.
+  async function hasAccess() {
+    const { data, error } = await createClient().rpc("get_my_access");
+    return parseAccess(data, error).allowed;
+  }
+
+  useEffect(() => {
+    hasAccess().then((ok) => {
+      if (!ok) window.location.href = "/assinatura";
+    });
+  }, []);
+
   async function finish() {
     setLoading(true);
+    if (!(await hasAccess())) {
+      window.location.href = "/assinatura";
+      return;
+    }
     const supabase = createClient();
     const { error } = await supabase.rpc("create_company_with_owner", {
       company_name: companyName,
