@@ -267,3 +267,18 @@ interrompidas por ela.
   (Fase 4: instrumentar a landing no Lovable).
 
 **Testes.** `supabase/tests/local/0038_local.sh` (banco) e `tests/admin.test.cjs` (telas).
+
+## Cobrança — histórico (0039 + `mp-webhook` v4)
+
+- Cada aviso do Mercado Pago é **consultado na fonte** (assinatura, cobrança e pagamento) antes de gravar. Nada do corpo do
+  aviso é confiado, além do id.
+- `billing_sync(p)` grava a situação atual (com valor do plano, moeda, início, cancelamento e `last_modified` do Mercado
+  Pago) e o **histórico** em `billing_subscription_events`. `billing_record_payment(p)` grava cada cobrança em
+  `billing_payments`: bruto, taxas pagas pela Áurea, líquido, reembolso, data de aprovação.
+- **Aviso repetido** não duplica (chaves = ids do Mercado Pago). **Aviso fora de ordem** não volta a situação: só um dado
+  mais novo substitui o atual; o histórico guarda cada mudança na data em que aconteceu. Reembolso não é "desfeito" por
+  um aviso incompleto. Cortesia nunca é rebaixada.
+- Sem cartão, documento ou endereço. Tabelas sem acesso pela API; só a função do servidor grava.
+- A medição começa quando a 0039 é aplicada (sem dados retroativos).
+- Ordem de deploy: aplicar a 0039 **antes** de publicar o `mp-webhook` v4 (a v4 chama `billing_sync`).
+- Testes: `supabase/tests/local/0039_local.sh` e `supabase/tests/local/mp-webhook/run.sh`.
