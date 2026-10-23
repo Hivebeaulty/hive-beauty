@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveMembership } from "@/lib/hive/membership";
-import { parseAccess, CHECKOUT_URL } from "@/lib/hive/access";
+import { parseAccess, formatUntil, CHECKOUT_URL } from "@/lib/hive/access";
 import { CompanyProvider } from "@/components/company-provider";
 import { AppNav, type NavItem } from "@/components/app-nav";
 import { MobileHeader } from "@/components/mobile-header";
@@ -45,7 +45,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <MobileHeader companyName={membership.companyName} />
           {access.warning && (
             <div role="status" className="border-b border-ink-100 bg-sand px-4 py-2.5 text-center text-sm text-ink-700">
-              {membership.role === "owner" ? (
+              {access.status === "ending" ? (
+                membership.role === "owner" ? (
+                  <>
+                    Sua assinatura foi cancelada. O acesso continua até {formatUntil(access.until)}.{" "}
+                    <a href={CHECKOUT_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+                      Assinar de novo
+                    </a>
+                  </>
+                ) : (
+                  `A assinatura deste negócio foi cancelada. O acesso continua até ${formatUntil(access.until)}.`
+                )
+              ) : membership.role === "owner" ? (
                 <>
                   Há um problema com o pagamento da sua assinatura.{" "}
                   <a href={CHECKOUT_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline">

@@ -299,3 +299,19 @@ interrompidas por ela.
   no Grafite e selo de status próprio (`components/admin/status-pill.tsx`). Contraste medido com
   `python3 scripts/contrast-check.py <arquivos>` (WCAG 4,5:1 para texto; 3:1 para elementos gráficos).
 - Testes: `supabase/tests/local/0040_local.sh`, `supabase/tests/local/admin-billing/run.sh`, `tests/admin-finance.test.cjs`.
+
+## Fase 4 — medição da landing, funil e documentos legais (0041 + `track`)
+
+- **Medição sem cookies:** a landing (Lovable, `src/lib/track.ts`) envia `pageview`, `cta_click` (topo, abertura, plano,
+  final), `whatsapp_click` e `login_click` para a Edge Function `track` (**sem** JWT). A função descarta robôs e outros
+  domínios, calcula `sha256(sal do dia + IP + navegador)` (16 caracteres) e grava só evento, página, domínio de origem,
+  UTM, aparelho e botão. O sal muda todo dia e o antigo é apagado. Retenção: 24 meses.
+- **Funil** (`/admin/aquisicao`, `admin_funnel`): visitantes → clicaram para assinar → começaram o teste → primeiro
+  pagamento, mais origem, aparelho, botão, campanhas e visitantes por dia. Compara **totais do período**: o link do
+  checkout é único, então não há ligação entre uma visita e uma assinatura.
+- **Cancelamento:** `get_company_access` mantém o acesso até o fim do período pago (último pagamento aprovado + 1 mês,
+  status `ending`, com aviso no app). Cancelou no teste: bloqueia na hora.
+- **Documentos:** `docs/legal/politica-de-privacidade.md` e `docs/legal/termos-de-uso.md` (publicados em `/privacidade`
+  e `/termos` da landing; links no login e na tela de assinatura do app).
+- Ordem de deploy: aplicar a 0041, publicar `track` sem JWT, publicar o app, publicar a landing no Lovable.
+- Testes: `supabase/tests/local/0041_local.sh`, `supabase/tests/local/track/run.sh`, `tests/admin-funnel.test.cjs`.

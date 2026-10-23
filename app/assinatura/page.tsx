@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveMembership } from "@/lib/hive/membership";
 import { accessCopy, parseAccess, CHECKOUT_URL } from "@/lib/hive/access";
 import { LogoutButton } from "@/components/logout-button";
+import { LegalLinks } from "@/components/legal-links";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function AssinaturaPage() {
         </a>
 
         <LogoutButton variant="sidebar" className="mt-4 justify-center" />
+        <LegalLinks className="mt-5" />
       </div>
     </main>
   );

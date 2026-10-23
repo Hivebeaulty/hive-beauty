@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Users, ScrollText, Wallet } from "lucide-react";
+import { LayoutDashboard, Users, ScrollText, Wallet, TrendingUp } from "lucide-react";
 
-// Só as áreas que já funcionam com dados reais. Aquisição e relatórios entram
-// aqui quando as próximas fases tiverem dados de verdade.
+// Só as áreas que já funcionam com dados reais. Relatórios entram aqui na Fase 5.
 const ITEMS = [
   { href: "/admin", label: "Visão geral", icon: LayoutDashboard, exact: true },
   { href: "/admin/profissionais", label: "Profissionais", icon: Users },
   { href: "/admin/financeiro", label: "Assinaturas e financeiro", icon: Wallet },
+  { href: "/admin/aquisicao", label: "Aquisição", icon: TrendingUp },
   { href: "/admin/auditoria", label: "Auditoria", icon: ScrollText },
 ];
 
