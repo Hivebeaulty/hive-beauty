@@ -63,3 +63,13 @@ test("conta suspensa (0038): bloqueia, não oferece assinatura, vale para dona e
     assert.match(c.text, /nada foi apagado/);
   }
 });
+
+test("cancelada com mês pago (0041): liberada até a data, com aviso; sem data válida, bloqueia", () => {
+  const ok = a.parseAccess({ status: "ending", allowed: true, warning: true, until: "2026-11-20T15:00:00Z" }, null);
+  assert.deepEqual(ok, { status: "ending", allowed: true, warning: true, until: "2026-11-20T15:00:00Z" });
+  assert.equal(a.formatUntil(ok.until), "20/11/2026");
+  assert.deepEqual(a.parseAccess({ status: "ending", allowed: true }, null), { status: "canceled", allowed: false, warning: false });
+  assert.deepEqual(a.parseAccess({ status: "ending", allowed: true, until: "amanhã" }, null), { status: "canceled", allowed: false, warning: false });
+  assert.equal(a.parseAccess({ status: "ending", allowed: false, until: "2026-11-20T15:00:00Z" }, null).allowed, false);
+  assert.equal(a.formatUntil(undefined), "");
+});

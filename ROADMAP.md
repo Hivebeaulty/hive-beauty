@@ -25,13 +25,19 @@ Atualizado em 23/10/2026. O que já está em produção fica no README; aqui só
 
 ## Fase 4 — site (Lovable): medição e documentos legais
 
-- Política de Privacidade e Termos de Uso publicados no site da Áurea e linkados no rodapé, no checkout e no login.
-  Devem descrever o que é coletado (inclusive a medição de visitas, se adotada), para que, por quanto tempo, com quem é
-  compartilhado (Supabase, Vercel, Mercado Pago, WhatsApp, Brevo) e como pedir acesso ou exclusão (LGPD).
-- Medição da landing sem dados pessoais: visitas, origem, cliques no botão de assinar e início do checkout, com UTM.
-- Funil completo no painel: visita → clique → checkout → teste iniciado → primeiro pagamento → pagante ativa, por coorte.
+- ~~Política de Privacidade e Termos de Uso; medição sem cookies; funil no painel (0041 + `track`).~~ Pronto.
+- **Obrigatório antes de 90 dias do primeiro cancelamento:** exclusão automática dos dados da conta 90 dias depois do
+  fim do acesso (prometido na política e nos termos). Até lá, fazer manualmente se ocorrer.
+- Revisão dos documentos por um advogado antes de considerar a versão definitiva.
+- Considerar abrir MEI/CNPJ: hoje o CPF aparece publicamente no rodapé e nos documentos (exigência do Decreto 7.962/2013
+  para quem vende como pessoa física).
+- Instagram: colocar o link no rodapé quando existir.
+- Opcional: hospedar as fontes no próprio site (hoje o Google Fonts recebe o IP de quem visita; está na política).
+- Futuro: checkout próprio pela API do Mercado Pago (com referência da visita) para ligar origem e assinatura.
 
 ## Fase 5 — uso, retenção e relatórios
+
+- Inclui a exclusão automática pós-cancelamento (ver Fase 4).
 
 - Contas que precisam de atenção (sem serviços, sem clientes, sem atendimentos, sem atividade recente), com motivo.
 - Ativação e retenção por coorte.

@@ -57,7 +57,7 @@ export function CancelSubscription({ companyId, companyName, courtesy }: { compa
             {courtesy ? (
               <li>A conta é cortesia: o acesso ao app continua liberado.</li>
             ) : (
-              <li>O acesso ao app é bloqueado assim que o Mercado Pago confirmar. Nenhum dado é apagado.</li>
+              <li>O acesso ao app continua até o fim do período já pago. Se ela ainda estiver no teste grátis, é bloqueado assim que o Mercado Pago confirmar. Nenhum dado é apagado.</li>
             )}
           </ul>
           <Textarea label="Motivo (fica registrado na auditoria)" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
