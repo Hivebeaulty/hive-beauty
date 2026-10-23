@@ -2,6 +2,7 @@
 // entre requisições (necessário com @supabase/ssr no App Router).
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { nextParamFor } from "@/lib/hive/next-path";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -32,7 +33,11 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/redefinir-senha");
 
   if (!user && !isAuthRoute) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    // Lembra a página pedida (ex.: /admin) para voltar a ela depois do login.
+    const login = new URL("/login", request.url);
+    const next = nextParamFor(request.nextUrl.pathname, request.nextUrl.search);
+    if (next) login.searchParams.set("next", next);
+    return NextResponse.redirect(login);
   }
 
   return response;
