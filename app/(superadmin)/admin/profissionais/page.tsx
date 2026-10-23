@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireSuperadmin } from "@/lib/supabase/require-superadmin";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { StatusPill } from "@/components/admin/status-pill";
 import {
   BILLING_LABEL,
   BILLING_ORDER,
@@ -24,9 +24,9 @@ const field = "rounded border border-ink-200 bg-surface px-2.5 py-2 text-sm text
 function Status({ r }: { r: AccountRow }) {
   return (
     <span className="flex flex-wrap gap-1">
-      <Badge tone={BILLING_TONE[r.billing_status]}>{BILLING_LABEL[r.billing_status]}</Badge>
-      {r.suspended && <Badge tone="danger">Suspensa</Badge>}
-      {r.is_demo && <Badge tone="muted">Demonstração</Badge>}
+      <StatusPill tone={BILLING_TONE[r.billing_status]}>{BILLING_LABEL[r.billing_status]}</StatusPill>
+      {r.suspended && <StatusPill tone="danger">Suspensa</StatusPill>}
+      {r.is_demo && <StatusPill tone="muted">Demonstração</StatusPill>}
     </span>
   );
 }
@@ -53,7 +53,7 @@ export default async function AdminProfissionaisPage({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="page-title">Profissionais</h1>
-          <p className="text-sm text-ink-400">
+          <p className="text-sm text-ink-500">
             {list ? `${list.total} ${list.total === 1 ? "conta" : "contas"}${filtered ? " no filtro" : ""}` : "—"}
           </p>
         </div>
@@ -71,7 +71,7 @@ export default async function AdminProfissionaisPage({
       <form action="/admin/profissionais" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto_auto_auto]">
         <label className="relative sm:col-span-2 lg:col-span-1">
           <span className="sr-only">Buscar</span>
-          <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-ink-300" />
+          <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-ink-500" />
           <input name="q" defaultValue={f.q} placeholder="Negócio, responsável ou e-mail" className={`${field} w-full pl-8`} />
         </label>
         <select name="assinatura" defaultValue={f.assinatura} aria-label="Assinatura" className={field}>
@@ -98,7 +98,7 @@ export default async function AdminProfissionaisPage({
           <label className="flex items-center gap-1.5 text-sm text-ink-600">
             <input type="checkbox" name="demo" value="1" defaultChecked={f.demo} /> Demonstração
           </label>
-          <button className="rounded bg-ink-800 px-3.5 py-2 text-sm font-semibold text-cream hover:bg-ink-700">Filtrar</button>
+          <button className="rounded bg-primary px-3.5 py-2 text-sm font-semibold text-primary-ink hover:bg-primary-hover">Filtrar</button>
         </span>
       </form>
 
@@ -120,7 +120,7 @@ export default async function AdminProfissionaisPage({
           {/* Computador: tabela */}
           <div className="hidden overflow-x-auto rounded-lg border border-ink-100 bg-surface md:block">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-ink-100 text-xs text-ink-400">
+              <thead className="border-b border-ink-100 text-xs text-ink-500">
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Negócio e responsável</th>
                   <th className="px-3 py-2.5 font-medium">Assinatura</th>
@@ -137,7 +137,7 @@ export default async function AdminProfissionaisPage({
                       <Link href={`/admin/profissionais/${r.company_id}`} className="font-medium text-ink-800 hover:underline">
                         {r.company_name}
                       </Link>
-                      <p className="text-xs text-ink-400">
+                      <p className="text-xs text-ink-500">
                         {r.owner_name ?? "Sem nome"} {r.owner_email && <>· {r.owner_email}</>}
                       </p>
                     </td>
@@ -161,7 +161,7 @@ export default async function AdminProfissionaisPage({
                     <p className="font-medium text-ink-800">{r.company_name}</p>
                     <Status r={r} />
                   </div>
-                  <p className="truncate text-xs text-ink-400">{r.owner_email ?? r.owner_name ?? "Sem responsável"}</p>
+                  <p className="truncate text-xs text-ink-500">{r.owner_email ?? r.owner_name ?? "Sem responsável"}</p>
                   <p className="text-xs text-ink-500">
                     Cadastro {fmtDate(r.created_at)}, {r.appointments_count} atendimentos, último acesso {fmtDate(r.owner_last_sign_in)}
                   </p>
@@ -177,7 +177,7 @@ export default async function AdminProfissionaisPage({
                   Anterior
                 </Link>
               ) : <span />}
-              <span className="text-ink-400">Página {f.pagina} de {pages}</span>
+              <span className="text-ink-500">Página {f.pagina} de {pages}</span>
               {f.pagina < pages ? (
                 <Link href={`/admin/profissionais${accountFiltersQuery(f, { pagina: f.pagina + 1 })}`} className="font-semibold text-ink-700 hover:underline">
                   Próxima

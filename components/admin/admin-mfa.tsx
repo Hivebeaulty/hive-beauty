@@ -66,7 +66,7 @@ export function AdminMfa({ email }: { email: string }) {
     window.location.href = "/admin"; // recarrega para o servidor ler a sessão nova (aal2)
   }
 
-  if (state.step === "loading") return <p className="mt-6 text-sm text-ink-400">Carregando…</p>;
+  if (state.step === "loading") return <p className="mt-6 text-sm text-ink-500">Carregando…</p>;
   if (state.step === "failed") {
     return (
       <p role="alert" className="mt-6 flex items-start gap-1.5 text-sm text-danger">

@@ -250,9 +250,12 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   reactivate: "Reativou o acesso",
   add_note: "Registrou uma observação",
   export_accounts: "Exportou a lista de profissionais",
+  cancel_subscription: "Cancelamento de assinatura no Mercado Pago",
+  reconcile: "Conferiu as cobranças com o Mercado Pago",
 };
 export const auditLabel = (action: string, result?: string) =>
-  `${AUDIT_ACTION_LABEL[action] ?? action}${result === "noop" ? " (já estava assim)" : result === "error" ? " (falhou)" : ""}`;
+  `${AUDIT_ACTION_LABEL[action] ?? action}${
+    result === "noop" ? " (já estava assim)" : result === "error" ? " (falhou)" : result === "requested" ? " (pedido)" : ""}`;
 
 // --- CSV ------------------------------------------------------------------------------
 // Ponto e vírgula + BOM: abre direto no Excel em português com acentos certos.
