@@ -51,6 +51,6 @@ export async function middleware(request: NextRequest) {
 // Rotas de página (sem extensão) continuam protegidas normalmente.
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|api|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|json|txt|xml|webmanifest)$).*)",
+    "/((?!_next/static|_next/image|api|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|json|txt|xml|webmanifest|pdf)$).*)",
   ],
 };
