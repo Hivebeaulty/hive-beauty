@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { StatusPill } from "@/components/admin/status-pill";
 import { PeriodPicker } from "@/components/admin/period-picker";
 import { ReconcileButton } from "@/components/admin/billing-actions";
+import { UnlinkedSubscriptions } from "@/components/admin/unlinked-subscriptions";
+import { parseUnlinked } from "@/lib/hive/admin-unlinked";
 import { cn } from "@/lib/utils";
 import { fmtDate, formatBRL, monthLabel, resolvePeriod } from "@/lib/hive/admin";
 import {
@@ -45,11 +47,13 @@ export default async function AdminFinanceiroPage({ searchParams }: { searchPara
   const period = resolvePeriod(sp.periodo, new Date(), { de: sp.de, ate: sp.ate });
   const range = { p_from: period.from.toISOString(), p_to: period.to.toISOString() };
 
-  const [ov, pays, evs] = await Promise.all([
+  const [ov, pays, evs, unl] = await Promise.all([
     supabase.rpc("admin_finance_overview", range),
     supabase.rpc("admin_list_billing", { p_kind: "payments", ...range, p_limit: 20 }),
     supabase.rpc("admin_list_billing", { p_kind: "events", ...range, p_limit: 20 }),
+    supabase.rpc("admin_list_unlinked"),
   ]);
+  const unlinked = unl.error ? [] : (parseUnlinked(unl.data) ?? []);
   const f = ov.error ? null : parseFinance(ov.data);
   const payments = (pays.error ? null : (pays.data as { total: number; rows: PayRow[] })) ?? null;
   const events = (evs.error ? null : (evs.data as { total: number; rows: EvRow[] })) ?? null;
@@ -77,6 +81,7 @@ export default async function AdminFinanceiroPage({ searchParams }: { searchPara
         </div>
         <ReconcileButton />
       </div>
+      <UnlinkedSubscriptions rows={unlinked} />
       <PeriodPicker basePath="/admin/financeiro" period={period} de={sp.de} ate={sp.ate} />
 
       {startsBeforeMeasuring(period.from, f.measuring_since) && (
