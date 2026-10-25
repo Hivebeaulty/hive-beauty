@@ -51,4 +51,14 @@ check("escape de HTML", m.esc('<a href="x">&') === "&lt;a href=&quot;x&quot;&gt;
 check("assinatura já ativa: sem texto de teste", !m.welcomeEmail({ ...W, status: "active" }).html.includes("7 dias grátis"));
 Deno.env.set("EMAIL_FROM", "contato@aurea.com.br");
 check("remetente configurável (domínio próprio no futuro)", m.cfg().from === "contato@aurea.com.br" && m.cfg().replyTo === "contato@aurea.com.br");
+
+// 0045: alerta de assinatura sem dona (vai para o suporte, não para a cliente)
+cfgStub.claim = () => 9; cfgStub.targets = { welcome: [], trial_ending: [], unlinked_alert: [{ preapproval_id: "PX", mp_status: "authorized", amount: 59.9, date_created: "2026-11-10T15:00:00Z" }] };
+calls.length = 0; sent.length = 0; Deno.env.delete("EMAIL_FROM");
+{ const r = await post(); const j = await r.json(); const b = sent[0]?.body;
+  check("alerta sem dona: enviado ao suporte", j.sent === 1 && b.to[0].email === "hivebeauty.suporte@gmail.com" && b.subject === "Assinatura sem dona: PX", JSON.stringify(j));
+  check("alerta: reserva pelo id da assinatura e e-mail do suporte", calls.some((c) => c[0] === "billing_email_claim" && c[1].p_kind === "unlinked_alert" && c[1].p_preapproval_id === "PX" && c[1].p_email === "hivebeauty.suporte@gmail.com"));
+  check("alerta: diz o que fazer e leva ao painel", b.htmlContent.includes("Assinaturas sem dona") && b.htmlContent.includes("/admin/financeiro") && b.htmlContent.includes("R$ 59,90")); }
+Deno.env.set("ALERT_EMAIL", "dono@x.com");
+check("destinatário do alerta configurável", m.cfg().alert === "dono@x.com");
 console.info(`RESULTADO billing-emails: PASS=${pass} FAIL=${fail}`);

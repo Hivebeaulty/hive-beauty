@@ -3,11 +3,12 @@
 //
 //   welcome       boas-vindas quando a assinatura começa (link do app e do guia em PDF)
 //   trial_ending  aviso ~2 dias antes da primeira cobrança (data, valor, como cancelar)
+//   unlinked_alert alerta ao SUPORTE: assinatura sem dona há mais de 10 min (0045)
 //
 // O banco decide quem recebe (billing_email_targets) e garante que nada sai duas vezes
 // (billing_email_claim / billing_email_finish). Envio pela API do Brevo.
 // Segredos: BREVO_API_KEY (obrigatório); EMAIL_FROM, EMAIL_FROM_NAME, EMAIL_REPLY_TO,
-// APP_URL, GUIDE_URL, LANDING_URL (opcionais, com padrão).
+// APP_URL, GUIDE_URL, LANDING_URL, ALERT_EMAIL (opcionais, com padrão).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -22,6 +23,7 @@ export const cfg = () => ({
   app: env("APP_URL", "https://hive-beauty.vercel.app"),
   guide: env("GUIDE_URL", `${env("APP_URL", "https://hive-beauty.vercel.app")}/guia-aurea.pdf`),
   landing: env("LANDING_URL", "https://aurea-hivebeauty.lovable.app"),
+  alert: env("ALERT_EMAIL", env("EMAIL_REPLY_TO", env("EMAIL_FROM", "hivebeauty.suporte@gmail.com"))),
   whatsapp: "(31) 99919-1534",
   whatsappUrl: "https://wa.me/5531999191534",
 });
@@ -103,6 +105,21 @@ ${button(c.guide, "Abrir o guia de uso")}`);
   return { subject: `Seu teste da Áurea termina ${when}`, html, text };
 }
 
+type Unlinked = { preapproval_id: string; mp_status?: string | null; amount?: number | null; date_created?: string | null; first_seen?: string };
+/** Alerta interno ao suporte (não vai para a cliente). */
+export function unlinkedAlertEmail(u: Unlinked, c = cfg()): Mail {
+  const when = u.date_created ? longDate(u.date_created) : "data não informada";
+  const html = layout(c, "Uma assinatura do Mercado Pago está sem dona. Ligue a um e-mail no painel.",
+    `${h1("Assinatura sem dona")}
+<p style="margin:0 0 12px;">O Mercado Pago não informou o e-mail desta assinatura e nenhuma conta ou e-mail informado no site correspondeu. A cliente pagou e ainda <strong>não tem acesso</strong>.</p>
+${box(`Assinatura: <strong>${esc(u.preapproval_id)}</strong><br>Situação no Mercado Pago: ${esc(u.mp_status ?? "não informada")}<br>Valor: ${esc(money(u.amount))}<br>Criada em: ${esc(when)}`)}
+<p style="margin:16px 0 6px;"><strong>O que fazer:</strong> descubra o e-mail da cliente (no painel do Mercado Pago, em Assinaturas, ou falando com ela) e ligue no painel da Áurea, em Assinaturas e financeiro › Assinaturas sem dona. Em até 5 minutos a conta é criada e ela recebe o e-mail de senha.</p>
+${button(`${c.app}/admin/financeiro`, "Abrir o painel")}`);
+  const text = `Assinatura sem dona: ${u.preapproval_id} (${u.mp_status ?? "situação não informada"}, ${money(u.amount)}, criada em ${when}).\n` +
+    `A cliente pagou e ainda não tem acesso. Ligue a assinatura a um e-mail no painel: ${c.app}/admin/financeiro`;
+  return { subject: `Assinatura sem dona: ${u.preapproval_id}`, html, text };
+}
+
 // ---- envio --------------------------------------------------------------------------------
 const mask = (e: string) => e.replace(/^(.).*(@.*)$/, "$1***$2");
 const log = (o: Record<string, unknown>) => console.log(JSON.stringify({ fn: "billing-emails", ...o }));
@@ -134,20 +151,21 @@ Deno.serve(async (req) => {
 
   const { data, error } = await service.rpc("billing_email_targets");
   if (error) { log({ error: error.message }); return new Response(JSON.stringify({ error: error.message }), { status: 500 }); }
-  const jobs: { kind: "welcome" | "trial_ending"; t: Target }[] = [
-    ...((data?.welcome ?? []) as Target[]).map((t) => ({ kind: "welcome" as const, t })),
-    ...((data?.trial_ending ?? []) as Target[]).map((t) => ({ kind: "trial_ending" as const, t })),
+  type Kind = "welcome" | "trial_ending" | "unlinked_alert";
+  const jobs: { kind: Kind; t: Target; to: string; mail: () => Mail }[] = [
+    ...((data?.unlinked_alert ?? []) as Unlinked[]).map((u) => ({ kind: "unlinked_alert" as const, t: { preapproval_id: u.preapproval_id, email: c.alert }, to: c.alert, mail: () => unlinkedAlertEmail(u, c) })),
+    ...((data?.welcome ?? []) as Target[]).map((t) => ({ kind: "welcome" as const, t, to: t.email, mail: () => welcomeEmail(t, c) })),
+    ...((data?.trial_ending ?? []) as Target[]).map((t) => ({ kind: "trial_ending" as const, t, to: t.email, mail: () => trialEndingEmail(t, c) })),
   ].slice(0, MAX_PER_RUN);
 
   const summary = { sent: 0, failed: 0, skipped: 0 };
-  for (const { kind, t } of jobs) {
-    const { data: id, error: ce } = await service.rpc("billing_email_claim", { p_kind: kind, p_preapproval_id: t.preapproval_id, p_email: t.email });
+  for (const { kind, t, to, mail: build } of jobs) {
+    const { data: id, error: ce } = await service.rpc("billing_email_claim", { p_kind: kind, p_preapproval_id: t.preapproval_id, p_email: to });
     if (ce || id == null) { summary.skipped++; continue; }
-    const mail = kind === "welcome" ? welcomeEmail(t, c) : trialEndingEmail(t, c);
-    const r = await brevo(c, t.email, mail);
+    const r = await brevo(c, to, build());
     await service.rpc("billing_email_finish", { p_id: id, p_ok: r.ok, p_message_id: r.ok ? r.id : null, p_error: r.ok ? null : r.error });
     r.ok ? summary.sent++ : summary.failed++;
-    log({ kind, to: mask(t.email), ok: r.ok, ...(r.ok ? {} : { error: r.error }) });
+    log({ kind, to: mask(to), ok: r.ok, ...(r.ok ? {} : { error: r.error }) });
   }
   if (jobs.length) log({ ...summary });
   return new Response(JSON.stringify(summary), { status: 200, headers: { "Content-Type": "application/json" } });

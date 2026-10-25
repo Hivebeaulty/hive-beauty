@@ -327,3 +327,22 @@ interrompidas por ela.
 - Segredos da função: `BREVO_API_KEY` (obrigatório); `EMAIL_FROM` (padrão `hivebeauty.suporte@gmail.com`),
   `EMAIL_FROM_NAME`, `EMAIL_REPLY_TO`, `APP_URL`, `GUIDE_URL`, `LANDING_URL` (opcionais).
 - Testes: `supabase/tests/local/0042_local.sh`, `supabase/tests/local/billing-emails/run.sh`.
+
+## Incidente de 25/10/2026 e correção (0043–0045, `mp-sync`, `signup-intent`)
+
+O link de plano do Mercado Pago (`mpago.la/2gCWhAH`) **não dispara o webhook** da aplicação e a assinatura
+vem **sem `payer_email`**. Uma assinatura real (Tainá, teste) não liberou o acesso.
+
+- **`mp-sync`** (0043, a cada 5 min, sem JWT, segredo `mp_sync_cron` no Vault): lista as assinaturas no Mercado
+  Pago e processa as novas/alteradas como a `mp-webhook` (situação, cobranças, conta + e-mail de senha).
+- E-mail da assinatura, nesta ordem: `payer_email` → busca do Mercado Pago com o filtro `payer_email` para cada
+  candidata (`mp_sync_candidates`: contas sem acesso **e e-mails informados no site antes do checkout**, 0044/0045)
+  → e-mail ligado no painel (`mp_manual_links`, auditado).
+- **Site**: os botões de assinar abrem um modal que pede o e-mail e chama a Edge Function **`signup-intent`**
+  (sem JWT, só os domínios do site/app, guarda e-mail + UTM em `signup_intents`) antes de ir ao checkout.
+- **Assinaturas sem dona** (`mp_unlinked`): aparecem em `/admin/financeiro` com "Ligar a um e-mail"
+  (`admin_link_subscription`, superadmin + MFA, auditado) e geram **alerta por e-mail ao suporte** depois de
+  10 min (`billing-emails`, kind `unlinked_alert`, destinatário `ALERT_EMAIL`).
+- Testes: `0045_local.sh`, `mp-sync/run.sh`, `signup-intent/run.sh`, `billing-emails/run.sh`,
+  `tests/admin-unlinked.test.cjs`.
+- Definitivo (roadmap): criar a assinatura pela API do Mercado Pago, com o e-mail e uma referência nossa.

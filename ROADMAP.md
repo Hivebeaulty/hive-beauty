@@ -5,7 +5,10 @@ semana e continuam pagando. O que já está em produção fica no README.
 
 ## 1. Agora: lançamento e primeiras vendas
 
-- [ ] **Assinatura real de ponta a ponta** (pagar → e-mail → criar senha → entrar no app → cancelar). Nunca rodou com
+- [x] **Assinatura real de ponta a ponta** (25/10: falhou e foi corrigido; ver README, incidente)
+- [ ] **Checkout pela API do Mercado Pago** (assinatura criada com o e-mail e uma referência nossa: webhook confiável e origem da cliente ligada à assinatura)
+- [ ] Repetir o teste real com um e-mail NOVO (sem conta), pelo modal do site
+- [ ] ~~Assinatura real de ponta a ponta~~ (pagar → e-mail → criar senha → entrar no app → cancelar). Nunca rodou com
       pagamento real; é o maior risco antes de divulgar.
 - [x] **E-mail de confirmação da assinatura (boas-vindas)** (0042 + `billing-emails`), enviado pelo webhook quando a assinatura começa: o que foi
       contratado, quando acontece a primeira cobrança, como criar a senha, link para o app e o guia em PDF.
