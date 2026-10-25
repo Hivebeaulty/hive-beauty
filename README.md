@@ -315,3 +315,15 @@ interrompidas por ela.
   e `/termos` da landing; links no login e na tela de assinatura do app).
 - Ordem de deploy: aplicar a 0041, publicar `track` sem JWT, publicar o app, publicar a landing no Lovable.
 - Testes: `supabase/tests/local/0041_local.sh`, `supabase/tests/local/track/run.sh`, `tests/admin-funnel.test.cjs`.
+
+## E-mails da assinatura (0042 + `billing-emails`)
+
+- **Boas-vindas** (assinatura do Mercado Pago que começou nos últimos 7 dias) com o link do app e do guia
+  (`public/guia-aurea.pdf`, servido em `/guia-aurea.pdf`), e **aviso ~2 dias antes da primeira cobrança** (data, valor,
+  como cancelar), só entre 9h e 20h de Brasília. Cortesias e contas antigas não recebem.
+- O pg_cron chama a Edge Function `billing-emails` (**sem** JWT) a cada 15 min via pg_net, com um segredo gerado e
+  guardado no Vault (`billing_emails_cron`). `billing_email_claim` garante que nada sai duas vezes; erro do Brevo =
+  nova tentativa no ciclo seguinte, até 5.
+- Segredos da função: `BREVO_API_KEY` (obrigatório); `EMAIL_FROM` (padrão `hivebeauty.suporte@gmail.com`),
+  `EMAIL_FROM_NAME`, `EMAIL_REPLY_TO`, `APP_URL`, `GUIDE_URL`, `LANDING_URL` (opcionais).
+- Testes: `supabase/tests/local/0042_local.sh`, `supabase/tests/local/billing-emails/run.sh`.
