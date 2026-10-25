@@ -50,7 +50,8 @@ function layout(c: ReturnType<typeof cfg>, preheader: string, inner: string) {
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3EADF;"><tr><td align="center" style="padding:24px 12px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAF7F2;border-radius:12px;">
-<tr><td style="padding:28px 32px 8px;"><img src="${c.app}/logo-lockup.png" width="132" alt="Áurea" style="display:block;border:0;"></td></tr>
+<tr><td style="padding:0;line-height:0;"><img src="${c.app}/email/cabecalho.png" width="560" alt="Áurea" style="display:block;width:100%;max-width:560px;height:auto;border:0;border-radius:12px 12px 0 0;"></td></tr>
+<tr><td style="height:20px;line-height:20px;font-size:0;">&nbsp;</td></tr>
 <tr><td style="padding:8px 32px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#2C2C2E;">${inner}</td></tr>
 <tr><td style="padding:20px 32px 28px;border-top:1px solid #E6DDD2;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#6E6862;">
 Dúvidas? Responda este e-mail ou chame no WhatsApp <a href="${c.whatsappUrl}" style="color:#7E6338;">${c.whatsapp}</a>.<br>
@@ -80,10 +81,12 @@ ${box(esc(charge))}
 ${button(`${c.app}/login`, "Entrar na Áurea")}
 <p style="margin:16px 0 6px;"><strong>3. Siga o guia.</strong> Em poucos minutos você cadastra os serviços, importa suas clientes e conecta o WhatsApp.</p>
 ${button(c.guide, "Baixar o guia de uso (PDF)")}
+${box(`<strong>Para não perder nossos avisos:</strong> adicione <strong>${esc(c.from)}</strong> aos seus contatos. Se este e-mail chegou no spam, marque como “Não é spam”.`)}
 <p style="margin:16px 0 0;">Você cuida das clientes. A Áurea cuida da rotina.</p>`);
   const text = `Boas-vindas à Áurea.\n\n${trial ? "Seus 7 dias grátis já começaram. " : ""}${charge}\n\n` +
     `1. Crie sua senha pelo link do outro e-mail que enviamos (veja o spam, ou use "Esqueci minha senha").\n` +
     `2. Entre no app: ${c.app}/login\n3. Siga o guia de uso: ${c.guide}\n\n` +
+    `Para não perder nossos avisos, adicione ${c.from} aos seus contatos. Se este e-mail chegou no spam, marque como "Não é spam".\n\n` +
     `Dúvidas? Responda este e-mail ou chame no WhatsApp ${c.whatsapp}.\nPara cancelar, acesse Assinaturas no Mercado Pago, sem multa.`;
   return { subject: "Boas-vindas à Áurea: seus primeiros passos", html, text };
 }
