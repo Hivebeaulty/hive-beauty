@@ -10,6 +10,7 @@
 //      e-mail de senha — exatamente como a mp-webhook.
 // E-mail: assinaturas por link de plano vêm com payer_email vazio. Ordem de busca:
 //   a) payer_email da própria assinatura;
+//   a2) o e-mail da conta já ligada a esta assinatura no banco (mp_sync_known_emails, 0046);
 //   b) a busca do Mercado Pago com o filtro payer_email, para cada candidata
 //      (mp_sync_candidates: contas sem acesso + e-mails informados no site antes do checkout, 0045);
 //   c) o e-mail ligado manualmente no painel (mp_manual_links, auditado, 0045).
@@ -124,10 +125,12 @@ export async function resolveEmails(candidates: string[]) {
   return map;
 }
 
-/** E-mail da assinatura: o do Mercado Pago, o confirmado pela busca, ou o ligado no painel. */
-export function pickEmail(p: Pre, byEmail: Map<string, string>, manual: Map<string, string>) {
+/** E-mail da assinatura: o do Mercado Pago, o da conta já ligada, o confirmado pela busca, ou o do painel. */
+export function pickEmail(p: Pre, byEmail: Map<string, string>, manual: Map<string, string>, known = new Map<string, string>()) {
   const own = String(p.payer_email ?? "").trim();
   if (own) return { email: own, via: "mp" };
+  const linkedAccount = known.get(p.id!) ?? "";
+  if (linkedAccount) return { email: linkedAccount, via: "known" };
   const found = byEmail.get(p.id!) ?? "";
   if (found) return { email: found, via: "search" };
   const linked = manual.get(p.id!) ?? "";
@@ -204,17 +207,25 @@ Deno.serve(async (req) => {
   const todo = listed.items.filter((p) => {
     const k = lastMod.get(p.id!); return k == null || Date.parse(p.last_modified ?? "") > Date.parse(k);
   });
-  const summary = { listed: listed.items.length, synced: 0, errors: 0, unlinked: 0, resolvedByEmail: 0, resolvedManually: 0 };
-  // Só consulta candidatas e ligações manuais se houver assinatura nova sem e-mail na busca.
+  const summary = { listed: listed.items.length, synced: 0, errors: 0, unlinked: 0, resolvedByEmail: 0, resolvedManually: 0, knownAccount: 0 };
+  // Sem e-mail na busca: primeiro o e-mail da conta já ligada à assinatura (0046).
+  let accountEmails = new Map<string, string>();
+  const noEmail = todo.filter((p) => !String(p.payer_email ?? "").trim()).map((p) => p.id!);
+  if (noEmail.length) {
+    const { data: ke } = await admin.rpc("mp_sync_known_emails", { p_ids: noEmail });
+    accountEmails = new Map(((ke as { preapproval_id: string; email: string }[]) ?? []).map((k) => [k.preapproval_id, k.email]));
+  }
+  // Só consulta candidatas e ligações manuais se ainda sobrar assinatura sem e-mail.
   let byEmail = new Map<string, string>(); let manual = new Map<string, string>();
-  if (todo.some((p) => !String(p.payer_email ?? "").trim())) {
+  if (noEmail.some((id) => !accountEmails.has(id))) {
     const { data: cands } = await admin.rpc("mp_sync_candidates");
     byEmail = await resolveEmails(((cands as string[]) ?? []).filter(Boolean));
     const { data: links } = await admin.rpc("mp_manual_links");
     manual = new Map(((links as { preapproval_id: string; email: string }[]) ?? []).map((l) => [l.preapproval_id, l.email]));
   }
   for (const p of todo) {
-    const pick = pickEmail(p, byEmail, manual);
+    const pick = pickEmail(p, byEmail, manual, accountEmails);
+    if (pick.via === "known") summary.knownAccount++;
     if (pick.via === "search") summary.resolvedByEmail++;
     if (pick.via === "manual") summary.resolvedManually++;
     const r = await syncOne(p.id!, pick.email);
