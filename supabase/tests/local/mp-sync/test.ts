@@ -86,4 +86,15 @@ st.links = [{ preapproval_id: "U", email: "ligada@x.com" }]; calls.length = 0;
     m.pickEmail(p, new Map([["Z", "busca@x.com"]]), new Map([["Z", "painel@x.com"]])).email === "busca@x.com" &&
     m.pickEmail(p, new Map([["Z", ""]]), new Map([["Z", "painel@x.com"]])).email === "painel@x.com" &&
     m.pickEmail(p, new Map(), new Map()).via === "none"); }
+
+// 0046: assinatura que já tem dona no banco (falso alarme de 25/10)
+st.links = []; st.cands = []; st.knownEmails = [{ preapproval_id: "U", email: "tai@x.com" }]; calls.length = 0;
+{ const j = await (await post()).json();
+  check("já ligada no banco: usa o e-mail da conta, sem virar sem dona", j.knownAccount === 1 && j.unlinked === 0 && !calls.some((c) => c[0] === "mp_unlinked_report") && calls.some((c) => c[0] === "billing_sync" && c[1].p.email === "tai@x.com"), JSON.stringify(j));
+  check("já ligada: nem consulta as candidatas", !calls.some((c) => c[0] === "mp_sync_candidates"));
+  check("já ligada: limpa um sem dona antigo", calls.some((c) => c[0] === "mp_unlinked_resolved" && c[1].p_id === "U")); }
+check("prioridade: e-mail do MP > conta ligada > busca > painel",
+  m.pickEmail({ id: "Z", payer_email: "" }, new Map([["Z", "busca@x.com"]]), new Map([["Z", "painel@x.com"]]), new Map([["Z", "conta@x.com"]])).email === "conta@x.com" &&
+  m.pickEmail({ id: "Z", payer_email: "mp@x.com" }, new Map(), new Map(), new Map([["Z", "conta@x.com"]])).via === "mp");
+st.knownEmails = [];
 console.info(`RESULTADO mp-sync: PASS=${pass} FAIL=${fail}`);

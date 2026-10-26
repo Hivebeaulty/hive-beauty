@@ -1,5 +1,5 @@
 export const calls: any[] = [];
-export const st: any = { secretOk: true, known: [], createErr: null, cands: [], links: [] };
+export const st: any = { secretOk: true, known: [], createErr: null, cands: [], links: [], knownEmails: [] };
 export function createClient(..._a: unknown[]) {
   return {
     rpc: async (fn: string, args: any = {}): Promise<{ data: any; error: any }> => {
@@ -8,6 +8,7 @@ export function createClient(..._a: unknown[]) {
       if (fn === "mp_sync_known") return { data: st.known, error: null };
       if (fn === "mp_sync_candidates") return { data: st.cands, error: null };
       if (fn === "mp_manual_links") return { data: st.links, error: null };
+      if (fn === "mp_sync_known_emails") return { data: st.knownEmails, error: null };
       return { data: { status: "trialing" }, error: null };
     },
     auth: {
