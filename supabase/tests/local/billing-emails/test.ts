@@ -61,4 +61,9 @@ calls.length = 0; sent.length = 0; Deno.env.delete("EMAIL_FROM");
   check("alerta: diz o que fazer e leva ao painel", b.htmlContent.includes("Assinaturas sem dona") && b.htmlContent.includes("/admin/financeiro") && b.htmlContent.includes("R$ 59,90")); }
 Deno.env.set("ALERT_EMAIL", "dono@x.com");
 check("destinatário do alerta configurável", m.cfg().alert === "dono@x.com");
+
+// cabeçalho em imagem (igual no modo claro e no escuro) e dica de contatos/spam
+{ const w = m.welcomeEmail({ preapproval_id: "P", email: "a@x.com", status: "trialing", next_payment_at: "2026-11-12T15:00:00Z", amount: 59.9 });
+  check("cabeçalho: imagem com fundo cacau e logo branco", w.html.includes("/email/cabecalho.png") && !w.html.includes("/logo-lockup.png"));
+  check("boas-vindas pede para adicionar o remetente aos contatos (spam)", w.html.includes("aos seus contatos") && w.html.includes("Não é spam") && w.text.includes("aos seus contatos")); }
 console.info(`RESULTADO billing-emails: PASS=${pass} FAIL=${fail}`);
