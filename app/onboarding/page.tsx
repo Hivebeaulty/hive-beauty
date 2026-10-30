@@ -57,7 +57,7 @@ export default function OnboardingPage() {
 
   return (
     <main className="flex min-h-screen flex-col justify-center bg-cream px-6 py-10">
-      <div className="mx-auto w-full max-w-sm rounded-lg border border-ink-100 bg-surface p-8">
+      <div className="mx-auto w-full max-w-sm surface-white rounded-lg border border-ink-100 bg-white p-8 dark:bg-surface">
         {step === 1 && (
           <>
             <h2 className="mb-4 text-xl font-semibold text-ink-800">Qual o nome da sua empresa?</h2>

@@ -4,7 +4,7 @@
   "description": "Seu negócio em boas mãos.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F6EEE1",
+  "background_color": "#FFFFFF",
   "theme_color": "#C80A39",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },

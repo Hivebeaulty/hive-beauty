@@ -27,7 +27,7 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
   return (
     <>
       {/* Desktop — sidebar fixa à esquerda */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-ink-100 bg-surface p-6 md:sticky md:top-0 md:flex md:h-screen md:self-start md:overflow-y-auto">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-ink-100 bg-cream p-6 dark:bg-surface md:sticky md:top-0 md:flex md:h-screen md:self-start md:overflow-y-auto">
         <div className="mb-8 flex items-center gap-2">
           <Image src="/logo-icon.png" alt="" width={26} height={26} priority className="dark:hidden" />
           <Image src="/logo-icon-dark.png" alt="" width={26} height={26} priority className="hidden dark:block" />
@@ -64,7 +64,7 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
       </aside>
 
       {/* Mobile — barra inferior */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-ink-100 bg-surface/95 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_16px_-8px_rgba(42,29,22,0.12)] backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-ink-100 bg-cream/95 dark:bg-surface/95 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_16px_-8px_rgba(42,29,22,0.12)] backdrop-blur md:hidden">
         {items.map((item) => {
           const icon = ICONS[item.href] ?? "inicio";
           const active = isActive(pathname, item.href);
