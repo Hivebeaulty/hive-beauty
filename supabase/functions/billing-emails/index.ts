@@ -18,7 +18,7 @@ const MAX_PER_RUN = 30;
 export const cfg = () => ({
   key: env("BREVO_API_KEY"),
   from: env("EMAIL_FROM", "hivebeauty.suporte@gmail.com"),
-  fromName: env("EMAIL_FROM_NAME", "Áurea"),
+  fromName: env("EMAIL_FROM_NAME", "Sócia"),
   replyTo: env("EMAIL_REPLY_TO", env("EMAIL_FROM", "hivebeauty.suporte@gmail.com")),
   app: env("APP_URL", "https://hive-beauty.vercel.app"),
   guide: env("GUIDE_URL", `${env("APP_URL", "https://hive-beauty.vercel.app")}/guia-aurea.pdf`),
@@ -45,26 +45,26 @@ export function whenPhrase(iso: string, now = new Date()) {
 
 // ---- layout ------------------------------------------------------------------------------
 function layout(c: ReturnType<typeof cfg>, preheader: string, inner: string) {
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Áurea</title></head>
-<body style="margin:0;padding:0;background:#F3EADF;">
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sócia</title></head>
+<body style="margin:0;padding:0;background:#F6EEE1;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3EADF;"><tr><td align="center" style="padding:24px 12px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAF7F2;border-radius:12px;">
-<tr><td style="padding:0;line-height:0;"><img src="${c.app}/email/cabecalho.png" width="560" alt="Áurea" style="display:block;width:100%;max-width:560px;height:auto;border:0;border-radius:12px 12px 0 0;"></td></tr>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6EEE1;"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFBF7;border-radius:12px;">
+<tr><td style="padding:0;line-height:0;"><img src="${c.app}/email/cabecalho.png" width="560" alt="Sócia" style="display:block;width:100%;max-width:560px;height:auto;border:0;border-radius:12px 12px 0 0;"></td></tr>
 <tr><td style="height:20px;line-height:20px;font-size:0;">&nbsp;</td></tr>
-<tr><td style="padding:8px 32px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#2C2C2E;">${inner}</td></tr>
-<tr><td style="padding:20px 32px 28px;border-top:1px solid #E6DDD2;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#6E6862;">
-Dúvidas? Responda este e-mail ou chame no WhatsApp <a href="${c.whatsappUrl}" style="color:#7E6338;">${c.whatsapp}</a>.<br>
+<tr><td style="padding:8px 32px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#452139;">${inner}</td></tr>
+<tr><td style="padding:20px 32px 28px;border-top:1px solid #E8DCCD;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#6B5A5E;">
+Dúvidas? Responda este e-mail ou chame no WhatsApp <a href="${c.whatsappUrl}" style="color:#C80A39;">${c.whatsapp}</a>.<br>
 Para cancelar, acesse Assinaturas no Mercado Pago, sem multa.<br>
-<a href="${c.landing}/termos" style="color:#6E6862;">Termos de Uso</a> · <a href="${c.landing}/privacidade" style="color:#6E6862;">Política de Privacidade</a>
+<a href="${c.landing}/termos" style="color:#6B5A5E;">Termos de Uso</a> · <a href="${c.landing}/privacidade" style="color:#6B5A5E;">Política de Privacidade</a>
 </td></tr></table></td></tr></table></body></html>`;
 }
-const h1 = (t: string) => `<h1 style="margin:8px 0 16px;font-family:Georgia,'Times New Roman',serif;font-weight:normal;font-size:26px;line-height:1.25;color:#2C2C2E;">${t}</h1>`;
+const h1 = (t: string) => `<h1 style="margin:8px 0 16px;font-family:Georgia,'Times New Roman',serif;font-weight:normal;font-size:26px;line-height:1.25;color:#452139;">${t}</h1>`;
 const button = (href: string, label: string) =>
-  `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 10px;"><tr><td style="border-radius:999px;background:#3A2A22;">
-<a href="${href}" style="display:inline-block;padding:13px 26px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#FAF7F2;text-decoration:none;border-radius:999px;">${label}</a></td></tr></table>`;
+  `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 10px;"><tr><td style="border-radius:999px;background:#C80A39;">
+<a href="${href}" style="display:inline-block;padding:13px 26px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#FFFBF7;text-decoration:none;border-radius:999px;">${label}</a></td></tr></table>`;
 const box = (inner: string) =>
-  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;"><tr><td style="background:#F2EBE1;border-radius:10px;padding:16px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#2C2C2E;">${inner}</td></tr></table>`;
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;"><tr><td style="background:#F9DDE1;border-radius:10px;padding:16px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#452139;">${inner}</td></tr></table>`;
 
 type Target = { preapproval_id: string; email: string; status?: string; next_payment_at?: string | null; amount?: number | null };
 type Mail = { subject: string; html: string; text: string };
@@ -73,22 +73,22 @@ export function welcomeEmail(t: Target, c = cfg()): Mail {
   const trial = t.status === "trialing" && t.next_payment_at;
   const charge = trial ? `A primeira cobrança, de ${money(t.amount)}, acontece em ${longDate(t.next_payment_at!)}, pelo Mercado Pago. Até lá, você usa tudo sem pagar nada.` : "Sua assinatura está ativa.";
   const html = layout(c, "Seu acesso está pronto. Veja como deixar tudo funcionando na primeira semana.",
-    `${h1('Boas-vindas à Áurea.')}
+    `${h1('Boas-vindas à Sócia.')}
 <p style="margin:0 0 12px;">Que bom ter você aqui. ${trial ? "Seus 7 dias grátis já começaram." : ""}</p>
 ${box(esc(charge))}
 <p style="margin:18px 0 6px;"><strong>1. Crie sua senha.</strong> Enviamos outro e-mail com o link para criar a senha. Não encontrou? Veja a caixa de spam ou toque em <em>Esqueci minha senha</em> na tela de entrada.</p>
-<p style="margin:12px 0 6px;"><strong>2. Entre no app.</strong> Dica: deixe a Áurea na tela inicial do celular, como um aplicativo.</p>
-${button(`${c.app}/login`, "Entrar na Áurea")}
+<p style="margin:12px 0 6px;"><strong>2. Entre no app.</strong> Dica: deixe a Sócia na tela inicial do celular, como um aplicativo.</p>
+${button(`${c.app}/login`, "Entrar na Sócia")}
 <p style="margin:16px 0 6px;"><strong>3. Siga o guia.</strong> Em poucos minutos você cadastra os serviços, importa suas clientes e conecta o WhatsApp.</p>
 ${button(c.guide, "Baixar o guia de uso (PDF)")}
 ${box(`<strong>Para não perder nossos avisos:</strong> adicione <strong>${esc(c.from)}</strong> aos seus contatos. Se este e-mail chegou no spam, marque como “Não é spam”.`)}
-<p style="margin:16px 0 0;">Você cuida das clientes. A Áurea cuida da rotina.</p>`);
-  const text = `Boas-vindas à Áurea.\n\n${trial ? "Seus 7 dias grátis já começaram. " : ""}${charge}\n\n` +
+<p style="margin:16px 0 0;">Você atende. A Sócia organiza.</p>`);
+  const text = `Boas-vindas à Sócia.\n\n${trial ? "Seus 7 dias grátis já começaram. " : ""}${charge}\n\n` +
     `1. Crie sua senha pelo link do outro e-mail que enviamos (veja o spam, ou use "Esqueci minha senha").\n` +
     `2. Entre no app: ${c.app}/login\n3. Siga o guia de uso: ${c.guide}\n\n` +
     `Para não perder nossos avisos, adicione ${c.from} aos seus contatos. Se este e-mail chegou no spam, marque como "Não é spam".\n\n` +
     `Dúvidas? Responda este e-mail ou chame no WhatsApp ${c.whatsapp}.\nPara cancelar, acesse Assinaturas no Mercado Pago, sem multa.`;
-  return { subject: "Boas-vindas à Áurea: seus primeiros passos", html, text };
+  return { subject: "Boas-vindas à Sócia: seus primeiros passos", html, text };
 }
 
 export function trialEndingEmail(t: Target, c = cfg(), now = new Date()): Mail {
@@ -102,10 +102,10 @@ ${box(`Em <strong>${esc(date)}</strong>, o Mercado Pago faz a primeira cobrança
 <p style="margin:12px 0 6px;"><strong>Prefere não continuar?</strong> Cancele antes dessa data em Assinaturas, no app ou no site do Mercado Pago, sem multa, e nada será cobrado. Se preferir, responda este e-mail que cancelamos para você.</p>
 <p style="margin:16px 0 6px;">Ainda falta configurar alguma coisa? O guia mostra o caminho em poucos minutos.</p>
 ${button(c.guide, "Abrir o guia de uso")}`);
-  const text = `Seu teste da Áurea termina ${when}.\n\nEm ${date}, o Mercado Pago faz a primeira cobrança de ${value}, na forma de pagamento que você cadastrou. Depois, a cobrança é mensal.\n\n` +
+  const text = `Seu teste da Sócia termina ${when}.\n\nEm ${date}, o Mercado Pago faz a primeira cobrança de ${value}, na forma de pagamento que você cadastrou. Depois, a cobrança é mensal.\n\n` +
     `Quer continuar? Não precisa fazer nada.\nPrefere não continuar? Cancele antes dessa data em Assinaturas, no app ou no site do Mercado Pago, sem multa. Ou responda este e-mail que cancelamos para você.\n\n` +
     `Guia de uso: ${c.guide}\nDúvidas? WhatsApp ${c.whatsapp}.`;
-  return { subject: `Seu teste da Áurea termina ${when}`, html, text };
+  return { subject: `Seu teste da Sócia termina ${when}`, html, text };
 }
 
 type Unlinked = { preapproval_id: string; mp_status?: string | null; amount?: number | null; date_created?: string | null; first_seen?: string };
@@ -116,7 +116,7 @@ export function unlinkedAlertEmail(u: Unlinked, c = cfg()): Mail {
     `${h1("Assinatura sem dona")}
 <p style="margin:0 0 12px;">O Mercado Pago não informou o e-mail desta assinatura e nenhuma conta ou e-mail informado no site correspondeu. A cliente pagou e ainda <strong>não tem acesso</strong>.</p>
 ${box(`Assinatura: <strong>${esc(u.preapproval_id)}</strong><br>Situação no Mercado Pago: ${esc(u.mp_status ?? "não informada")}<br>Valor: ${esc(money(u.amount))}<br>Criada em: ${esc(when)}`)}
-<p style="margin:16px 0 6px;"><strong>O que fazer:</strong> descubra o e-mail da cliente (no painel do Mercado Pago, em Assinaturas, ou falando com ela) e ligue no painel da Áurea, em Assinaturas e financeiro › Assinaturas sem dona. Em até 5 minutos a conta é criada e ela recebe o e-mail de senha.</p>
+<p style="margin:16px 0 6px;"><strong>O que fazer:</strong> descubra o e-mail da cliente (no painel do Mercado Pago, em Assinaturas, ou falando com ela) e ligue no painel da Sócia, em Assinaturas e financeiro › Assinaturas sem dona. Em até 5 minutos a conta é criada e ela recebe o e-mail de senha.</p>
 ${button(`${c.app}/admin/financeiro`, "Abrir o painel")}`);
   const text = `Assinatura sem dona: ${u.preapproval_id} (${u.mp_status ?? "situação não informada"}, ${money(u.amount)}, criada em ${when}).\n` +
     `A cliente pagou e ainda não tem acesso. Ligue a assinatura a um e-mail no painel: ${c.app}/admin/financeiro`;

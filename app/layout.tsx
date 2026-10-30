@@ -19,14 +19,15 @@ const sans = Plus_Jakarta_Sans({
 const serif = Fraunces({
   subsets: ["latin"],
   variable: "--font-serif",
-  weight: ["500", "600"],
+  // Variável com o eixo SOFT: títulos pesados e arredondados, como a palavra do logotipo.
+  axes: ["SOFT", "WONK", "opsz"],
   style: ["normal", "italic"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Áurea",
-  description: "Sua assistente de negócio.",
+  title: "Sócia",
+  description: "Seu negócio em boas mãos.",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -44,7 +45,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#FAF6F1",
+  themeColor: "#F6EEE1",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

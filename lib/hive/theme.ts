@@ -1,12 +1,12 @@
-// Tema do app (design system "Áurea"): Claro (padrão), Grafite ou Automático
+// Tema do app (design system "Sócia"): Claro (padrão), Escuro ou Automático
 // (segue o celular). A escolha fica NO APARELHO (localStorage) e é aplicada no
 // <html data-theme> antes da tela aparecer (script em app/layout.tsx), para não
 // "piscar" claro ao abrir no escuro.
 export type ThemePref = "light" | "dark" | "auto";
 export const THEME_KEY = "aurea-theme";
 export const THEME_OPTIONS: { value: ThemePref; label: string; hint: string }[] = [
-  { value: "light", label: "Claro", hint: "Creme e areia" },
-  { value: "dark", label: "Grafite", hint: "Escuro, confortável à noite" },
+  { value: "light", label: "Claro", hint: "Creme e framboesa" },
+  { value: "dark", label: "Escuro", hint: "Grafite, confortável à noite" },
   { value: "auto", label: "Automático", hint: "Segue o tema do celular" },
 ];
 

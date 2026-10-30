@@ -9,7 +9,7 @@ export const CHECKOUT_URL = "https://mpago.la/2gCWhAH";
 export const TERMS_URL = `${LANDING_URL}/termos`;
 export const PRIVACY_URL = `${LANDING_URL}/privacidade`;
 
-// "suspended" (0038): conta suspensa pela administração da Áurea; vence a assinatura.
+// "suspended" (0038): conta suspensa pela administração da Sócia; vence a assinatura.
 // "ending" (0041): cancelada, mas com o mês já pago ainda valendo (acesso até "until").
 export type AccessStatus = "free" | "trialing" | "active" | "past_due" | "pending" | "canceled" | "none" | "suspended" | "ending" | "error";
 export type Access = { status: AccessStatus; allowed: boolean; warning: boolean; until?: string };
@@ -45,7 +45,7 @@ export function accessCopy(status: AccessStatus, isOwner: boolean): AccessCopy {
     // Assinar de novo não resolve: quem libera é o suporte. Vale para dona e equipe.
     return {
       title: "Acesso suspenso",
-      text: `O acesso a esta conta foi suspenso pela equipe da Áurea. Fale com o suporte para entender e reativar. ${keep}`,
+      text: `O acesso a esta conta foi suspenso pela equipe da Sócia. Fale com o suporte para entender e reativar. ${keep}`,
       canSubscribe: false,
     };
   }
@@ -67,9 +67,9 @@ export function accessCopy(status: AccessStatus, isOwner: boolean): AccessCopy {
     };
   }
   if (status === "canceled") {
-    return { title: "Assinatura cancelada", text: `Assine de novo para voltar a usar a Áurea. ${keep}`, canSubscribe: true };
+    return { title: "Assinatura cancelada", text: `Assine de novo para voltar a usar a Sócia. ${keep}`, canSubscribe: true };
   }
-  return { title: "Assine para usar a Áurea", text: `Sua conta ainda não tem uma assinatura ativa. ${keep}`, canSubscribe: true };
+  return { title: "Assine para usar a Sócia", text: `Sua conta ainda não tem uma assinatura ativa. ${keep}`, canSubscribe: true };
 }
 
 /** Data em que o acesso termina (assinatura cancelada com mês pago), no fuso do negócio. */

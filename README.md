@@ -346,3 +346,16 @@ vem **sem `payer_email`**. Uma assinatura real (Tainá, teste) não liberou o ac
 - Testes: `0045_local.sh`, `mp-sync/run.sh`, `signup-intent/run.sh`, `billing-emails/run.sh`,
   `tests/admin-unlinked.test.cjs`.
 - Definitivo (roadmap): criar a assinatura pela API do Mercado Pago, com o e-mail e uma referência nossa.
+
+## Marca: Sócia (out/2026)
+
+A Áurea passou a se chamar **Sócia** ("seu negócio em boas mãos"). Só a camada visual mudou; funcionalidades,
+banco, endereços (`hive-beauty.vercel.app`) e chaves internas (ex.: `aurea-theme` no aparelho) continuam iguais.
+- Cores (`app/globals.css`): framboesa `#C80A39` (primária), framboesa clara `#DA1545` (símbolo, títulos grandes),
+  dobra `#A7032D`, vinho `#4E0B1C` (painéis), blush `#F9DDE1`, creme `#F6EEE1` (fundo), ameixa `#452139` (texto).
+  Tema escuro: ameixa quase preto `#1B1317` com framboesa clara `#F0567A` nas ações. Os nomes de token antigos
+  (`gold-*`, `feature`, `cream`) foram mantidos e apontam para as cores novas.
+- Títulos: Fraunces variável com `SOFT 100` (pesada e arredondada, como a palavra do logotipo).
+- Logotipos e ícones em `public/` com os mesmos nomes de arquivo. Ilustração dos estados vazios recolorida
+  provisoriamente (as definitivas estão em produção no ChatGPT).
+- E-mails (`billing-emails`): cabeçalho framboesa, nome e cores da Sócia.

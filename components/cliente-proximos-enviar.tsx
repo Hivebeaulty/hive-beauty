@@ -2,7 +2,7 @@
 
 // Envia para a cliente a lista dos próximos atendimentos (ficha da cliente).
 // Dois caminhos, como no resto do app:
-//   1) WhatsApp do negócio conectado -> fila da Áurea (wa_send_message, 0017).
+//   1) WhatsApp do negócio conectado -> fila da Sócia (wa_send_message, 0017).
 //      O BANCO decide: papel, cliente bloqueada/arquivada/sem celular, sessão
 //      conectada, limite por minuto/dia e idempotência pela chave.
 //   2) Sem conexão -> abre o WhatsApp da profissional (wa.me) com o texto pronto.

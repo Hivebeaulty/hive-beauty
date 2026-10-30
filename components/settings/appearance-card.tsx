@@ -1,5 +1,5 @@
 "use client";
-// Aparência: Claro, Grafite ou Automático. Vale para este aparelho.
+// Aparência: Claro, Escuro ou Automático. Vale para este aparelho.
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { THEME_OPTIONS, readThemePref, saveThemePref, type ThemePref } from "@/lib/hive/theme";
@@ -12,7 +12,7 @@ export function AppearanceCard() {
     <Card className="space-y-3" data-testid="appearance">
       <div>
         <h2 className="text-sm font-semibold text-ink-800">Aparência</h2>
-        <p className="mt-1 text-sm text-ink-500">Escolha o tema da Áurea neste aparelho.</p>
+        <p className="mt-1 text-sm text-ink-500">Escolha o tema da Sócia neste aparelho.</p>
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Tema">
         {THEME_OPTIONS.map((o) => (

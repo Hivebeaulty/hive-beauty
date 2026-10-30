@@ -195,7 +195,7 @@ export default async function AdminContaPage({ params }: { params: Promise<{ id:
         </Card>
 
         <Card>
-          <h2 className="mb-1 text-sm font-semibold text-ink-700">Uso da Áurea</h2>
+          <h2 className="mb-1 text-sm font-semibold text-ink-700">Uso da Sócia</h2>
           <ul className="mb-3 space-y-1.5">
             {steps.map((s) => (
               <li key={s.key} className="flex items-center gap-2 text-sm">

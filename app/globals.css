@@ -2,116 +2,116 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---- Temas: Claro (padrão) e Grafite — design system "Áurea" ---- */
+/* ---- Temas: Claro (padrão) e Escuro — identidade "Sócia" (framboesa, vinho, creme, ameixa) ---- */
 :root {
   color-scheme: light;
-  --c-cream-DEFAULT: 250 246 241;
-  --c-cream-50: 253 251 249;
-  --c-cream-100: 250 246 241;
+  --c-cream-DEFAULT: 246 238 225;
+  --c-cream-50: 250 245 238;
+  --c-cream-100: 246 238 225;
   --c-surface: 255 255 255;
-  --c-ink-50: 243 237 230;
-  --c-ink-100: 233 224 214;
-  --c-ink-200: 214 202 190;
-  --c-ink-300: 176 160 147;
-  --c-ink-400: 122 102 86;
-  --c-ink-500: 111 91 76;
-  --c-ink-600: 92 74 61;
-  --c-ink-700: 68 64 60;
-  --c-ink-800: 44 44 46;
-  --c-ink-900: 31 31 33;
-  --c-gold-50: 251 243 231;
-  --c-gold-100: 243 228 204;
-  --c-gold-300: 227 203 160;
-  --c-gold-500: 201 168 118;
-  --c-gold-600: 176 143 94;
-  --c-gold-700: 126 99 56;
+  --c-ink-50: 244 234 230;
+  --c-ink-100: 236 223 218;
+  --c-ink-200: 220 203 199;
+  --c-ink-300: 180 157 160;
+  --c-ink-400: 120 94 103;
+  --c-ink-500: 112 86 96;
+  --c-ink-600: 92 66 80;
+  --c-ink-700: 74 48 64;
+  --c-ink-800: 69 33 57;
+  --c-ink-900: 46 20 38;
+  --c-gold-50: 252 236 239;
+  --c-gold-100: 249 221 225;
+  --c-gold-300: 243 182 194;
+  --c-gold-500: 218 21 69;
+  --c-gold-600: 200 10 57;
+  --c-gold-700: 167 3 45;
   --c-wine-50: 245 238 243;
   --c-wine-100: 234 220 230;
   --c-wine-300: 185 147 174;
   --c-wine-500: 106 62 92;
   --c-wine-700: 78 44 68;
-  --c-sand-DEFAULT: 243 234 223;
-  --c-sand-200: 232 217 198;
+  --c-sand-DEFAULT: 242 229 220;
+  --c-sand-200: 233 214 204;
   --c-success: 79 122 82;
   --c-warning: 168 100 42;
   --c-danger: 162 68 63;
-  --c-feature-DEFAULT: 58 42 34;
-  --c-primary: 58 42 34;
-  --c-primary-hover: 42 29 22;
-  --c-primary-ink: 250 246 241;
-  --gold-from: #E8CFA3; --gold-to: #C79D66; --gold-ink: #2A1E14; --gold-edge: rgba(150, 110, 60, 0.35);
-  --gold-shadow: 0 1px 0 rgba(255, 250, 240, 0.55) inset, 0 8px 18px -10px rgba(120, 84, 40, 0.45);
-  --c-accent: 147 99 58;
-  --c-accent-hover: 127 84 48;
-  --c-accent-ink: 255 251 246;
-  --c-feature-line: 74 56 46;
-  --c-feature-ink: 250 246 241;
-  --c-feature-muted: 233 224 214;
-  --c-feature-soft: 214 202 190;
-  --c-feature-accent: 227 203 160;
-  --c-feature-border: 58 42 34;
+  --c-feature-DEFAULT: 200 10 57;
+  --c-primary: 200 10 57;
+  --c-primary-hover: 167 3 45;
+  --c-primary-ink: 255 248 242;
+  --gold-from: #D0103F; --gold-to: #C80A39; --gold-ink: #FFF8F2; --gold-edge: rgba(167, 3, 45, 0.45);
+  --gold-shadow: 0 1px 0 rgba(255, 220, 228, 0.25) inset, 0 8px 18px -10px rgba(200, 10, 57, 0.55);
+  --c-accent: 200 10 57;
+  --c-accent-hover: 167 3 45;
+  --c-accent-ink: 255 248 242;
+  --c-feature-line: 222 76 108;
+  --c-feature-ink: 255 248 242;
+  --c-feature-muted: 255 226 233;
+  --c-feature-soft: 255 222 230;
+  --c-feature-accent: 255 248 242;
+  --c-feature-border: 200 10 57;
 }
 [data-theme="dark"] {
-  /* GRAFITE (aprovado): fundo grafite profundo, superfícies em grafites, texto bege claro,
-     dourado suave só em ações e detalhes */
+  /* ESCURO (grafite): fundo grafite quase preto, cartões grafite, texto creme;
+     framboesa nos botões e no cartão do dia, framboesa clara nos textos de destaque */
   color-scheme: dark;
-  --c-cream-DEFAULT: 28 28 30;
-  --c-cream-50: 35 35 37;
-  --c-cream-100: 28 28 30;
-  --c-surface: 44 44 46;
-  --c-ink-50: 48 48 50;
-  --c-ink-100: 58 58 60;
-  --c-ink-200: 74 74 77;
+  --c-cream-DEFAULT: 30 30 30;
+  --c-cream-50: 36 36 36;
+  --c-cream-100: 30 30 30;
+  --c-surface: 42 42 42;
+  --c-ink-50: 50 49 48;
+  --c-ink-100: 62 60 58;
+  --c-ink-200: 80 77 74;
   --c-ink-300: 122 116 110;
-  --c-ink-400: 166 158 149;
-  --c-ink-500: 185 177 168;
-  --c-ink-600: 206 197 186;
-  --c-ink-700: 227 219 209;
-  --c-ink-800: 242 237 230;
-  --c-ink-900: 247 242 235;
-  --c-gold-50: 46 42 36;
-  --c-gold-100: 58 52 40;
-  --c-gold-300: 227 203 160;
-  --c-gold-500: 201 168 118;
-  --c-gold-600: 211 181 131;
-  --c-gold-700: 217 190 143;
+  --c-ink-400: 166 158 150;
+  --c-ink-500: 182 174 166;
+  --c-ink-600: 205 197 188;
+  --c-ink-700: 226 219 210;
+  --c-ink-800: 246 238 225;
+  --c-ink-900: 250 245 236;
+  --c-gold-50: 56 30 37;
+  --c-gold-100: 72 34 45;
+  --c-gold-300: 243 182 194;
+  --c-gold-500: 232 27 74;
+  --c-gold-600: 240 70 106;
+  --c-gold-700: 255 107 136;
   --c-wine-50: 58 46 54;
   --c-wine-100: 70 52 63;
   --c-wine-300: 142 109 132;
   --c-wine-500: 199 160 188;
   --c-wine-700: 224 196 216;
-  --c-sand-DEFAULT: 52 52 54;
-  --c-sand-200: 63 63 66;
+  --c-sand-DEFAULT: 52 51 50;
+  --c-sand-200: 64 62 60;
   --c-success: 141 187 143;
   --c-warning: 224 164 107;
   --c-danger: 230 138 128;
-  --c-feature-DEFAULT: 36 36 38;
-  --c-feature-line: 58 58 60;
-  --c-feature-ink: 242 237 230;
-  --c-feature-muted: 206 197 186;
-  --c-feature-soft: 185 177 168;
-  --c-feature-accent: 217 190 143;
-  --c-feature-border: 140 118 82;
-  --c-primary: 230 211 179;
-  --c-primary-hover: 240 226 200;
-  --c-primary-ink: 28 28 30;
-  --c-accent: 210 165 116;
-  --c-accent-hover: 221 180 136;
-  --c-accent-ink: 28 28 30;
-  --gold-from: #E6CB9C; --gold-to: #BC915C; --gold-ink: #1C1C1E; --gold-edge: rgba(230, 203, 156, 0.45);
-  --gold-shadow: 0 1px 0 rgba(255, 240, 210, 0.18) inset, 0 8px 18px -10px rgba(0, 0, 0, 0.7);
+  --c-feature-DEFAULT: 200 10 57;
+  --c-feature-line: 222 76 108;
+  --c-feature-ink: 255 248 242;
+  --c-feature-muted: 255 226 233;
+  --c-feature-soft: 255 222 230;
+  --c-feature-accent: 255 248 242;
+  --c-feature-border: 200 10 57;
+  --c-primary: 200 10 57;
+  --c-primary-hover: 224 22 72;
+  --c-primary-ink: 246 238 225;
+  --c-accent: 200 10 57;
+  --c-accent-hover: 224 22 72;
+  --c-accent-ink: 246 238 225;
+  --gold-from: #D0103F; --gold-to: #C80A39; --gold-ink: #F6EEE1; --gold-edge: rgba(232, 27, 74, 0.5);
+  --gold-shadow: 0 1px 0 rgba(255, 220, 228, 0.18) inset, 0 8px 18px -10px rgba(0, 0, 0, 0.7);
 }
 
 
 /* ============================================================================
-   Design System — Áurea
+   Design System — Sócia
    Tokens espelham tailwind.config.ts. Mantidos como CSS vars para uso fora
    de classes utilitárias (ex.: manifest/meta theme-color, gráficos).
    ============================================================================ */
 :root {
-  --color-bg: #faf6f1;
-  --color-ink: #3a2a22;
-  --color-gold: #c9a876;
+  --color-bg: #f6eee1;
+  --color-ink: #452139;
+  --color-gold: #da1545;
 }
 
 * {
@@ -133,9 +133,60 @@ body {
    só a saudação a usava). Um padrão só, aplicado em todas as telas. */
 @layer components {
   .page-title {
-    @apply font-serif text-[1.625rem] font-medium leading-tight tracking-[-0.01em] text-ink-800 sm:text-[1.875rem];
+    @apply font-serif text-[1.625rem] font-extrabold leading-tight tracking-[-0.015em] text-ink-800 sm:text-[1.875rem];
   }
 }
+
+/* Tema escuro: o card com a personagem (estado vazio da agenda) fica inteiro em creme e usa as
+   cores do tema claro dentro dele, como os blocos creme da identidade sobre o grafite. */
+[data-theme="dark"] [data-card="default"]:has([data-illustration]) {
+  --c-cream-50: 250 245 238;
+  --c-cream-100: 246 238 225;
+  --c-surface: 255 255 255;
+  --c-ink-50: 244 234 230;
+  --c-ink-100: 236 223 218;
+  --c-ink-200: 220 203 199;
+  --c-ink-300: 180 157 160;
+  --c-ink-400: 120 94 103;
+  --c-ink-500: 112 86 96;
+  --c-ink-600: 92 66 80;
+  --c-ink-700: 74 48 64;
+  --c-ink-800: 69 33 57;
+  --c-ink-900: 46 20 38;
+  --c-gold-50: 252 236 239;
+  --c-gold-100: 249 221 225;
+  --c-gold-300: 243 182 194;
+  --c-gold-500: 218 21 69;
+  --c-gold-600: 200 10 57;
+  --c-gold-700: 167 3 45;
+  --c-wine-50: 245 238 243;
+  --c-wine-100: 234 220 230;
+  --c-wine-300: 185 147 174;
+  --c-wine-500: 106 62 92;
+  --c-wine-700: 78 44 68;
+  --c-sand-200: 233 214 204;
+  --c-success: 79 122 82;
+  --c-warning: 168 100 42;
+  --c-danger: 162 68 63;
+  --c-primary: 200 10 57;
+  --c-primary-hover: 167 3 45;
+  --c-primary-ink: 255 248 242;
+  --c-accent: 200 10 57;
+  --c-accent-hover: 167 3 45;
+  --c-accent-ink: 255 248 242;
+  --c-feature-line: 222 76 108;
+  --c-feature-ink: 255 248 242;
+  --c-feature-muted: 255 226 233;
+  --c-feature-soft: 255 222 230;
+  --c-feature-accent: 255 248 242;
+  --c-feature-border: 200 10 57;
+  --c-surface: 246 238 225;
+  background-color: rgb(246 238 225);
+  border-color: rgb(246 238 225);
+}
+
+/* Fraunces na versão suave (SOFT 100): a forma arredondada da palavra "sócia". */
+.font-serif { font-variation-settings: "SOFT" 100, "WONK" 0; }
 
 /* Base para o efeito shimmer do componente Skeleton. */
 .skeleton-shimmer {

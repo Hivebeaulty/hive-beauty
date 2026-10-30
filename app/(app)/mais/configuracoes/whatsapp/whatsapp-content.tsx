@@ -24,7 +24,7 @@ export function WhatsappContent() {
 
       <div>
         <h1 className="page-title">WhatsApp</h1>
-        <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Áurea.</p>
+        <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Sócia.</p>
       </div>
 
       <WhatsappPanel companyId={companyId} role={role} />

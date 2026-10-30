@@ -106,7 +106,7 @@ export default function ServicosPage() {
       ) : !hasAny ? (
         <EmptyState
           icon={Scissors}
-          art="ramo"
+         
           title="Ainda não há serviços cadastrados"
           description="Cadastre o que você oferece para começar a agendar atendimentos."
           action={
