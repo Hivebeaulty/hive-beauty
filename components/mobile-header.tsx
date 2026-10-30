@@ -8,11 +8,11 @@ import Link from "next/link";
 export function MobileHeader({ companyName }: { companyName: string }) {
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-sand-200 bg-cream/95 backdrop-blur px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))] md:hidden">
-      <Link href="/inicio" aria-label="Áurea — início" className="flex items-center gap-2">
+      <Link href="/inicio" aria-label="Sócia — início" className="flex items-center gap-2">
         <Image src="/logo-icon.png" alt="" width={28} height={28} priority className="dark:hidden" />
         <Image src="/logo-icon-dark.png" alt="" width={28} height={28} priority className="hidden dark:block" />
-        <Image src="/logo-wordmark.png" alt="Áurea" width={92} height={22} priority className="dark:hidden" />
-        <Image src="/logo-wordmark-dark.png" alt="Áurea" width={92} height={22} priority className="hidden dark:block" />
+        <Image src="/logo-wordmark.png" alt="Sócia" width={84} height={26} priority className="dark:hidden" />
+        <Image src="/logo-wordmark-dark.png" alt="Sócia" width={84} height={26} priority className="hidden dark:block" />
       </Link>
       <span className="max-w-[45%] truncate text-xs font-medium text-ink-500">{companyName}</span>
     </header>

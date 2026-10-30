@@ -99,7 +99,7 @@ export function WhatsappPanel({ companyId, role, api }: { companyId: string; rol
       >
         <p className="text-sm text-ink-500">
           {connected
-            ? "O aparelho será desvinculado da Áurea. As confirmações voltam a abrir o WhatsApp no celular. Para conectar de novo, será preciso ler um novo QR Code."
+            ? "O aparelho será desvinculado da Sócia. As confirmações voltam a abrir o WhatsApp no celular. Para conectar de novo, será preciso ler um novo QR Code."
             : "O pedido de conexão será cancelado. Você pode pedir de novo quando quiser."}
         </p>
         <div className="mt-5 flex justify-end gap-2">

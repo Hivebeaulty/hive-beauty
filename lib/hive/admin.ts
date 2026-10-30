@@ -234,7 +234,7 @@ export function formatBRL(v: number): string {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-// --- ativação: configurou o básico para usar a Áurea? -------------------------------
+// --- ativação: configurou o básico para usar a Sócia? -------------------------------
 export function activationSteps(u: { services: number; clients: number; appointments_total: number }) {
   return [
     { key: "services", label: "Cadastrou serviços", done: u.services > 0 },

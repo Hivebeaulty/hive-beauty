@@ -1,5 +1,5 @@
 import { ToastProvider } from "@/components/ui/toast";
-import { LineIllustration } from "@/components/ui/line-illustration";
+import { BrandIllustration } from "@/components/ui/brand-illustration";
 import * as React from "react";
 // Palco de testes: o painel REAL da tela de WhatsApp com uma API simulada que o
 // teste controla (window.__wa). Só o cliente do Supabase é trocado.
@@ -52,7 +52,7 @@ w.__wa = { sc, calls };
 
 const role = new URLSearchParams(location.search).get("role") || "owner";
 const view = new URLSearchParams(location.search).get("view") || "";
-// tema do palco: ?theme=dark aplica o Grafite (mesmo atributo do app)
+// tema do palco: ?theme=dark aplica o tema Escuro (mesmo atributo do app)
 const __theme = new URLSearchParams(location.search).get("theme");
 if (__theme) document.documentElement.setAttribute("data-theme", __theme);
 createRoot(document.getElementById("root")!).render(
@@ -62,15 +62,15 @@ createRoot(document.getElementById("root")!).render(
       <div className="space-y-5 pb-4">
         <div>
           <h1 className="text-xl font-semibold text-ink-800 sm:text-2xl">WhatsApp</h1>
-          <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Áurea.</p>
+          <p className="mt-1 text-sm text-ink-500">Conexão do número de WhatsApp da empresa com a Sócia.</p>
         </div>
         {view === "automsgs" ? (
           <WhatsappAutoMessages companyId="00000000-0000-0000-0000-000000000001" companyName="Studio Bella" />
         ) : view === "illus" ? (
           <div className="grid grid-cols-3 gap-2 bg-cream p-2">
-            <LineIllustration kind="perfil" className="h-40" />
-            <LineIllustration kind="pensativa" className="h-40" />
-            <LineIllustration kind="ramo" className="h-40" />
+            <BrandIllustration kind="agenda" className="size-40" />
+            <BrandIllustration kind="agenda" className="size-40" />
+            
           </div>
         ) : view === "extras" ? (
           <ExtrasStage />
@@ -118,7 +118,7 @@ createRoot(document.getElementById("root")!).render(
                 <Card>
                   <h2 className="mb-1 text-sm font-semibold text-ink-700">Agenda de hoje</h2>
                   {/* Agenda de hoje (palco) */}
-                  <EmptyState art="perfil" icon={CalendarX} title="Nenhum atendimento hoje" description="Aproveite para organizar a agenda dos próximos dias."
+                  <EmptyState art="agenda" icon={CalendarX} title="Nenhum atendimento hoje" description="Aproveite para organizar a agenda dos próximos dias."
                     action={<Button variant="accent" size="sm" className="rounded-full px-5">Criar agendamento</Button>} />
                 </Card>
                 <Card data-testid="month">

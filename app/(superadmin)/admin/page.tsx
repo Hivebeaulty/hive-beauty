@@ -83,7 +83,7 @@ export default async function AdminHomePage({ searchParams }: { searchParams: Pr
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <p className="text-ink-800">
             <span className="font-serif text-4xl">{ov.total}</span>{" "}
-            <span className="text-sm text-ink-500">{ov.total === 1 ? "profissional na Áurea" : "profissionais na Áurea"} hoje</span>
+            <span className="text-sm text-ink-500">{ov.total === 1 ? "profissional na Sócia" : "profissionais na Sócia"} hoje</span>
           </p>
           <p className="text-xs text-ink-500">
             {ov.demo > 0 && `${ov.demo} de demonstração fora da conta. `}

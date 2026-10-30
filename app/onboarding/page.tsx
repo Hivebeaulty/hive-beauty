@@ -92,7 +92,7 @@ export default function OnboardingPage() {
               ))}
             </div>
             <Button disabled={!niche} loading={loading} onClick={finish} className="mt-6 w-full">
-              {loading ? "Criando empresa..." : "Entrar na Áurea"}
+              {loading ? "Criando empresa..." : "Entrar na Sócia"}
             </Button>
           </>
         )}

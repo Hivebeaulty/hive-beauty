@@ -111,7 +111,7 @@ export function DespesasContent() {
           <SkeletonListItem />
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState art="ramo" icon={TrendingDown} title="Nenhuma despesa neste período" description="Ajuste o período ou cadastre uma nova despesa." />
+        <EmptyState icon={TrendingDown} title="Nenhuma despesa neste período" description="Ajuste o período ou cadastre uma nova despesa." />
       ) : (
         <div className="space-y-2">
           {filtered.map((r) => (

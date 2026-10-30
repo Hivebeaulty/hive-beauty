@@ -113,7 +113,7 @@ export function NoteForm({ companyId }: { companyId: string }) {
     <div className="space-y-2">
       <Textarea
         label="Nova observação"
-        hint="Visível só para a administração da Áurea."
+        hint="Visível só para a administração da Sócia."
         rows={2}
         maxLength={2000}
         value={body}

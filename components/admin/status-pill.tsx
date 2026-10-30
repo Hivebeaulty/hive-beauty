@@ -1,5 +1,5 @@
 // Selo de status do painel: texto em ink-800 sobre ink-50 (12:1 no claro, 11,3:1 no
-// Grafite) + bolinha na cor do status (contraste de elemento gráfico >= 3:1 nos dois
+// Escuro) + bolinha na cor do status (contraste de elemento gráfico >= 3:1 nos dois
 // temas, ver scripts/contrast-check.py). O Badge do app tem tons abaixo de 4,5:1 em
 // um dos temas; o painel usa este para não depender da cor do texto.
 import { cn } from "@/lib/utils";

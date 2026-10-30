@@ -1,11 +1,11 @@
 {
-  "name": "Áurea",
-  "short_name": "Áurea",
-  "description": "Sua assistente de negócio.",
+  "name": "Sócia",
+  "short_name": "Sócia",
+  "description": "Seu negócio em boas mãos.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FBF7F1",
-  "theme_color": "#3A2A22",
+  "background_color": "#F6EEE1",
+  "theme_color": "#C80A39",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }

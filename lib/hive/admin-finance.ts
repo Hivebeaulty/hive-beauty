@@ -80,7 +80,7 @@ export const paymentTone = (s: string): BadgeTone => PAYMENT_TONE[s] ?? "muted";
 // Definições mostradas na tela (as mesmas da migration 0040).
 export const DEFINITIONS: [string, string][] = [
   ["Recebido", "Cobranças aprovadas no período, menos reembolsos e estornos. Valor bruto, antes das taxas."],
-  ["Taxas e líquido", "Taxas do Mercado Pago pagas pela Áurea e o líquido que ele informa. Cobranças sem essa informação aparecem contadas à parte."],
+  ["Taxas e líquido", "Taxas do Mercado Pago pagas pela Sócia e o líquido que ele informa. Cobranças sem essa informação aparecem contadas à parte."],
   ["Pendente e recusado", "Cobranças agendadas, em análise ou recusadas no período. Não entram na receita."],
   ["Ticket médio", "Recebido dividido pelo número de assinaturas que pagaram no período."],
   ["MRR contratado", "Soma do valor mensal das assinaturas pagas ativas hoje. Teste, cortesia e atrasadas não entram."],

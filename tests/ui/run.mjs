@@ -164,7 +164,7 @@ test("U6 banco/rede fora: mantém o último estado com aviso de desatualizado; '
   assert.match(await text(page), /Sem conexão com o servidor/);
   assert.equal(await page.$eval('[data-testid="wa-status"]', (e) => e.innerText), "Última informação: Conectado");
   assert.ok(!(await buttons(page)).includes("Desconectar"), "sem servidor, nada de ações que dependem dele");
-  assert.ok(!(await text(page)).includes("está conectado à Áurea"), "nenhuma afirmação de estado sem confirmação");
+  assert.ok(!(await text(page)).includes("está conectado à Sócia"), "nenhuma afirmação de estado sem confirmação");
   await page.screenshot({ path: join(SHOTS, "06-sem-conexao-390.png"), fullPage: true });
   const before = (await calls(page)).getStatus;
   await set(page, { status: statusData("connected", { phone: "5511987654321" }) });
@@ -606,18 +606,18 @@ test("U25 serviços adicionais: adicionar, escolher (valor/duração do cadastro
   await page.close();
 });
 
-// ============================================================ Temas: Claro / Grafite / Automático
-test("U26 aparência: escolher Grafite aplica o tema na hora e guarda no aparelho; Automático segue o celular", async () => {
+// ============================================================ Temas: Claro / Escuro / Automático
+test("U26 aparência: escolher Escuro aplica o tema na hora e guarda no aparelho; Automático segue o celular", async () => {
   const page = await browser.newPage();
   await page.setViewport({ width: 390, height: 900, deviceScaleFactor: 1 });
   await page.goto(`${PAGE}?view=kit`);
   await page.waitForSelector('[data-testid="appearance"]', { timeout: 6000 });
   const pick = (t) => page.$$eval('[data-testid="appearance"] [role="radio"]', (bs, t) => bs.find((b) => b.innerText.startsWith(t)).click(), t);
-  await pick("Grafite");
+  await pick("Escuro");
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "dark");
   assert.equal(await page.evaluate(() => localStorage.getItem("aurea-theme")), "dark");
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  assert.equal(bg, "rgb(28, 28, 30)", "fundo grafite #1C1C1E");
+  assert.equal(bg, "rgb(30, 30, 30)", "fundo do tema Escuro (grafite) #1E1E1E");
   await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "light" }]);
   await pick("Automático");
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");
@@ -630,7 +630,7 @@ test("U26 aparência: escolher Grafite aplica o tema na hora e guarda no aparelh
   await page.close();
 });
 
-test("U27 tema Grafite: painel do início sem sobreposição em 320–1024 px", async () => {
+test("U27 tema Escuro: painel do início sem sobreposição em 320–1024 px", async () => {
   for (const w of [320, 390, 768, 1024]) {
     const { page, r } = await dashboardGeometry(w, "money=123456.78&today=12&up=148&theme=dark");
     assert.deepEqual(r.overlaps, [], `${w}px escuro: sobreposição`);
@@ -641,7 +641,7 @@ test("U27 tema Grafite: painel do início sem sobreposição em 320–1024 px", 
 });
 
 // ============================================================ Persistência do tema (fechar e reabrir)
-test("U28 tema PERSISTE: Grafite → fechar → (iPhone apaga o armazenamento local) → reabrir = Grafite; depois Claro idem", async () => {
+test("U28 tema PERSISTE: Escuro → fechar → (iPhone apaga o armazenamento local) → reabrir = Escuro; depois Claro idem", async () => {
   const http = await import("node:http"); const fs = await import("node:fs"); const path = await import("node:path");
   const root = path.join(process.cwd(), "dist");
   const srv = http.createServer((req, res) => {
@@ -657,13 +657,13 @@ test("U28 tema PERSISTE: Grafite → fechar → (iPhone apaga o armazenamento lo
   try {
     let p = await open();
     assert.equal(await theme(p), "light", "nunca escolheu: claro");
-    await pick(p, "Grafite");
+    await pick(p, "Escuro");
     assert.equal(await theme(p), "dark");
     await p.evaluate(() => localStorage.clear());           // o iPhone apagou o armazenamento local
     await p.close();                                        // fechou o app
     p = await open();                                       // reabriu
-    assert.equal(await theme(p), "dark", "reabriu no Grafite (cookie)");
-    assert.equal(await p.$eval('[aria-checked="true"]', (b) => b.innerText.split("\n")[0]), "Grafite", "a opção marcada é a salva");
+    assert.equal(await theme(p), "dark", "reabriu no Escuro (cookie)");
+    assert.equal(await p.$eval('[aria-checked="true"]', (b) => b.innerText.split("\n")[0]), "Escuro", "a opção marcada é a salva");
     await pick(p, "Claro");
     await p.close();
     p = await open();

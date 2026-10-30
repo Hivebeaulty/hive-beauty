@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveMembership } from "@/lib/hive/membership";
 import { Card } from "@/components/ui/card";
 import { LogoutButton } from "@/components/logout-button";
-import { Scissors, BarChart3, Settings, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { BrandIcon } from "@/components/ui/brand-illustration";
 
 // Só entram itens que já têm funcionalidade real por trás (regra do spec:
 // não criar tela "porque sistema de gestão normalmente tem"). Relatórios e
@@ -21,7 +22,7 @@ export default async function MaisPage() {
       <div className="space-y-2">
         <Link href="/mais/servicos">
           <Card interactive className="flex items-center gap-3">
-            <Scissors className="size-5 shrink-0 text-ink-400" />
+            <BrandIcon name="servicos" className="text-ink-700" />
             <div className="flex-1">
               <p className="font-semibold text-ink-800">Serviços</p>
               <p className="text-sm text-ink-400">Cadastre e organize o que você oferece.</p>
@@ -33,7 +34,7 @@ export default async function MaisPage() {
         {isAdmin && (
           <Link href="/mais/relatorios">
             <Card interactive className="flex items-center gap-3">
-              <BarChart3 className="size-5 shrink-0 text-ink-400" />
+              <BrandIcon name="relatorios" className="text-ink-700" />
               <div className="flex-1">
                 <p className="font-semibold text-ink-800">Relatórios</p>
                 <p className="text-sm text-ink-400">Indicadores do negócio por período.</p>
@@ -45,7 +46,7 @@ export default async function MaisPage() {
 
         <Link href="/mais/configuracoes">
           <Card interactive className="flex items-center gap-3">
-            <Settings className="size-5 shrink-0 text-ink-400" />
+            <BrandIcon name="configuracoes" className="text-ink-700" />
             <div className="flex-1">
               <p className="font-semibold text-ink-800">Configurações</p>
               <p className="text-sm text-ink-400">

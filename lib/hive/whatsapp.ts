@@ -84,7 +84,7 @@ export function describeStatus(
 ): StatusView {
   switch (s) {
     case "connected":
-      return { label: "Conectado", tone: "success", busy: false, description: "O WhatsApp da empresa está conectado à Áurea." };
+      return { label: "Conectado", tone: "success", busy: false, description: "O WhatsApp da empresa está conectado à Sócia." };
     case "connect_requested":
       return {
         label: "Preparando conexão",

@@ -31,8 +31,8 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
         <div className="mb-8 flex items-center gap-2">
           <Image src="/logo-icon.png" alt="" width={26} height={26} priority className="dark:hidden" />
           <Image src="/logo-icon-dark.png" alt="" width={26} height={26} priority className="hidden dark:block" />
-          <Image src="/logo-wordmark.png" alt="Áurea" width={72} height={17} priority className="mt-0.5 dark:hidden" />
-          <Image src="/logo-wordmark-dark.png" alt="Áurea" width={72} height={17} priority className="mt-0.5 hidden dark:block" />
+          <Image src="/logo-wordmark.png" alt="Sócia" width={68} height={21} priority className="mt-0.5 dark:hidden" />
+          <Image src="/logo-wordmark-dark.png" alt="Sócia" width={68} height={21} priority className="mt-0.5 hidden dark:block" />
         </div>
         <p className="mb-6 -mt-5 truncate pl-[34px] text-xs text-ink-400">{companyName}</p>
         <nav className="space-y-0.5">

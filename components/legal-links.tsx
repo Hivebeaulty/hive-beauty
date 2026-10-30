@@ -1,4 +1,4 @@
-// Links para os Termos de Uso e a Política de Privacidade (publicados no site da Áurea).
+// Links para os Termos de Uso e a Política de Privacidade (publicados no site da Sócia).
 import { PRIVACY_URL, TERMS_URL } from "@/lib/hive/access";
 import { cn } from "@/lib/utils";
 

@@ -38,8 +38,8 @@ export function AdminMfa({ email }: { email: string }) {
       // falha ("site url is improperly formatted") se o Site URL estiver sem https://.
       const { data: en, error: ee } = await mfa.enroll({
         factorType: "totp",
-        issuer: "Áurea",
-        friendlyName: `Áurea admin (${email})`,
+        issuer: "Sócia",
+        friendlyName: `Sócia admin (${email})`,
       });
       if (ee || !en || en.type !== "totp") {
         return setState({

@@ -3,7 +3,7 @@
 // 2) consulta a assinatura NO PRÓPRIO Mercado Pago (não confia no corpo do aviso);
 // 3) grava a situação e o histórico (billing_sync, 0039) e cada cobrança com o pagamento
 //    gerado (billing_record_payment: bruto, taxa, líquido, reembolso);
-// 4) se é assinatura nova, cria a conta e envia o e-mail "Crie uma nova senha na Áurea".
+// 4) se é assinatura nova, cria a conta e envia o e-mail "Crie uma nova senha na Sócia".
 // Segredos (Supabase → Edge Functions → Secrets): MP_ACCESS_TOKEN, MP_WEBHOOK_SECRET.
 // Publicar SEM exigir JWT (o Mercado Pago não envia JWT; a segurança é a assinatura secreta).
 //

@@ -16,6 +16,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Card({ className, padding = "md", interactive, tone = "default", ...props }: CardProps) {
   return (
     <div
+      data-card={tone}
       className={cn(
         tone === "default" && "rounded-lg border border-ink-100 bg-surface shadow-card",
         tone === "sand" && "rounded-lg border border-sand-200 bg-sand",
