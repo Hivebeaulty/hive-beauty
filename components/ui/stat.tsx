@@ -24,8 +24,8 @@ export function Stat({ value, label, hint, size = "md", onDark, accent, valueCla
     <div data-stat="" className={cn("min-w-0", className)}>
       <p
         className={cn(
-          "whitespace-nowrap font-serif font-medium leading-none tabular-nums tracking-[-0.01em]",
-          size === "lg" && "text-[2rem] sm:text-[2.25rem]",
+          "whitespace-nowrap font-sans font-bold leading-none tabular-nums tracking-[-0.02em]",
+          size === "lg" && "text-[1.625rem] min-[360px]:text-[1.875rem] sm:text-[1.75rem] lg:text-[2rem]",
           size === "md" && "text-[1.625rem]",
           size === "sm" && "text-xl",
           onDark ? (accent ? "text-feature-accent" : "text-feature-ink") : accent ? "text-gold-700" : "text-ink-800",

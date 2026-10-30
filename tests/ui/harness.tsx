@@ -110,7 +110,7 @@ createRoot(document.getElementById("root")!).render(
             return (
               <div className="space-y-6">
                 <div>
-                  <h1 className="font-serif text-[26px] italic text-ink-800 sm:text-[30px]">Boa tarde, Patrícia.</h1>
+                  <h1 className="text-[26px] font-bold tracking-[-0.02em] text-ink-800 sm:text-[30px]">Boa tarde, Patrícia.</h1>
                   <p className="text-sm text-ink-400">Veja como está o seu negócio hoje.</p>
                 </div>
                 <TodaySummary loading={q.get("loading") === "1"} canSeeFinance={fin} received={money}
@@ -123,7 +123,7 @@ createRoot(document.getElementById("root")!).render(
                 </Card>
                 <Card data-testid="month">
                   <h2 className="mb-4 text-sm font-semibold text-ink-700">Negócio no mês</h2>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-[minmax(0,1.8fr)_repeat(3,minmax(0,1fr))]">
                     {fin && <Stat size="sm" accent value={fmt.format(money * 9)} label="Recebido" className="col-span-2 sm:col-span-1" />}
                     <Stat size="sm" value={286} label="Atendimentos" />
                     <Stat size="sm" value={143} label="Clientes ativas" />

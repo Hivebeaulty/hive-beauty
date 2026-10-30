@@ -3,16 +3,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Home, CalendarDays, Users, Wallet, MoreHorizontal, type LucideIcon } from "lucide-react";
+import { NavIcon } from "@/components/ui/brand-illustration";
 import { LogoutButton } from "@/components/logout-button";
 import { cn } from "@/lib/utils";
 
-const ICONS: Record<string, LucideIcon> = {
-  "/inicio": Home,
-  "/agenda": CalendarDays,
-  "/clientes": Users,
-  "/financeiro": Wallet,
-  "/mais": MoreHorizontal,
+const ICONS: Record<string, string> = {
+  "/inicio": "inicio",
+  "/agenda": "agenda",
+  "/clientes": "clientes",
+  "/financeiro": "financeiro",
+  "/mais": "mais",
 };
 
 export type NavItem = { href: string; label: string };
@@ -37,7 +37,7 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
         <p className="mb-6 -mt-5 truncate pl-[34px] text-xs text-ink-400">{companyName}</p>
         <nav className="space-y-0.5">
           {items.map((item) => {
-            const Icon = ICONS[item.href] ?? Home;
+            const icon = ICONS[item.href] ?? "inicio";
             const active = isActive(pathname, item.href);
             return (
               <Link
@@ -50,7 +50,7 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
                     : "border-transparent text-ink-500 hover:bg-sand/60 hover:text-ink-800"
                 )}
               >
-                <Icon className="size-[18px]" strokeWidth={active ? 2.25 : 2} />
+                <NavIcon name={icon} active={active} className="size-[18px]" />
                 {item.label}
               </Link>
             );
@@ -66,7 +66,7 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
       {/* Mobile — barra inferior */}
       <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-ink-100 bg-surface/95 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_16px_-8px_rgba(42,29,22,0.12)] backdrop-blur md:hidden">
         {items.map((item) => {
-          const Icon = ICONS[item.href] ?? Home;
+          const icon = ICONS[item.href] ?? "inicio";
           const active = isActive(pathname, item.href);
           return (
             <Link
@@ -84,7 +84,7 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
                 className={cn("absolute inset-x-5 top-0 h-[3px] rounded-b-full transition-[background-color,transform] duration-200 ease-out", active ? "scale-x-100 bg-gold-500" : "scale-x-50 bg-transparent")}
               />
               <span className={cn("flex h-7 w-11 items-center justify-center rounded-full transition-colors duration-200 active:scale-95", active && "bg-sand")}>
-                <Icon className="size-5" strokeWidth={active ? 2.25 : 2} />
+                <NavIcon name={icon} active={active} className="size-[22px]" />
               </span>
               {item.label}
             </Link>
