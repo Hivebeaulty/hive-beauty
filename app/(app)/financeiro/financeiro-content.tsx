@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { Plus, Receipt, TrendingDown, ArrowRight } from "lucide-react";
+import { Plus, ArrowRight } from "lucide-react";
+import { BrandIcon } from "@/components/ui/brand-illustration";
 
 type Indicators = {
   atendimentos_realizados: number;
@@ -225,10 +226,10 @@ export function FinanceiroContent() {
           </Card>
 
           {/* Resultado --------------------------------------------------- */}
-          <Card className="!bg-ink-800 !text-cream">
-            <p className="text-xs text-cream/60">Resultado do período</p>
-            <p className="mt-1 text-2xl font-semibold sm:text-3xl">{formatMoney(indicators?.resultado_caixa)}</p>
-            <p className="mt-2 text-xs text-cream/50">
+          <Card tone="feature">
+            <p className="text-xs text-feature-muted">Resultado do período</p>
+            <p className="mt-1 text-2xl font-bold tracking-[-0.02em] sm:text-3xl">{formatMoney(indicators?.resultado_caixa)}</p>
+            <p className="mt-2 text-xs text-feature-soft">
               {formatMoney(indicators?.recebido)} recebido − {formatMoney(indicators?.despesas)} em despesas
             </p>
           </Card>
@@ -301,7 +302,7 @@ export function FinanceiroContent() {
           <div className="grid grid-cols-2 gap-3">
             <Link href="/financeiro/receitas">
               <Card interactive className="flex items-center gap-3">
-                <Receipt className="size-5 shrink-0 text-ink-400" />
+                <BrandIcon name="receitas" className="text-ink-700" />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-ink-800">Receitas</p>
                   <p className="text-xs text-ink-400">Ver todas</p>
@@ -311,7 +312,7 @@ export function FinanceiroContent() {
             </Link>
             <Link href="/financeiro/despesas">
               <Card interactive className="flex items-center gap-3">
-                <TrendingDown className="size-5 shrink-0 text-ink-400" />
+                <BrandIcon name="despesas" className="text-ink-700" />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-ink-800">Despesas</p>
                   <p className="text-xs text-ink-400">Ver todas</p>

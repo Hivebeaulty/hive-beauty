@@ -198,10 +198,9 @@ export default function InicioPage() {
 
   return (
     <div className="space-y-6 pb-4">
-      {/* Saudação — o único lugar da interface, além do login, onde a
-          serifada aparece. Momento de destaque pontual, não um padrão. */}
+      {/* Saudação: título da tela, na fonte da interface, em grafite. */}
       <div>
-        <h1 className="font-serif text-[26px] italic text-ink-800 sm:text-[30px]">
+        <h1 className="text-[26px] font-bold tracking-[-0.02em] text-ink-800 sm:text-[30px]">
           {greeting}
           {name ? `, ${name}` : ""}.
         </h1>
@@ -304,7 +303,7 @@ export default function InicioPage() {
             <Skeleton className="h-12" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-[minmax(0,1.8fr)_repeat(3,minmax(0,1fr))]">
             {canSeeFinance && (
               <Stat size="sm" accent value={formatMoney(month?.recebido)} label="Recebido" className="col-span-2 sm:col-span-1" />
             )}
