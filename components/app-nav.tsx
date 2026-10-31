@@ -46,7 +46,7 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
                 className={cn(
                   "flex items-center gap-3 rounded-md border-l-2 py-2.5 pl-3.5 pr-3 text-sm font-medium transition-colors",
                   active
-                    ? "border-gold-500 bg-sand font-semibold text-ink-800"
+                    ? "border-ink-800 bg-sand font-semibold text-ink-800"
                     : "border-transparent text-ink-500 hover:bg-sand/60 hover:text-ink-800"
                 )}
               >
@@ -78,10 +78,10 @@ export function AppNav({ items, companyName }: { items: NavItem[]; companyName: 
                 active ? "font-semibold text-ink-800" : "font-medium text-ink-400"
               )}
             >
-              {/* indicador do item ativo: traço dourado no topo + ícone sobre areia */}
+              {/* indicador do item ativo: traço grafite azulado no topo + ícone sobre areia */}
               <span
                 aria-hidden="true"
-                className={cn("absolute inset-x-5 top-0 h-[3px] rounded-b-full transition-[background-color,transform] duration-200 ease-out", active ? "scale-x-100 bg-gold-500" : "scale-x-50 bg-transparent")}
+                className={cn("absolute inset-x-5 top-0 h-[3px] rounded-b-full transition-[background-color,transform] duration-200 ease-out", active ? "scale-x-100 bg-ink-800" : "scale-x-50 bg-transparent")}
               />
               <span className={cn("flex h-7 w-11 items-center justify-center rounded-full transition-colors duration-200 active:scale-95", active && "bg-sand")}>
                 <NavIcon name={icon} active={active} className="size-[22px]" />

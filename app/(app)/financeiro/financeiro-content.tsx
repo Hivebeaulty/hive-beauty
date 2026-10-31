@@ -226,7 +226,7 @@ export function FinanceiroContent() {
           </Card>
 
           {/* Resultado --------------------------------------------------- */}
-          <Card tone="feature">
+          <Card tone="feature" data-feature="grafite">
             <p className="text-xs text-feature-muted">Resultado do período</p>
             <p className="mt-1 text-2xl font-bold tracking-[-0.02em] sm:text-3xl">{formatMoney(indicators?.resultado_caixa)}</p>
             <p className="mt-2 text-xs text-feature-soft">
