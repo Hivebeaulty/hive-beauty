@@ -1,0 +1,18 @@
+# dependências e build
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# testes de interface
+tests/ui/dist/
+tests/ui/screenshots/
+
+# segredos
+.env*
+!.env.example
+
+# sistema
+.DS_Store
+.vercel

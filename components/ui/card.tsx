@@ -7,6 +7,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
    * default: superfície branca com borda e sombra quentes.
    * sand:    superfície areia, para agrupar conteúdo secundário.
    * feature: painel em cacau profundo — UM por tela, onde está o foco (ex.: "Hoje").
+   *          Com data-feature="grafite", o mesmo painel em grafite azulado ("Resultado do período").
    */
   tone?: "default" | "sand" | "feature";
 }
