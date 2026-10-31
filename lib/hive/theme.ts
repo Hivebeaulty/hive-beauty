@@ -5,8 +5,8 @@
 export type ThemePref = "light" | "dark" | "auto";
 export const THEME_KEY = "aurea-theme";
 export const THEME_OPTIONS: { value: ThemePref; label: string; hint: string }[] = [
-  { value: "light", label: "Claro", hint: "Creme e cacau" },
-  { value: "dark", label: "Escuro", hint: "Grafite azulado, confortável à noite" },
+  { value: "light", label: "Claro", hint: "Creme e dourado" },
+  { value: "dark", label: "Escuro", hint: "Grafite, confortável à noite" },
   { value: "auto", label: "Automático", hint: "Segue o tema do celular" },
 ];
 

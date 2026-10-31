@@ -226,10 +226,10 @@ export function FinanceiroContent() {
           </Card>
 
           {/* Resultado --------------------------------------------------- */}
-          <Card tone="feature" data-feature="grafite">
-            <p className="text-xs text-feature-muted">Resultado do período</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-0.02em] sm:text-3xl">{formatMoney(indicators?.resultado_caixa)}</p>
-            <p className="mt-2 text-xs text-feature-soft">
+          <Card className="!bg-ink-800 !text-cream">
+            <p className="text-xs text-cream/60">Resultado do período</p>
+            <p className="mt-1 text-2xl font-semibold sm:text-3xl">{formatMoney(indicators?.resultado_caixa)}</p>
+            <p className="mt-2 text-xs text-cream/50">
               {formatMoney(indicators?.recebido)} recebido − {formatMoney(indicators?.despesas)} em despesas
             </p>
           </Card>

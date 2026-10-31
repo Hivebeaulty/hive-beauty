@@ -2,106 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---- Temas: Claro (padrão) e Escuro — identidade "Sócia" (cacau, grafite azulado, creme, areia, dourado) ----
-   Cacau: marca, botão principal e cartão do dia. Grafite azulado: ícones, item ativo, filtro selecionado,
-   texto de destaque e cartão "Resultado do período". Creme e areia: fundos e detalhes. Dourado: acentos. */
+/* ---- Temas: Claro (padrão) e Escuro — cores da Áurea, mantidas na marca Sócia ----
+   Cacau no cartão do dia; botão principal em dourado gradual; creme e areia nos fundos. */
 :root {
   color-scheme: light;
-  --c-cream-DEFAULT: 251 244 236;
-  --c-cream-50: 253 249 244;
-  --c-cream-100: 251 244 236;
-  --c-surface: 255 252 248;
-  --c-ink-50: 246 239 231;
-  --c-ink-100: 234 223 213;
-  --c-ink-200: 216 205 194;
-  --c-ink-300: 158 160 166;
-  --c-ink-400: 98 102 110;
-  --c-ink-500: 92 96 104;
-  --c-ink-600: 74 78 86;
-  --c-ink-700: 58 62 70;
-  --c-ink-800: 52 59 75;
-  --c-ink-900: 36 41 53;
-  --c-gold-50: 248 240 227;
-  --c-gold-100: 241 229 207;
-  --c-gold-300: 222 201 162;
+  --c-cream-DEFAULT: 250 246 241;
+  --c-cream-50: 253 251 249;
+  --c-cream-100: 250 246 241;
+  --c-surface: 255 255 255;
+  --c-ink-50: 243 237 230;
+  --c-ink-100: 233 224 214;
+  --c-ink-200: 214 202 190;
+  --c-ink-300: 176 160 147;
+  --c-ink-400: 122 102 86;
+  --c-ink-500: 111 91 76;
+  --c-ink-600: 92 74 61;
+  --c-ink-700: 68 64 60;
+  --c-ink-800: 44 44 46;
+  --c-ink-900: 31 31 33;
+  --c-gold-50: 251 243 231;
+  --c-gold-100: 243 228 204;
+  --c-gold-300: 227 203 160;
   --c-gold-500: 201 168 118;
-  --c-gold-600: 134 106 62;
-  --c-gold-700: 124 99 54;
-  --c-wine-50: 230 233 237;
-  --c-wine-100: 214 219 226;
-  --c-wine-300: 150 158 172;
-  --c-wine-500: 52 59 75;
-  --c-wine-700: 36 41 53;
-  --c-sand-DEFAULT: 243 234 224;
-  --c-sand-200: 234 223 213;
-  --c-success: 9 120 59;
-  --c-warning: 146 84 32;
-  --c-danger: 150 56 52;
+  --c-gold-600: 176 143 94;
+  --c-gold-700: 126 99 56;
+  --c-wine-50: 245 238 243;
+  --c-wine-100: 234 220 230;
+  --c-wine-300: 185 147 174;
+  --c-wine-500: 106 62 92;
+  --c-wine-700: 78 44 68;
+  --c-sand-DEFAULT: 243 234 223;
+  --c-sand-200: 232 217 198;
+  --c-success: 79 122 82;
+  --c-warning: 168 100 42;
+  --c-danger: 162 68 63;
   --c-feature-DEFAULT: 58 42 34;
   --c-primary: 58 42 34;
-  --c-primary-hover: 78 58 47;
-  --c-primary-ink: 251 244 236;
-  --c-accent: 58 42 34;
-  --c-accent-hover: 78 58 47;
-  --c-accent-ink: 251 244 236;
-  --c-feature-line: 92 70 58;
-  --c-feature-ink: 251 244 236;
-  --c-feature-muted: 214 199 184;
-  --c-feature-soft: 230 218 205;
-  --c-feature-accent: 201 168 118;
+  --c-primary-hover: 42 29 22;
+  --c-primary-ink: 250 246 241;
+  --gold-from: #E8CFA3; --gold-to: #C79D66; --gold-ink: #2A1E14; --gold-edge: rgba(150, 110, 60, 0.35);
+  --gold-shadow: 0 1px 0 rgba(255, 250, 240, 0.55) inset, 0 8px 18px -10px rgba(120, 84, 40, 0.45);
+  --c-accent: 147 99 58;
+  --c-accent-hover: 127 84 48;
+  --c-accent-ink: 255 251 246;
+  --c-feature-line: 74 56 46;
+  --c-feature-ink: 250 246 241;
+  --c-feature-muted: 233 224 214;
+  --c-feature-soft: 214 202 190;
+  --c-feature-accent: 227 203 160;
   --c-feature-border: 58 42 34;
-  --gold-from: #46332A; --gold-to: #3A2A22; --gold-ink: #FBF4EC; --gold-edge: rgba(58, 42, 34, 0.55);
-  --gold-shadow: 0 1px 0 rgba(255, 244, 230, 0.12) inset, 0 8px 18px -10px rgba(58, 42, 34, 0.55);
 }
 [data-theme="dark"] {
-  /* ESCURO (grafite azulado): fundo grafite profundo, cartões grafite, texto creme;
-     botão principal dourado com texto cacau; cartão do dia continua cacau com número dourado */
+  /* GRAFITE (aprovado): fundo grafite profundo, superfícies em grafites, texto bege claro,
+     dourado suave só em ações e detalhes */
   color-scheme: dark;
-  --c-cream-DEFAULT: 31 35 44;
-  --c-cream-50: 36 41 51;
-  --c-cream-100: 31 35 44;
-  --c-surface: 42 48 60;
-  --c-ink-50: 50 57 70;
-  --c-ink-100: 62 69 84;
-  --c-ink-200: 80 88 104;
-  --c-ink-300: 122 130 145;
-  --c-ink-400: 164 171 184;
-  --c-ink-500: 178 184 196;
-  --c-ink-600: 202 207 216;
-  --c-ink-700: 224 227 233;
-  --c-ink-800: 246 240 232;
-  --c-ink-900: 251 246 240;
-  --c-gold-50: 56 52 48;
-  --c-gold-100: 72 64 52;
-  --c-gold-300: 160 135 96;
+  --c-cream-DEFAULT: 28 28 30;
+  --c-cream-50: 35 35 37;
+  --c-cream-100: 28 28 30;
+  --c-surface: 44 44 46;
+  --c-ink-50: 48 48 50;
+  --c-ink-100: 58 58 60;
+  --c-ink-200: 74 74 77;
+  --c-ink-300: 122 116 110;
+  --c-ink-400: 166 158 149;
+  --c-ink-500: 185 177 168;
+  --c-ink-600: 206 197 186;
+  --c-ink-700: 227 219 209;
+  --c-ink-800: 242 237 230;
+  --c-ink-900: 247 242 235;
+  --c-gold-50: 46 42 36;
+  --c-gold-100: 58 52 40;
+  --c-gold-300: 227 203 160;
   --c-gold-500: 201 168 118;
-  --c-gold-600: 214 186 140;
-  --c-gold-700: 224 200 158;
-  --c-wine-50: 52 59 75;
-  --c-wine-100: 66 74 92;
-  --c-wine-300: 130 138 154;
-  --c-wine-500: 200 206 216;
-  --c-wine-700: 230 233 237;
-  --c-sand-DEFAULT: 50 57 70;
-  --c-sand-200: 62 69 84;
-  --c-success: 52 210 122;
+  --c-gold-600: 211 181 131;
+  --c-gold-700: 217 190 143;
+  --c-wine-50: 58 46 54;
+  --c-wine-100: 70 52 63;
+  --c-wine-300: 142 109 132;
+  --c-wine-500: 199 160 188;
+  --c-wine-700: 224 196 216;
+  --c-sand-DEFAULT: 52 52 54;
+  --c-sand-200: 63 63 66;
+  --c-success: 141 187 143;
   --c-warning: 224 164 107;
-  --c-danger: 236 146 136;
-  --c-feature-DEFAULT: 58 42 34;
-  --c-primary: 201 168 118;
-  --c-primary-hover: 214 184 136;
-  --c-primary-ink: 58 42 34;
-  --c-accent: 201 168 118;
-  --c-accent-hover: 214 184 136;
-  --c-accent-ink: 58 42 34;
-  --c-feature-line: 96 74 62;
-  --c-feature-ink: 251 244 236;
-  --c-feature-muted: 214 199 184;
-  --c-feature-soft: 230 218 205;
-  --c-feature-accent: 201 168 118;
-  --c-feature-border: 96 74 62;
-  --gold-from: #D2B585; --gold-to: #C9A876; --gold-ink: #3A2A22; --gold-edge: rgba(201, 168, 118, 0.6);
-  --gold-shadow: 0 1px 0 rgba(255, 244, 230, 0.25) inset, 0 8px 18px -10px rgba(0, 0, 0, 0.7);
+  --c-danger: 230 138 128;
+  --c-feature-DEFAULT: 36 36 38;
+  --c-feature-line: 58 58 60;
+  --c-feature-ink: 242 237 230;
+  --c-feature-muted: 206 197 186;
+  --c-feature-soft: 185 177 168;
+  --c-feature-accent: 217 190 143;
+  --c-feature-border: 140 118 82;
+  --c-primary: 230 211 179;
+  --c-primary-hover: 240 226 200;
+  --c-primary-ink: 28 28 30;
+  --c-accent: 210 165 116;
+  --c-accent-hover: 221 180 136;
+  --c-accent-ink: 28 28 30;
+  --gold-from: #E6CB9C; --gold-to: #BC915C; --gold-ink: #1C1C1E; --gold-edge: rgba(230, 203, 156, 0.45);
+  --gold-shadow: 0 1px 0 rgba(255, 240, 210, 0.18) inset, 0 8px 18px -10px rgba(0, 0, 0, 0.7);
 }
 
 
@@ -111,9 +110,9 @@
    de classes utilitárias (ex.: manifest/meta theme-color, gráficos).
    ============================================================================ */
 :root {
-  --color-bg: #FBF4EC;
-  --color-ink: #343B4B;
-  --color-gold: #C9A876;
+  --color-bg: #faf6f1;
+  --color-ink: #3a2a22;
+  --color-gold: #c9a876;
 }
 
 * {
@@ -135,91 +134,21 @@ body {
    só a saudação a usava). Um padrão só, aplicado em todas as telas. */
 @layer components {
   .page-title {
-    @apply font-sans text-[1.625rem] font-extrabold leading-tight tracking-[-0.02em] text-ink-800 sm:text-[1.875rem];
+    @apply font-serif text-[1.625rem] font-medium leading-tight tracking-[-0.01em] text-ink-800 sm:text-[1.875rem];
   }
-}
-
-/* Cartão em destaque na variante grafite azulado ("Resultado do período"). O cacau fica só no cartão do dia. */
-[data-feature="grafite"] {
-  --c-feature-DEFAULT: 52 59 75;
-  --c-feature-line: 78 86 104;
-  --c-feature-ink: 251 244 236;
-  --c-feature-muted: 200 206 216;
-  --c-feature-soft: 220 224 231;
-  --c-feature-accent: 201 168 118;
-  --c-feature-border: 52 59 75;
-}
-[data-theme="dark"] [data-feature="grafite"] {
-  --c-feature-DEFAULT: 52 59 75;
-  --c-feature-line: 78 86 104;
-  --c-feature-ink: 251 244 236;
-  --c-feature-muted: 200 206 216;
-  --c-feature-soft: 220 224 231;
-  --c-feature-accent: 201 168 118;
-  --c-feature-border: 78 86 104;
 }
 
 /* Telas de entrada (login, senha, cadastro, assinatura): tudo branco no tema claro, inclusive os campos. */
 [data-theme="light"] .surface-white { --c-surface: 255 255 255; }
 
-/* Card com a personagem (estado vazio da agenda): branco nos dois temas, como a personagem.
-   No tema escuro ele usa as cores do tema claro por dentro, para o texto continuar legível. */
-[data-card="default"]:has([data-illustration]) {
-  --c-surface: 255 255 255;
-  background-color: rgb(255 255 255);
-}
-[data-theme="dark"] [data-card="default"]:has([data-illustration]) {
-  --c-cream-50: 253 249 244;
-  --c-cream-100: 251 244 236;
-  --c-ink-50: 246 239 231;
-  --c-ink-100: 234 223 213;
-  --c-ink-200: 216 205 194;
-  --c-ink-300: 158 160 166;
-  --c-ink-400: 98 102 110;
-  --c-ink-500: 92 96 104;
-  --c-ink-600: 74 78 86;
-  --c-ink-700: 58 62 70;
-  --c-ink-800: 52 59 75;
-  --c-ink-900: 36 41 53;
-  --c-gold-50: 248 240 227;
-  --c-gold-100: 241 229 207;
-  --c-gold-300: 222 201 162;
-  --c-gold-500: 201 168 118;
-  --c-gold-600: 134 106 62;
-  --c-gold-700: 124 99 54;
-  --c-wine-50: 230 233 237;
-  --c-wine-100: 214 219 226;
-  --c-wine-300: 150 158 172;
-  --c-wine-500: 52 59 75;
-  --c-wine-700: 36 41 53;
-  --c-sand-200: 234 223 213;
-  --c-success: 9 120 59;
-  --c-warning: 146 84 32;
-  --c-danger: 150 56 52;
-  --c-primary: 58 42 34;
-  --c-primary-hover: 78 58 47;
-  --c-primary-ink: 251 244 236;
-  --c-accent: 58 42 34;
-  --c-accent-hover: 78 58 47;
-  --c-accent-ink: 251 244 236;
-  --c-feature-line: 92 70 58;
-  --c-feature-ink: 251 244 236;
-  --c-feature-muted: 214 199 184;
-  --c-feature-soft: 230 218 205;
-  --c-feature-accent: 201 168 118;
-  --c-feature-border: 58 42 34;
-  --c-surface: 255 255 255;
-  background-color: rgb(255 255 255);
-  border-color: rgb(255 255 255);
-}
 
 
 
-/* Fonte da interface: Plus Jakarta Sans (a da assinatura "seu negócio em boas mãos"), hospedada em
-   public/fonts (licença OFL). Títulos e texto usam a mesma família; não há serifada no app. */
-@font-face { font-family: "Plus Jakarta Sans"; src: url("/fonts/plus-jakarta-sans.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
-@font-face { font-family: "Plus Jakarta Sans"; src: url("/fonts/plus-jakarta-sans-italic.woff2") format("woff2"); font-weight: 200 800; font-style: italic; font-display: swap; }
-:root { --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --font-serif: var(--font-sans); }
+/* Fonte da interface: Noto Serif (licença OFL), hospedada em public/fonts. É a serifada que o celular
+   mostrava na Áurea; agora vem do próprio app, igual em Android, iPhone e computador. */
+@font-face { font-family: "Noto Serif"; src: url("/fonts/noto-serif.woff2") format("woff2"); font-weight: 400 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Noto Serif"; src: url("/fonts/noto-serif-italic.woff2") format("woff2"); font-weight: 400 700; font-style: italic; font-display: swap; }
+:root { --font-sans: "Noto Serif", Georgia, "Times New Roman", serif; --font-serif: var(--font-sans); }
 
 /* Base para o efeito shimmer do componente Skeleton. */
 .skeleton-shimmer {

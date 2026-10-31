@@ -198,9 +198,9 @@ export default function InicioPage() {
 
   return (
     <div className="space-y-6 pb-4">
-      {/* Saudação: título da tela, na fonte da interface, em grafite. */}
+      {/* Saudação: serifada em itálico, como na Áurea. */}
       <div>
-        <h1 className="text-[26px] font-bold tracking-[-0.02em] text-ink-800 sm:text-[30px]">
+        <h1 className="font-serif text-[26px] italic text-ink-800 sm:text-[30px]">
           {greeting}
           {name ? `, ${name}` : ""}.
         </h1>

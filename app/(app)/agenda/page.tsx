@@ -222,7 +222,7 @@ export default function AgendaPage() {
         ) : view === "dia" ? (
           activeDayAppointments.length === 0 ? (
             <EmptyState
-              art="agenda"
+              art="perfil"
               icon={CalendarX}
               title="Nenhum atendimento neste dia"
               description="Que tal aproveitar para organizar a agenda da semana?"

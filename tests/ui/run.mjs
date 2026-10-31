@@ -617,7 +617,7 @@ test("U26 aparência: escolher Escuro aplica o tema na hora e guarda no aparelho
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "dark");
   assert.equal(await page.evaluate(() => localStorage.getItem("aurea-theme")), "dark");
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  assert.equal(bg, "rgb(31, 35, 44)", "fundo do tema Escuro (grafite azulado) #1F232C");
+  assert.equal(bg, "rgb(28, 28, 30)", "fundo do tema Escuro (grafite) #1C1C1E");
   await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "light" }]);
   await pick("Automático");
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");

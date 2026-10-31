@@ -1,5 +1,5 @@
 import { ToastProvider } from "@/components/ui/toast";
-import { BrandIllustration } from "@/components/ui/brand-illustration";
+import { OfficialIllustration } from "@/components/ui/line-illustration";
 import * as React from "react";
 // Palco de testes: o painel REAL da tela de WhatsApp com uma API simulada que o
 // teste controla (window.__wa). Só o cliente do Supabase é trocado.
@@ -68,8 +68,8 @@ createRoot(document.getElementById("root")!).render(
           <WhatsappAutoMessages companyId="00000000-0000-0000-0000-000000000001" companyName="Studio Bella" />
         ) : view === "illus" ? (
           <div className="grid grid-cols-3 gap-2 bg-cream p-2">
-            <BrandIllustration kind="agenda" className="size-40" />
-            <BrandIllustration kind="agenda" className="size-40" />
+            <OfficialIllustration className="size-40" />
+            <OfficialIllustration className="size-40" />
             
           </div>
         ) : view === "extras" ? (
@@ -118,7 +118,7 @@ createRoot(document.getElementById("root")!).render(
                 <Card>
                   <h2 className="mb-1 text-sm font-semibold text-ink-700">Agenda de hoje</h2>
                   {/* Agenda de hoje (palco) */}
-                  <EmptyState art="agenda" icon={CalendarX} title="Nenhum atendimento hoje" description="Aproveite para organizar a agenda dos próximos dias."
+                  <EmptyState art="perfil" icon={CalendarX} title="Nenhum atendimento hoje" description="Aproveite para organizar a agenda dos próximos dias."
                     action={<Button variant="accent" size="sm" className="rounded-full px-5">Criar agendamento</Button>} />
                 </Card>
                 <Card data-testid="month">
