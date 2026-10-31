@@ -26,8 +26,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FBF4EC" },
-    { media: "(prefers-color-scheme: dark)", color: "#1F232C" },
+    { media: "(prefers-color-scheme: light)", color: "#FAF6F1" },
+    { media: "(prefers-color-scheme: dark)", color: "#1C1C1E" },
   ],
 };
 
@@ -38,7 +38,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="pt-BR" data-theme={pref === "dark" ? "dark" : "light"} suppressHydrationWarning>
       <head>
         {/* fonte da interface hospedada no próprio app (public/fonts): carrega sempre, sem depender do Google */}
-        <link rel="preload" href="/fonts/plus-jakarta-sans.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/noto-serif.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         {/* aplica o tema escolhido ANTES de pintar (sem "piscar" claro no escuro) */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>

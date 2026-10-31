@@ -1,20 +1,6 @@
-// Ilustração e ícones da Sócia.
-// - Personagem da marca em traço, com o S do logotipo ao fundo, nos estados vazios da agenda.
-//   Um arquivo só (public/illustrations); no tema escuro o card dela fica creme.
-// - Ícones de traço (Phosphor, licença MIT) que usam a cor do texto: ameixa no claro, creme no escuro.
+// Ícones da Sócia: traço (Phosphor, licença MIT) que usa a cor do texto.
+// A ilustração dos estados vazios é a da Áurea (components/ui/line-illustration.tsx).
 import { cn } from "@/lib/utils";
-
-export type IllustrationKind = "agenda";
-
-export function BrandIllustration({ kind, className }: { kind: IllustrationKind; className?: string }) {
-  // Um arquivo só: no tema escuro o card que a contém fica em creme (ver globals.css).
-  return (
-    <span className={cn("block size-44 shrink-0", className)} data-illustration={kind}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/illustrations/personagem-${kind}.webp`} alt="" width={176} height={176} loading="lazy" decoding="async" className="size-full object-contain" />
-    </span>
-  );
-}
 
 const ICONS: Record<string, string[]> = {
   receitas: ["M240,56v64a8,8,0,0,1-16,0V75.31l-82.34,82.35a8,8,0,0,1-11.32,0L96,123.31,29.66,189.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0L136,140.69,212.69,64H168a8,8,0,0,1,0-16h64A8,8,0,0,1,240,56Z"],

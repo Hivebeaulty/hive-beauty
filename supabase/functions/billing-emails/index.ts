@@ -46,25 +46,25 @@ export function whenPhrase(iso: string, now = new Date()) {
 // ---- layout ------------------------------------------------------------------------------
 function layout(c: ReturnType<typeof cfg>, preheader: string, inner: string) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sócia</title></head>
-<body style="margin:0;padding:0;background:#FBF4EC;">
+<body style="margin:0;padding:0;background:#F3EADF;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBF4EC;"><tr><td align="center" style="padding:24px 12px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFCF8;border-radius:12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3EADF;"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAF7F2;border-radius:12px;">
 <tr><td style="padding:0;line-height:0;"><img src="${c.app}/email/cabecalho.png" width="560" alt="Sócia" style="display:block;width:100%;max-width:560px;height:auto;border:0;border-radius:12px 12px 0 0;"></td></tr>
 <tr><td style="height:20px;line-height:20px;font-size:0;">&nbsp;</td></tr>
-<tr><td style="padding:8px 32px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#3A3E46;">${inner}</td></tr>
-<tr><td style="padding:20px 32px 28px;border-top:1px solid #EADFD5;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#62666E;">
-Dúvidas? Responda este e-mail ou chame no WhatsApp <a href="${c.whatsappUrl}" style="color:#3A2A22;">${c.whatsapp}</a>.<br>
+<tr><td style="padding:8px 32px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#2C2C2E;">${inner}</td></tr>
+<tr><td style="padding:20px 32px 28px;border-top:1px solid #E6DDD2;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#6E6862;">
+Dúvidas? Responda este e-mail ou chame no WhatsApp <a href="${c.whatsappUrl}" style="color:#7E6338;">${c.whatsapp}</a>.<br>
 Para cancelar, acesse Assinaturas no Mercado Pago, sem multa.<br>
-<a href="${c.landing}/termos" style="color:#62666E;">Termos de Uso</a> · <a href="${c.landing}/privacidade" style="color:#62666E;">Política de Privacidade</a>
+<a href="${c.landing}/termos" style="color:#6E6862;">Termos de Uso</a> · <a href="${c.landing}/privacidade" style="color:#6E6862;">Política de Privacidade</a>
 </td></tr></table></td></tr></table></body></html>`;
 }
-const h1 = (t: string) => `<h1 style="margin:8px 0 16px;font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;font-weight:800;font-size:26px;line-height:1.25;letter-spacing:-0.02em;color:#343B4B;">${t}</h1>`;
+const h1 = (t: string) => `<h1 style="margin:8px 0 16px;font-family:'Noto Serif',Georgia,'Times New Roman',serif;font-weight:normal;font-size:26px;line-height:1.25;color:#2C2C2E;">${t}</h1>`;
 const button = (href: string, label: string) =>
   `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 10px;"><tr><td style="border-radius:999px;background:#3A2A22;">
-<a href="${href}" style="display:inline-block;padding:13px 26px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#FBF4EC;text-decoration:none;border-radius:999px;">${label}</a></td></tr></table>`;
+<a href="${href}" style="display:inline-block;padding:13px 26px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#FAF7F2;text-decoration:none;border-radius:999px;">${label}</a></td></tr></table>`;
 const box = (inner: string) =>
-  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;"><tr><td style="background:#F3EAE0;border-radius:10px;padding:16px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#3A3E46;">${inner}</td></tr></table>`;
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;"><tr><td style="background:#F2EBE1;border-radius:10px;padding:16px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#2C2C2E;">${inner}</td></tr></table>`;
 
 type Target = { preapproval_id: string; email: string; status?: string; next_payment_at?: string | null; amount?: number | null };
 type Mail = { subject: string; html: string; text: string };
