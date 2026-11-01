@@ -319,7 +319,7 @@ interrompidas por ela.
 ## E-mails da assinatura (0042 + `billing-emails`)
 
 - **Boas-vindas** (assinatura do Mercado Pago que começou nos últimos 7 dias) com o link do app e do guia
-  (`public/guia-aurea.pdf`, servido em `/guia-aurea.pdf`), e **aviso ~2 dias antes da primeira cobrança** (data, valor,
+  (`public/guia-socia.pdf`, servido em `/guia-socia.pdf`; o endereço antigo `/guia-aurea.pdf` redireciona para ele; gerado por `scripts/guia/gerar_guia.py`), e **aviso ~2 dias antes da primeira cobrança** (data, valor,
   como cancelar), só entre 9h e 20h de Brasília. Cortesias e contas antigas não recebem.
 - O pg_cron chama a Edge Function `billing-emails` (**sem** JWT) a cada 15 min via pg_net, com um segredo gerado e
   guardado no Vault (`billing_emails_cron`). `billing_email_claim` garante que nada sai duas vezes; erro do Brevo =

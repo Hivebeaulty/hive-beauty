@@ -14,6 +14,7 @@ const protegido = (p) => re.test(p);
 
 test("o guia em PDF (link dos e-mails) abre sem login", () => {
   assert.equal(protegido("/guia-aurea.pdf"), false);
+  assert.equal(protegido("/guia-socia.pdf"), false);
 });
 test("imagens, manifest e ícones abrem sem login", () => {
   for (const p of ["/logo-lockup.png", "/illustrations/agenda-vazia-claro.webp", "/fonts/noto-serif.woff2", "/manifest.webmanifest", "/favicon.ico", "/icon-512.png"]) {
