@@ -35,9 +35,10 @@ Falta:
       com palavras a usar e a evitar, e aplicar no app, nos e-mails, na landing e no Instagram.
 - [ ] **Landing: nova abordagem**: apresentar as soluções que a Sócia traz para a rotina da nail designer (menos faltas,
       agenda cheia, clareza do dinheiro, tempo livre) em vez de listar funcionalidades técnicas. Depende da linguagem.
-- [ ] **Guia de uso com a nova marca** (`public/guia-socia.pdf`), já com a edição de atendimento e a previsão de
-      faturamento, e trocar o link nos e-mails (`GUIDE_URL`), hoje
-      `guia-aurea.pdf`.
+- [x] **Guia de uso com a nova marca** (`public/guia-socia.pdf`, 14 páginas, gerado por `scripts/guia/gerar_guia.py`):
+      Noto Serif, telas novas, previsão de faturamento, edição de atendimento e o fluxo atual do atendimento
+      (conclusão automática, sem "Confirmar" e "Iniciar"). O link antigo `/guia-aurea.pdf` redireciona; e-mails apontam
+      para o novo.
 - [ ] **Instagram**: destaques e os 3 carrosséis fixados com a nova marca.
 
 ## 1. Agora: lançamento e primeiras vendas
@@ -49,7 +50,7 @@ Falta:
       pagamento real; é o maior risco antes de divulgar.
 - [x] **E-mail de confirmação da assinatura (boas-vindas)** (0042 + `billing-emails`), enviado pelo webhook quando a assinatura começa: o que foi
       contratado, quando acontece a primeira cobrança, como criar a senha, link para o app e o guia em PDF.
-- [x] **Guia de uso em PDF** (`public/guia-aurea.pdf`, ainda com a marca Áurea; ver seção 0), com a identidade da Áurea e telas reais (anonimizadas): primeiros passos, agenda,
+- [x] **Guia de uso em PDF** (hoje `public/guia-socia.pdf`; ver seção 0), com a identidade da Áurea e telas reais (anonimizadas): primeiros passos, agenda,
       clientes, WhatsApp, financeiro, relatórios, dúvidas frequentes e contato.
 - [x] **Aviso antes da primeira cobrança** (0042 + `billing-emails`): e-mail no 5º dia do teste (data e valor da cobrança, como cancelar).
 - [ ] **Conteúdo do Instagram**: 3 carrosséis fixados (dois prontos), calendário de 30 dias, perfil e link com UTM.

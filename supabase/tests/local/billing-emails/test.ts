@@ -23,7 +23,7 @@ cfgStub.targets = { welcome: [W], trial_ending: [T] }; calls.length = 0; sent.le
   check("cada envio é registrado como enviado, com o id do Brevo", fin.length === 2 && fin.every((c) => c[1].p_ok === true && c[1].p_message_id === "<m1@brevo>"));
   const b = sent[0].body;
   check("Brevo: remetente, resposta e chave", b.sender.email === "hivebeauty.suporte@gmail.com" && b.sender.name === "Sócia" && b.replyTo.email === "hivebeauty.suporte@gmail.com" && sent[0].init.headers["api-key"] === "chave" && sent[0].url === "https://api.brevo.com/v3/smtp/email");
-  check("boas-vindas: assunto, link do app e do guia", b.subject === "Boas-vindas à Sócia: seus primeiros passos" && b.htmlContent.includes("https://hive-beauty.vercel.app/login") && b.htmlContent.includes("https://hive-beauty.vercel.app/guia-aurea.pdf"));
+  check("boas-vindas: assunto, link do app e do guia", b.subject === "Boas-vindas à Sócia: seus primeiros passos" && b.htmlContent.includes("https://hive-beauty.vercel.app/login") && b.htmlContent.includes("https://hive-beauty.vercel.app/guia-socia.pdf"));
   check("boas-vindas: data e valor da primeira cobrança", b.htmlContent.includes("quinta-feira, 12 de novembro") && b.htmlContent.includes("R$ 59,90"), b.htmlContent.slice(0, 0));
   check("tem versão em texto puro", b.textContent.includes("Esqueci minha senha") && !b.textContent.includes("<"));
   const t = sent[1].body;
