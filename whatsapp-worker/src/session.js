@@ -39,11 +39,20 @@ export class CompanySession {
     if (!this.isActive) return
     this.state = 'connecting'
     const gen = ++this.generation
-    this.auth = await this.authFactory(this.companyId)
-    if (!this.isActive || gen !== this.generation) return
-    if (!this.auth.hadCreds) this.log.info('sem credencial: vai gerar QR')
+    // Um único estado de credenciais por sessão: as reconexões reaproveitam o MESMO objeto
+    // (em memória e com a mesma fila de gravação), em vez de reler o banco enquanto o socket
+    // anterior ainda pode estar gravando chaves. Só a primeira abertura lê do banco.
+    if (!this.auth) {
+      this.auth = await this.authFactory(this.companyId)
+      if (!this.isActive || gen !== this.generation) return
+      if (!this.auth.hadCreds) this.log.info('sem credencial: vai gerar QR')
+    }
     await this.#safe(() => this.db.setState(this.companyId, 'connecting'), 'estado connecting')
-    const sock = this.provider.createSocket({ auth: this.auth, logger: this.log.child({ lib: 'baileys' }, { level: 'warn' }) })
+    const sock = this.provider.createSocket({
+      auth: this.auth,
+      logger: this.log.child({ lib: 'baileys' }, { level: 'warn' }),
+      ignoreGroups: this.config.ignoreGroups !== false,
+    })
     this.sock = sock
     sock.ev.on('creds.update', () => {
       if (gen !== this.generation) return
@@ -104,12 +113,20 @@ export class CompanySession {
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
       this.generation++   // eventos do socket antigo (inclusive o "close" do end) passam a ser ignorados
-      this.#closeSocket().then(() => this.start()).catch((e) => {
+      // antes do socket novo: espera terminarem as gravações de chaves do socket antigo
+      this.#closeSocket().then(() => this.#settleAuth()).then(() => this.start()).catch((e) => {
         this.log.error({ err: e.message }, 'falha ao reconectar')
         this.#scheduleReconnect(this.#delay())
       })
     }, delayMs)
     this.reconnectTimer.unref?.()
+  }
+
+  // Espera a biblioteca terminar de gravar credenciais/chaves (com limite), como no stop().
+  async #settleAuth() {
+    if (!this.auth?.drain) return
+    const quiet = await this.auth.drain({ quietMs: this.config.shutdownQuietMs ?? 500, maxMs: this.config.shutdownDrainMs ?? 3000 })
+    if (!quiet) this.log.warn('credenciais ainda em gravação ao reconectar (limite de espera atingido)')
   }
 
   #delay() {

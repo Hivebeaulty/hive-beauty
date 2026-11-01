@@ -23,3 +23,8 @@ test('banco: SSL com certificado verificado é obrigatório fora de teste', () =
   assert.equal(readConfig({ ...ok, DB_SSL: 'off', NODE_ENV: 'test' }).dbSsl, 'off')
   assert.equal(readConfig(ok).dbSsl, 'verify')
 })
+
+test('grupos, transmissões e canais ficam fora por padrão; WA_IGNORE_GROUPS=false liga de volta', () => {
+  assert.equal(readConfig(ok).ignoreGroups, true)
+  assert.equal(readConfig({ ...ok, WA_IGNORE_GROUPS: 'false' }).ignoreGroups, false)
+})

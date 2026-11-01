@@ -58,6 +58,8 @@ export function readConfig(env = process.env) {
     sendIntervalMs: int(env, 'SEND_INTERVAL_MS', 3000, 0, 60000),
     // Receber e enviar andam juntos. Ligar só com autorização (roteiro de implantação W5).
     messagingEnabled: env.WA_MESSAGING_ENABLED === 'true',
+    // Grupos, listas de transmissão, status e canais ficam fora (o worker não usa). Padrão: ligado.
+    ignoreGroups: env.WA_IGNORE_GROUPS !== 'false',
     logLevel: env.LOG_LEVEL || 'info',
   }
 }

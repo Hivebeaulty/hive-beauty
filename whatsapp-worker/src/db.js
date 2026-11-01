@@ -33,6 +33,10 @@ export class WorkerDb {
     return r.rows[0] ? Object.values(r.rows[0])[0] : undefined
   }
 
+  // Marca o início real do processo (a tabela workers passa a mostrar os reinícios).
+  workerStarted(version) {
+    return this.pool.query('select whatsapp_private.worker_started($1, $2)', [this.workerId, version])
+  }
   heartbeat(version) {
     return this.pool.query('select whatsapp_private.worker_heartbeat($1, $2)', [this.workerId, version])
   }
