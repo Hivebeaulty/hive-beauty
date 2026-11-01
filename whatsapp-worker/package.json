@@ -1,6 +1,6 @@
 {
   "name": "aurea-whatsapp-worker",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Worker de WhatsApp da Áurea (W2–W5): conexão por QR, reconexão, recebimento com opt-out e envio da fila (confirmação automática). Fala só com o banco (schema whatsapp_private).",
   "type": "module",

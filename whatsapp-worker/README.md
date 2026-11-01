@@ -26,6 +26,17 @@ Ele **só conversa com o banco**, pelas funções do schema `whatsapp_private`
 - Confirmação automática (migration 0018): o banco enfileira no momento do agendamento; o worker só envia.
 - Logs: nunca telefone completo nem texto de mensagem.
 
+## Sem "sincronizações" no celular (0.4.0, auditoria de 01/11/2026)
+- O Baileys **não pede ao celular** cópia de mensagem que não conseguiu ler (`placeholderResendCache` que sempre
+  responde "já pedido"). Cada pedido desses fazia o WhatsApp Business mostrar "A sincronização com o WhatsApp Business
+  no Google Chrome (Ubuntu) foi concluída".
+- Grupos, listas de transmissão, status e canais são ignorados **antes** de decifrar (`shouldIgnoreJid`):
+  sem falhas de decifração de grupo nem chaves de grupo guardadas à toa. `WA_IGNORE_GROUPS=false` desliga.
+- Reconexão reaproveita o mesmo estado de credenciais e espera as gravações do socket anterior.
+- Logs: a libsignal escrevia no console objetos de sessão com chaves privadas; agora essas linhas são descartadas
+  (`guardConsole`). Identificadores de contato dos erros do Baileys ficam ocultos.
+- `whatsapp_private.workers.started_at` mostra a última subida do processo (migration 0047).
+
 ## Testes
 - Unitários (sem banco, sem rede): `npm test`
 - Integração (Postgres LOCAL com 0001–0018; senha de teste aleatória só local; desfaz tudo; inclui

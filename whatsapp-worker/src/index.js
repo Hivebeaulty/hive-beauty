@@ -1,14 +1,15 @@
 // Ponto de entrada do worker (Discloud: MAIN=src/index.js).
 import { loadEnvFile, readConfig } from './config.js'
-import { createLogger } from './logger.js'
+import { createLogger, guardConsole } from './logger.js'
 import { loadMasterKey } from './crypto.js'
 import { createPool, WorkerDb } from './db.js'
 import { useDbAuthState } from './auth-state.js'
 import { SessionManager, makeSessionFactory } from './manager.js'
 
-const VERSION = '0.3.0'
+const VERSION = '0.4.0'
 
 async function main() {
+  guardConsole()   // antes de carregar o Baileys: chaves da libsignal nunca vão para o log
   loadEnvFile()
   const config = readConfig()
   const log = createLogger(config.logLevel)
@@ -42,7 +43,8 @@ async function main() {
   process.on('unhandledRejection', (e) => log.error({ err: e?.message }, 'promessa rejeitada sem tratamento'))
   process.on('uncaughtException', (e) => { log.fatal({ err: e?.message }, 'erro fatal'); shutdown('uncaughtException', 1) })
 
-  log.info({ worker: config.workerId, provider: config.provider, version: VERSION }, 'worker iniciado')
+  log.info({ worker: config.workerId, provider: config.provider, version: VERSION, pid: process.pid, ignoreGroups: config.ignoreGroups }, 'worker iniciado')
+  await db.workerStarted(VERSION).catch((e) => log.warn({ err: e.message }, 'não registrou o início do processo (migration 0047 pendente?)'))
   manager.start()
 }
 

@@ -332,3 +332,16 @@ test('I16 o papel do worker não lê tabelas nem chama RPCs do app (permissões 
   await assert.rejects(() => w.pool.query(`select wa_send_message('${client}', 'x', 'y')`), (e) => e.code === '42501')
   await assert.rejects(() => w.pool.query('select aurea_private.run_auto_conclusion()'), (e) => e.code === '42501')
 })
+
+test('I17 (0047) início do processo: o worker registra started_at a cada subida, sem mexer nas sessões', async () => {
+  const w = newWorker('w-started')
+  await w.db.heartbeat('0.4.0')
+  const first = (await admin.query("select started_at from whatsapp_private.workers where worker_id = 'w-started'")).rows[0].started_at
+  await sleep(20)
+  await w.db.heartbeat('0.4.0')
+  const afterBeat = (await admin.query("select started_at from whatsapp_private.workers where worker_id = 'w-started'")).rows[0].started_at
+  assert.equal(+afterBeat, +first, 'o batimento não muda o início')
+  await w.db.workerStarted('0.4.0')
+  const restarted = (await admin.query("select started_at from whatsapp_private.workers where worker_id = 'w-started'")).rows[0].started_at
+  assert.ok(+restarted > +first, 'a subida do processo atualiza o início')
+})
