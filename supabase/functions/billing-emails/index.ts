@@ -22,7 +22,7 @@ export const cfg = () => ({
   replyTo: env("EMAIL_REPLY_TO", env("EMAIL_FROM", "hivebeauty.suporte@gmail.com")),
   app: env("APP_URL", "https://hive-beauty.vercel.app"),
   guide: env("GUIDE_URL", `${env("APP_URL", "https://hive-beauty.vercel.app")}/guia-aurea.pdf`),
-  landing: env("LANDING_URL", "https://aurea-hivebeauty.lovable.app"),
+  landing: env("LANDING_URL", "https://socia-beauty.lovable.app"),
   alert: env("ALERT_EMAIL", env("EMAIL_REPLY_TO", env("EMAIL_FROM", "hivebeauty.suporte@gmail.com"))),
   whatsapp: "(31) 99919-1534",
   whatsappUrl: "https://wa.me/5531999191534",

@@ -49,7 +49,7 @@ test("tela: sempre lembra que os dados continuam guardados quando bloqueia", () 
 });
 
 test("links fixos: landing e checkout", () => {
-  assert.equal(a.LANDING_URL, "https://aurea-hivebeauty.lovable.app");
+  assert.equal(a.LANDING_URL, "https://socia-beauty.lovable.app");
   assert.equal(a.CHECKOUT_URL, "https://mpago.la/2gCWhAH");
 });
 

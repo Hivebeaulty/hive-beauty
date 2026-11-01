@@ -3,7 +3,7 @@ Deno.env.set("SUPABASE_URL", "x"); Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "y"
 let handler: any; (Deno as any).serve = (h: any) => { handler = h; };
 const m = await import("./index.ts");
 let pass = 0, fail = 0; const check = (n: string, c: boolean, x = "") => { c ? pass++ : fail++; console.info((c ? "PASS " : "FAIL ") + n + (c ? "" : "  " + x)); };
-const SITE = "https://aurea-hivebeauty.lovable.app";
+const SITE = "https://socia-beauty.lovable.app";
 const post = (body: unknown, origin = SITE) => handler(new Request("https://f/signup-intent", { method: "POST", headers: { origin, "content-type": "text/plain" }, body: typeof body === "string" ? body : JSON.stringify(body) }));
 
 calls.length = 0;
@@ -14,6 +14,8 @@ calls.length = 0;
   check("CORS só para o site", r.headers.get("access-control-allow-origin") === SITE); }
 calls.length = 0;
 { const r = await post({ email: "a@x.com" }, "https://evil.com"); check("outro site: 403, nada gravado", r.status === 403 && calls.length === 0); }
+calls.length = 0;
+{ const r = await post({ email: "a@x.com" }, "https://aurea-hivebeauty.lovable.app"); check("endereço antigo da landing (liberado no Lovable): 403", r.status === 403 && calls.length === 0); }
 { const r = await post({ email: "a@x.com" }, "https://hive-beauty.vercel.app"); check("app também pode chamar", r.status === 200); }
 calls.length = 0;
 { const r = await post({ email: "sem-arroba" }); const j = await r.json(); check("e-mail inválido: 400 com mensagem clara, nada gravado", r.status === 400 && j.error === "Confira o e-mail digitado." && calls.length === 0); }
