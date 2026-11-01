@@ -475,7 +475,7 @@ export default function AgendamentoDetalhePage() {
       {/* Atendimento concluído: recebimento (alterar forma / marcar recebido) */}
       {appt.status === "concluido" && canManageConcluded(role) && (
         <Button variant="secondary" className="w-full" disabled={busy} onClick={() => router.push(`/agenda/${id}/editar`)}>
-          Editar atendimento (serviço, horário, valor, recebimento)
+          Editar atendimento (cliente, serviço, horário, duração, valor e recebimento)
         </Button>
       )}
 

@@ -7,6 +7,7 @@ import { useCompany } from "@/components/company-provider";
 import { getPeriodRange, periodBoundsISO, PERIOD_LABEL, type Period } from "@/lib/hive/period";
 import { expenseEffectiveDate, isWithinPeriod } from "@/lib/hive/finance";
 import { formatMoney } from "@/lib/hive/format";
+import { FORECAST_STATUSES, forecastFor, periodHasFuture, type Forecast, type ForecastRow } from "@/lib/hive/forecast";
 import { getActiveProfessionals, type Professional } from "@/lib/hive/schedule";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
@@ -68,6 +69,7 @@ export function FinanceiroContent() {
   const [byProfessional, setByProfessional] = useState<{ name: string; count: number; total: number }[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [pending, setPending] = useState<PendingPayment[]>([]);
+  const [forecast, setForecast] = useState<Forecast | null>(null);
 
   const range = period === "personalizado" ? { start: customStart, end: customEnd } : getPeriodRange(period);
 
@@ -77,7 +79,7 @@ export function FinanceiroContent() {
     const { start, end } = range;
     const bounds = periodBoundsISO(start, end);
 
-    const [{ data: ind }, { data: expenses }, { data: appts }, profs, { data: pend }] =
+    const [{ data: ind }, { data: expenses }, { data: appts }, profs, { data: pend }, { data: fRows }] =
       await Promise.all([
         supabase.rpc("get_period_indicators", { p_company_id: companyId, p_start: start, p_end: end }),
         // Todas as despesas — filtro por data efetiva (paid_at > due_date >
@@ -98,6 +100,14 @@ export function FinanceiroContent() {
           .in("status", ["pendente", "parcial"])
           .order("created_at", { ascending: false })
           .limit(6),
+        // Previsão: concluídos + em aberto do período (cancelados e faltas ficam de fora).
+        supabase
+          .from("appointments")
+          .select("price, status, scheduled_start")
+          .eq("company_id", companyId)
+          .in("status", [...FORECAST_STATUSES])
+          .gte("scheduled_start", bounds.from)
+          .lte("scheduled_start", bounds.to),
       ]);
 
     setIndicators((ind as unknown as Indicators[])?.[0] ?? null);
@@ -134,6 +144,7 @@ export function FinanceiroContent() {
     );
 
     setPending((pend as unknown as PendingPayment[]) ?? []);
+    setForecast(forecastFor((fRows as ForecastRow[] | null) ?? [], start, end));
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, period, customStart, customEnd]);
@@ -188,6 +199,31 @@ export function FinanceiroContent() {
         </div>
       ) : (
         <>
+          {/* Previsão (só para período que ainda não terminou) ------------ */}
+          {forecast && periodHasFuture(range.end) && (
+            <Card data-testid="forecast-period">
+              <h2 className="text-sm font-semibold text-ink-700">Previsão de faturamento</h2>
+              <p className="mb-3 mt-1 text-xs text-ink-400">
+                O que já foi atendido somado ao que está agendado no período. Cancelados e faltas ficam de fora.
+              </p>
+              <p className="whitespace-nowrap font-serif text-2xl font-medium tabular-nums text-gold-700 sm:text-3xl">{formatMoney(forecast.previsto)}</p>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <p className="whitespace-nowrap text-base font-semibold tabular-nums text-ink-800">{formatMoney(forecast.realizado)}</p>
+                  <p className="text-xs text-ink-400">
+                    Realizado · {forecast.realizados} {forecast.realizados === 1 ? "atendimento" : "atendimentos"}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <p className="whitespace-nowrap text-base font-semibold tabular-nums text-ink-800">{formatMoney(forecast.agendado)}</p>
+                  <p className="text-xs text-ink-400">
+                    Agendado · {forecast.agendados} {forecast.agendados === 1 ? "atendimento" : "atendimentos"}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Receita ------------------------------------------------- */}
           <Card>
             <h2 className="mb-1 text-sm font-semibold text-ink-700">Receita</h2>

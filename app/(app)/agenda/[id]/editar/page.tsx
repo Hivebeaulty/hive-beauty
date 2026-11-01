@@ -19,8 +19,10 @@ import {
   concludedExpectedFrom,
   durationMinutesOf,
   editErrorMessage,
+  editTimeOptions,
   expectedFrom,
   hasChanges,
+  isValidTime,
   type AppointmentSnapshot,
 } from "@/lib/hive/appointment-edit";
 import { describeChangeNotice, parseChangeNotice, type ChangeNoticeView } from "@/lib/hive/whatsapp-change-notice";
@@ -73,6 +75,8 @@ export default function EditarAgendamentoPage() {
   const [primaryOrig, setPrimaryOrig] = useState({ minutes: 60, price: 0 });
 
   const [slots, setSlots] = useState<string[]>([]);
+  // "Outro horário": digitar a hora livremente (o banco ainda recusa conflito com outro atendimento)
+  const [manualTime, setManualTime] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,19 +184,19 @@ export default function EditarAgendamentoPage() {
     reloadSlots();
   }, [reloadSlots]);
 
-  // O horário atual sempre pode ser mantido (mesmo se hoje estiver fora da grade).
+  // O horário atual continua disponível no mesmo dia e com a mesma profissional, mesmo que a
+  // duração ou o serviço mudem (se a nova duração bater em outro atendimento, o banco recusa).
   const originalTime = original ? format(new Date(original.scheduled_start), "HH:mm") : "";
   const keepsOriginalSlot =
     !!original &&
     date === format(new Date(original.scheduled_start), "yyyy-MM-dd") &&
-    professionalId === original.professional_member_id &&
-    totals({ price: 0, minutes: duration }, extras).minutes === durationMinutesOf(original);
-  const timeOptions = keepsOriginalSlot && !slots.includes(originalTime) ? [originalTime, ...slots].sort() : slots;
+    professionalId === original.professional_member_id;
+  const timeOptions = editTimeOptions(slots, originalTime, keepsOriginalSlot);
 
   const concluded = original?.status === "concluido";
   useEffect(() => {
-    if (!concluded && time && !timeOptions.includes(time)) setTime("");
-  }, [timeOptions, time, concluded]);
+    if (!concluded && !manualTime && time && !timeOptions.includes(time)) setTime("");
+  }, [timeOptions, time, concluded, manualTime]);
 
   // Serviços adicionais (0033): troca a lista de uma vez; false = deu erro (mensagem na tela).
   async function saveExtras(): Promise<boolean> {
@@ -254,8 +258,8 @@ export default function EditarAgendamentoPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!original) return;
-    if (!time) {
-      setError("Escolha um horário disponível.");
+    if (!time || !isValidTime(time)) {
+      setError(manualTime || concluded ? "Informe o horário." : "Escolha um horário disponível.");
       return;
     }
     const problem = extraItemsProblem(extras);
@@ -424,7 +428,7 @@ export default function EditarAgendamentoPage() {
             max={concluded ? format(new Date(), "yyyy-MM-dd") : undefined}
             onChange={(e) => setDate(e.target.value)}
           />
-          <NumberInput integer label="Duração (min)" required value={duration} onChange={setDuration} />
+          <NumberInput integer label="Duração (minutos)" required value={duration} onChange={setDuration} />
         </div>
 
         {concluded ? (
@@ -435,7 +439,12 @@ export default function EditarAgendamentoPage() {
             <Clock className="size-3.5" />
             Horário
           </label>
-          {slotsLoading ? (
+          {manualTime ? (
+            <div className="space-y-1.5">
+              <Input type="time" aria-label="Horário" required value={time} onChange={(e) => setTime(e.target.value)} />
+              <p className="text-xs text-ink-400">Use para um horário fora da grade. Se bater com outro atendimento, a Sócia avisa ao salvar.</p>
+            </div>
+          ) : slotsLoading ? (
             <p className="text-sm text-ink-400">Calculando horários livres...</p>
           ) : timeOptions.length === 0 ? (
             <p className="text-sm text-ink-400">Nenhum horário livre nesse dia. Tente outra data.</p>
@@ -457,6 +466,16 @@ export default function EditarAgendamentoPage() {
               ))}
             </div>
           )}
+          <button
+            type="button"
+            className="mt-2 text-xs font-medium text-ink-500 underline-offset-2 hover:text-ink-700 hover:underline"
+            onClick={() => {
+              setManualTime((m) => !m);
+              if (manualTime && time && !timeOptions.includes(time)) setTime("");
+            }}
+          >
+            {manualTime ? "Escolher entre os horários livres" : "Outro horário"}
+          </button>
         </div>
 
         )}
