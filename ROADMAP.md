@@ -1,7 +1,32 @@
-# Roadmap da Áurea
+# Roadmap da Sócia
 
-Atualizado em 24/10/2026. Objetivo do momento: **as primeiras assinantes pagantes**, que usam a Áurea na primeira
+Atualizado em 31/10/2026. Objetivo do momento: **as primeiras assinantes pagantes**, que usam a Sócia na primeira
 semana e continuam pagando. O que já está em produção fica no README.
+
+## 0. Agora: marca Sócia (antes Áurea)
+
+Feito:
+- [x] **App com a nova marca** (PRs #39 e #40): logotipo S em traço duplo, ícone S cacau sobre creme, visual da Áurea
+      (cores, botões dourados, ilustração dos estados vazios) e fonte Noto Serif hospedada no app.
+- [x] **E-mails da assinatura** com as cores da Áurea e o nome Sócia (`billing-emails` publicada em 31/10, versão 6).
+- [x] **Landing com a nova marca**: logotipos, favicon, nome em todos os textos, Termos e Política; CTA final
+      "Sua parceira de negócio". Publicada no endereço novo **https://socia-beauty.lovable.app**.
+- [x] **Endereço novo em todo o sistema** (31/10): links do app para o site, Termos e Política (`lib/hive/access.ts`);
+      `signup-intent` e `track` aceitam só o endereço novo (o antigo foi liberado no Lovable e pode ser usado por outra
+      pessoa); links de Termos e Política nos e-mails. Domínio próprio futuro previsto como `socia*.com.br`.
+
+Falta:
+- [ ] **Landing: capturas do celular** ainda mostram a marca Áurea. As telas novas estão prontas (`telas-socia.zip`);
+      trocar pelo agente do Lovable quando houver créditos.
+- [ ] **Landing: mensagem pronta do WhatsApp** (`src/lib/links.ts`) ainda diz "Quero saber mais sobre a Áurea".
+- [ ] **Mercado Pago**: conferir no plano de assinatura se o endereço de retorno (página `/obrigado`) aponta para o
+      endereço antigo e trocar para `https://socia-beauty.lovable.app/obrigado`.
+- [ ] **Supabase**: se o segredo `LANDING_URL` existir nas Edge Functions, atualizar para o endereço novo (senão vale o
+      padrão do código).
+- [ ] **Links fora do sistema** com o endereço antigo: bio e destaques do Instagram, WhatsApp Business, materiais impressos.
+- [ ] **Guia de uso com a nova marca** (`public/guia-socia.pdf`) e trocar o link nos e-mails (`GUIDE_URL`), hoje
+      `guia-aurea.pdf`.
+- [ ] **Instagram**: perfil, destaques e os 3 carrosséis fixados com a nova marca.
 
 ## 1. Agora: lançamento e primeiras vendas
 
@@ -12,7 +37,7 @@ semana e continuam pagando. O que já está em produção fica no README.
       pagamento real; é o maior risco antes de divulgar.
 - [x] **E-mail de confirmação da assinatura (boas-vindas)** (0042 + `billing-emails`), enviado pelo webhook quando a assinatura começa: o que foi
       contratado, quando acontece a primeira cobrança, como criar a senha, link para o app e o guia em PDF.
-- [x] **Guia de uso em PDF** (`public/guia-aurea.pdf`), com a identidade da Áurea e telas reais (anonimizadas): primeiros passos, agenda,
+- [x] **Guia de uso em PDF** (`public/guia-aurea.pdf`, ainda com a marca Áurea; ver seção 0), com a identidade da Áurea e telas reais (anonimizadas): primeiros passos, agenda,
       clientes, WhatsApp, financeiro, relatórios, dúvidas frequentes e contato.
 - [x] **Aviso antes da primeira cobrança** (0042 + `billing-emails`): e-mail no 5º dia do teste (data e valor da cobrança, como cancelar).
 - [ ] **Conteúdo do Instagram**: 3 carrosséis fixados (dois prontos), calendário de 30 dias, perfil e link com UTM.

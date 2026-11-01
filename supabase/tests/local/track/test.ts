@@ -4,7 +4,7 @@ let handler: any; (Deno as any).serve = (h: any) => { handler = h; };
 const mod = await import("./index.ts");
 let pass = 0, fail = 0;
 const check = (n: string, c: boolean, x = "") => { c ? pass++ : fail++; console.info((c ? "PASS " : "FAIL ") + n + (c ? "" : "  " + x)); };
-const SITE = "https://aurea-hivebeauty.lovable.app";
+const SITE = "https://socia-beauty.lovable.app";
 const UA_M = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148";
 const send = (body: unknown, h: Record<string, string> = {}) => handler(new Request("https://f/track", {
   method: "POST", body: typeof body === "string" ? body : JSON.stringify(body),
@@ -34,6 +34,6 @@ calls.length = 0; { const r = await handler(new Request("https://f/track", { met
 calls.length = 0; { await send({ e: "pageview", p: "/", r: `${SITE}/termos` }); check("navegação interna não vira origem", ingest().referrer_host === null); }
 check("aparelhos: tablet e computador", mod.deviceOf("Mozilla/5.0 (iPad; CPU OS 17_0)") === "tablet" && mod.deviceOf("Mozilla/5.0 (Linux; Android 14; SM-X200)") === "tablet" && mod.deviceOf("Mozilla/5.0 (Windows NT 10.0; Win64)") === "desktop");
 check("domínio próprio futuro aceito; preview do Lovable deste projeto aceito",
-  await (async () => { calls.length = 0; await send({ e: "pageview", p: "/" }, { origin: "https://www.aurea.com.br" }); const a = calls.length > 0;
+  await (async () => { calls.length = 0; await send({ e: "pageview", p: "/" }, { origin: "https://www.socia.com.br" }); const a = calls.length > 0;
     calls.length = 0; await send({ e: "pageview", p: "/" }, { origin: "https://id-preview--0d74345f-386a-4984-93f3-04929c0124cc.lovable.app" }); return a && calls.length > 0; })());
 console.info(`RESULTADO track: PASS=${pass} FAIL=${fail}`);

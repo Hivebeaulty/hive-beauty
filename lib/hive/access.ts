@@ -4,7 +4,7 @@
 // Falha FECHADA: erro da consulta ou resposta fora do formato -> sem acesso.
 // Mas o erro vira status próprio ("error"), para a tela não dizer "assinatura
 // cancelada" a quem paga e só pegou uma instabilidade.
-export const LANDING_URL = "https://aurea-hivebeauty.lovable.app";
+export const LANDING_URL = "https://socia-beauty.lovable.app";
 export const CHECKOUT_URL = "https://mpago.la/2gCWhAH";
 export const TERMS_URL = `${LANDING_URL}/termos`;
 export const PRIVACY_URL = `${LANDING_URL}/privacidade`;
