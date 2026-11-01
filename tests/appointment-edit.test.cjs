@@ -79,3 +79,19 @@ test("concluído: conferência inclui o status do recebimento; mensagens claras"
 test("concluído: a conferência inclui a cliente (correção de lançamento recusa se outra pessoa mudou)", () => {
   assert.equal(e.concludedExpectedFrom({ ...appt, status: "concluido" }, "pago").client_id, "c1");
 });
+
+test("edição: o horário atual continua disponível ao mudar a duração (mesmo dia e profissional)", () => {
+  assert.deepEqual(e.editTimeOptions(["09:00", "10:00"], "19:15", true), ["09:00", "10:00", "19:15"]);
+  assert.deepEqual(e.editTimeOptions(["09:00", "19:15"], "19:15", true), ["09:00", "19:15"]);
+  // outro dia ou outra profissional: só os livres
+  assert.deepEqual(e.editTimeOptions(["09:00"], "19:15", false), ["09:00"]);
+});
+
+test("edição: horário digitado precisa ser HH:mm", () => {
+  for (const t of ["00:00", "07:05", "19:15", "23:59"]) assert.equal(e.isValidTime(t), true, t);
+  for (const t of ["", "7:05", "24:00", "19:60", "19h15"]) assert.equal(e.isValidTime(t), false, t);
+});
+
+test("conflito ao salvar explica que pode ser a duração", () => {
+  assert.match(e.editErrorMessage("23P01").message, /duração/);
+});

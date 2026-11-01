@@ -5,7 +5,7 @@ import Link from "next/link";
 import { subDays, format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
-import { getPeriodRange } from "@/lib/hive/period";
+import { getPeriodRange, periodBoundsISO } from "@/lib/hive/period";
 import { formatMoney, greetingForHour } from "@/lib/hive/format";
 import { resolveGreetingName } from "@/lib/hive/display-name";
 import { computeClientRelationship, daysUntilNextBirthday } from "@/lib/hive/relationship";
@@ -17,6 +17,7 @@ import { Skeleton, SkeletonListItem } from "@/components/ui/skeleton";
 import { Stat } from "@/components/ui/stat";
 import { TodaySummary } from "@/components/dashboard/today-summary";
 import { UPCOMING_STATUSES, upcomingWindow } from "@/lib/hive/dashboard";
+import { FORECAST_STATUSES, forecastFor, forecastRanges, forecastWindow, type Forecast, type ForecastRow } from "@/lib/hive/forecast";
 import { CalendarPlus, UserPlus, CalendarX, Sparkles, ArrowRight } from "lucide-react";
 
 type PeriodIndicators = {
@@ -73,6 +74,7 @@ export default function InicioPage() {
   const [upcomingCount, setUpcomingCount] = useState(0);
   const [overdueCount, setOverdueCount] = useState(0);
   const [birthdaysWeekCount, setBirthdaysWeekCount] = useState(0);
+  const [forecast, setForecast] = useState<{ hoje: Forecast; semana: Forecast; mes: Forecast } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,6 +86,8 @@ export default function InicioPage() {
     const { start: monthStart, end: monthEnd } = getPeriodRange("mes");
     const activeSinceStr = format(subDays(now, 60), "yyyy-MM-dd");
     const upcoming = upcomingWindow(now);
+    const fw = forecastWindow(now);
+    const fWin = periodBoundsISO(fw.start, fw.end);
 
     // Cada chamada roda com o privilégio de quem está logado — RLS já garante
     // que faturado/recebido/pendente venham zerados para quem não é
@@ -99,6 +103,7 @@ export default function InicioPage() {
       { data: clientsForRelationship },
       { data: apptsForRelationship },
       { count: upcomingTotal },
+      { data: forecastRows },
     ] = await Promise.all([
       supabase.auth.getUser(),
       supabase.rpc("get_period_indicators", { p_company_id: companyId, p_start: todayStr, p_end: todayStr }),
@@ -136,7 +141,25 @@ export default function InicioPage() {
         .in("status", [...UPCOMING_STATUSES])
         .gt("scheduled_start", upcoming.from)
         .lt("scheduled_start", upcoming.to),
+      // Previsão de faturamento: concluídos + em aberto de hoje, da semana e do mês.
+      supabase
+        .from("appointments")
+        .select("price, status, scheduled_start")
+        .eq("company_id", companyId)
+        .in("status", [...FORECAST_STATUSES])
+        .gte("scheduled_start", fWin.from)
+        .lte("scheduled_start", fWin.to),
     ]);
+
+    {
+      const fr = (forecastRows as ForecastRow[] | null) ?? [];
+      const r = forecastRanges(now);
+      setForecast({
+        hoje: forecastFor(fr, r.hoje.start, r.hoje.end),
+        semana: forecastFor(fr, r.semana.start, r.semana.end),
+        mes: forecastFor(fr, r.mes.start, r.mes.end),
+      });
+    }
 
     // Saudação: "Como você quer ser chamada?" (profiles.display_name) > 1º nome do
     // perfil > 1º nome do metadado do login (comportamento anterior). Se a coluna
@@ -291,6 +314,42 @@ export default function InicioPage() {
           </Link>
         )}
       </Card>
+
+      {/* PREVISÃO DE FATURAMENTO ------------------------------------------- */}
+      {canSeeFinance && (
+        <Card data-testid="forecast-card">
+          <h2 className="text-sm font-semibold text-ink-700">Previsão de faturamento</h2>
+          <p className="mb-3 mt-1 text-xs text-ink-400">O que já foi atendido somado ao que está agendado.</p>
+          {loading || !forecast ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+            </div>
+          ) : (
+            <ul className="divide-y divide-ink-100">
+              {([
+                ["Hoje", forecast.hoje],
+                ["Esta semana", forecast.semana],
+                ["Este mês", forecast.mes],
+              ] as const).map(([label, f]) => (
+                <li key={label} className="flex items-start justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink-700">{label}</p>
+                    <p className="text-xs text-ink-400">
+                      {formatMoney(f.realizado)} realizado · {formatMoney(f.agendado)} agendado
+                    </p>
+                  </div>
+                  <p className="shrink-0 whitespace-nowrap font-serif text-lg font-medium tabular-nums text-gold-700">{formatMoney(f.previsto)}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link href="/financeiro" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-ink-500 hover:text-ink-700">
+            Ver no Financeiro <ArrowRight className="size-3.5" />
+          </Link>
+        </Card>
+      )}
 
       {/* NEGÓCIO (mês) ----------------------------------------------------- */}
       <Card>

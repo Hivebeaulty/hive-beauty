@@ -19,14 +19,26 @@ Falta:
 - [ ] **Landing: capturas do celular** ainda mostram a marca Áurea. As telas novas estão prontas (`telas-socia.zip`);
       trocar pelo agente do Lovable quando houver créditos.
 - [ ] **Landing: mensagem pronta do WhatsApp** (`src/lib/links.ts`) ainda diz "Quero saber mais sobre a Áurea".
-- [ ] **Mercado Pago**: conferir no plano de assinatura se o endereço de retorno (página `/obrigado`) aponta para o
-      endereço antigo e trocar para `https://socia-beauty.lovable.app/obrigado`.
-- [ ] **Supabase**: se o segredo `LANDING_URL` existir nas Edge Functions, atualizar para o endereço novo (senão vale o
-      padrão do código).
-- [ ] **Links fora do sistema** com o endereço antigo: bio e destaques do Instagram, WhatsApp Business, materiais impressos.
-- [ ] **Guia de uso com a nova marca** (`public/guia-socia.pdf`) e trocar o link nos e-mails (`GUIDE_URL`), hoje
+- [x] **Mercado Pago**: endereço de retorno do plano trocado para o endereço novo (31/10).
+- [x] **Supabase**: não há segredo `LANDING_URL`; vale o padrão do código (endereço novo).
+- [x] **Instagram**: nome, foto de perfil e link da bio com o endereço novo e UTM
+      (`?utm_source=instagram&utm_medium=bio&utm_campaign=perfil`) (31/10).
+- [ ] **Outros links com o endereço antigo**: WhatsApp Business e materiais impressos, se houver.
+- [x] **Edição de atendimento** (em aberto e concluído): cliente, serviço, duração e horário. O horário atual continua
+      disponível ao mudar a duração ou o serviço, e dá para digitar um horário fora da grade ("Outro horário"); o banco
+      continua recusando conflito com outro atendimento. Atendimento concluído atualiza o Financeiro junto (0030/0034).
+- [x] **Previsão de faturamento**: hoje, esta semana e este mês no Início; previsão do período escolhido no Financeiro.
+      Previsto = concluídos + agendados (cancelados e faltas ficam de fora), pelo dia de Brasília (`lib/hive/forecast.ts`).
+- [ ] **Branding book da Sócia**: atualizar com o logotipo novo (S em traço duplo, versões e tamanhos mínimos), as cores
+      da Áurea mantidas, a Noto Serif, o ícone do app e exemplos de uso certo e errado.
+- [ ] **Linguagem da Sócia**: tom de voz e vocabulário da marca (a Sócia como parceira do negócio, não uma ferramenta),
+      com palavras a usar e a evitar, e aplicar no app, nos e-mails, na landing e no Instagram.
+- [ ] **Landing: nova abordagem**: apresentar as soluções que a Sócia traz para a rotina da nail designer (menos faltas,
+      agenda cheia, clareza do dinheiro, tempo livre) em vez de listar funcionalidades técnicas. Depende da linguagem.
+- [ ] **Guia de uso com a nova marca** (`public/guia-socia.pdf`), já com a edição de atendimento e a previsão de
+      faturamento, e trocar o link nos e-mails (`GUIDE_URL`), hoje
       `guia-aurea.pdf`.
-- [ ] **Instagram**: perfil, destaques e os 3 carrosséis fixados com a nova marca.
+- [ ] **Instagram**: destaques e os 3 carrosséis fixados com a nova marca.
 
 ## 1. Agora: lançamento e primeiras vendas
 

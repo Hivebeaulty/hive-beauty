@@ -67,6 +67,22 @@ export function hasChanges(a: AppointmentSnapshot, f: EditForm): boolean {
   );
 }
 
+/**
+ * Horários oferecidos na edição: os livres da grade + o horário ATUAL sempre que o dia e a
+ * profissional continuam os mesmos, mesmo que a duração ou o serviço mudem (antes o horário
+ * atual sumia ao mudar a duração). Se a nova duração bater em outro atendimento, o banco
+ * recusa ao salvar (23P01) e a tela explica.
+ */
+export function editTimeOptions(slots: string[], originalTime: string, sameDayAndProfessional: boolean): string[] {
+  if (!sameDayAndProfessional || !originalTime || slots.includes(originalTime)) return slots;
+  return [originalTime, ...slots].sort();
+}
+
+/** "HH:mm" válido (para o horário digitado em "Outro horário"). */
+export function isValidTime(t: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
+}
+
 /** A alteração muda o que a cliente sabe do agendamento (dia, horário ou serviço)? */
 export function isReschedule(a: AppointmentSnapshot, f: EditForm): boolean {
   return f.serviceId !== a.service_id || f.start.getTime() !== new Date(a.scheduled_start).getTime();
@@ -76,7 +92,7 @@ export function isReschedule(a: AppointmentSnapshot, f: EditForm): boolean {
 export function editErrorMessage(code: string | null | undefined): { message: string; reload: boolean; reloadSlots: boolean } {
   switch (code) {
     case "23P01":
-      return { message: "Esse horário acabou de ser ocupado por outro atendimento. Escolha outro horário.", reload: false, reloadSlots: true };
+      return { message: "Esse horário já está ocupado por outro atendimento da profissional (confira também a duração). Escolha outro horário ou ajuste a duração.", reload: false, reloadSlots: true };
     case "AUE01":
       return { message: "Este agendamento não está mais em aberto (foi concluído, cancelado ou marcado como falta). A tela foi atualizada.", reload: true, reloadSlots: false };
     case "AUE02":
