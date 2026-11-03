@@ -21,8 +21,11 @@ test("imagens, manifest e ícones abrem sem login", () => {
     assert.equal(protegido(p), false, p);
   }
 });
+test("o service worker dos avisos (/sw.js) abre sem login", () => {
+  assert.equal(protegido("/sw.js"), false);
+});
 test("as páginas do app continuam protegidas", () => {
-  for (const p of ["/", "/agenda", "/clientes", "/admin/financeiro", "/guia-aurea", "/assinatura"]) {
+  for (const p of ["/", "/agenda", "/clientes", "/admin/financeiro", "/guia-aurea", "/assinatura", "/mais/configuracoes"]) {
     assert.equal(protegido(p), true, p);
   }
 });

@@ -48,9 +48,11 @@ export async function middleware(request: NextRequest) {
 // /login (HTML) e o <Image> do Next exibiria imagem quebrada. O otimizador
 // /_next/image também busca o arquivo de origem sem cookies de sessão, então o
 // mesmo redirect o quebrava. Manifest e ícones de PWA/favicon sofriam igual.
+// O service worker (/sw.js, avisos antes do atendimento) também: o navegador o busca
+// para registrar e para checar atualização, e um redirect para /login o invalidaria.
 // Rotas de página (sem extensão) continuam protegidas normalmente.
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|api|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|json|txt|xml|webmanifest|pdf|woff2)$).*)",
+    "/((?!_next/static|_next/image|api|favicon.ico|sw\\.js|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|json|txt|xml|webmanifest|pdf|woff2)$).*)",
   ],
 };
