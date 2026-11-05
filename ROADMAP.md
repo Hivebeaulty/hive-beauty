@@ -18,7 +18,8 @@ filtro de profissional.
 - [x] Respeita o filtro de profissional; só a administração do negócio vê valores (`canSeeFinance`), como no Início.
 - [x] Cabe de 320 a 1440 px nos dois temas (inclusive com R$ 123.456,78); testes da regra (`tests/forecast.test.cjs`)
       e de interface (U30 a U33 em `tests/ui`).
-- [ ] Atualizar o guia em PDF (página da Agenda) depois que estiver no ar.
+- [x] Guia em PDF atualizado (05/11): página da Agenda com a captura nova (visão Semana com o Previsto) e o texto da
+      previsão; página do Início cita a previsão na Agenda.
 
 ### 0.2 WhatsApp: sincronizações repetidas no celular e quedas
 
