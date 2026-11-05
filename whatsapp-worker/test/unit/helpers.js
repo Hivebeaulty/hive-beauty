@@ -24,6 +24,7 @@ export class MemoryDb {
   async setState(companyId, status, extra = {}) { this.#maybeFail('setState'); this.calls.push({ setState: status, ...extra }) }
   async putQr(companyId, qr) { this.#maybeFail('putQr'); this.calls.push({ putQr: qr }) }
   async releaseLease() { this.#maybeFail('releaseLease') }
+  async recordConnectionEvent(companyId, event, code, kind, attempt) { this.#maybeFail('recordConnectionEvent'); this.calls.push({ event: [event, code, kind, attempt] }) }
   async recordInbound(companyId, m) { this.#maybeFail('recordInbound'); this.calls.push({ inbound: m }); return { inserted: true, opted_out: false } }
   async recordMessageStatus(companyId, id, s) { this.#maybeFail('recordMessageStatus'); this.calls.push({ status: [id, s] }); return true }
   states() { return this.calls.filter((c) => c && c.setState).map((c) => c.setState) }

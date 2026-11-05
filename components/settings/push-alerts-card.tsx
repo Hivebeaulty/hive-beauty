@@ -1,7 +1,8 @@
 "use client";
-// Aviso no celular antes do atendimento (0048). Pessoal: vale para QUALQUER papel e para este
-// aparelho. A antecedência (15 min, 30 min, 1 h, 2 h ou desligado) é da profissional (push_prefs).
-// Se a migration 0048 ainda não foi aplicada, o card some e nada quebra.
+// Avisos no celular (0048 e 0049). Pessoal: vale para QUALQUER papel e para este aparelho.
+//   * antes do atendimento: antecedência de 15 min, 30 min, 1 h, 2 h ou desligado (push_prefs);
+//   * clientes sumidas: um aviso por semana, que a pessoa pode desligar (0049).
+// Se a migration 0048 ainda não foi aplicada, o card some; sem a 0049, só some a opção das sumidas.
 import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -47,6 +48,8 @@ export function PushAlertsCard() {
   const [busy, setBusy] = useState(false);
   const [hasDevice, setHasDevice] = useState(false);
   const [minutes, setMinutes] = useState<number | null>(null);
+  // Aviso semanal de clientes sumidas: null = indisponível (migration 0049 ainda não aplicada).
+  const [overdue, setOverdue] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +63,9 @@ export function PushAlertsCard() {
         return;
       }
       setMinutes(typeof data === "number" ? data : null);
+      const od = await createClient().rpc("push_get_overdue_alert", { p_member_id: memberId });
+      if (cancelled) return;
+      setOverdue(od.error ? null : od.data === true);
       setSupport(s);
       if (s === "ready" && Notification.permission === "granted") {
         try {
@@ -84,6 +90,16 @@ export function PushAlertsCard() {
     const { error } = await createClient().rpc("push_set_alert_minutes", { p_member_id: memberId, p_minutes: value });
     if (error) throw error;
     setMinutes(value);
+  }
+
+  async function chooseOverdue(value: boolean) {
+    const before = overdue;
+    setOverdue(value);
+    const { error } = await createClient().rpc("push_set_overdue_alert", { p_member_id: memberId, p_enabled: value });
+    if (error) {
+      setOverdue(before);
+      toast.error("Não foi possível salvar. Tente novamente.");
+    }
   }
 
   async function enable() {
@@ -168,9 +184,9 @@ export function PushAlertsCard() {
       <div className="flex items-start gap-3">
         <Bell className="mt-0.5 size-5 shrink-0 text-ink-700" aria-hidden="true" />
         <div>
-          <h2 className="text-sm font-semibold text-ink-800">Aviso antes do atendimento</h2>
+          <h2 className="text-sm font-semibold text-ink-800">Avisos no celular</h2>
           <p className="mt-1 text-sm text-ink-500">
-            Receba uma notificação no celular um tempo antes de cada cliente, com o nome, o serviço e o horário.
+            Receba uma notificação no celular um tempo antes de cada cliente, com o nome, o serviço e o horário, e um lembrete semanal das clientes que sumiram.
           </p>
         </div>
       </div>
@@ -193,6 +209,7 @@ export function PushAlertsCard() {
         </Button>
       ) : (
         <>
+          <p className="text-xs font-semibold text-ink-500">Aviso antes de cada atendimento</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Quanto tempo antes avisar">
             {options.map((o) => (
               <button
@@ -210,6 +227,34 @@ export function PushAlertsCard() {
               </button>
             ))}
           </div>
+          {overdue !== null && (
+            <div className="flex items-start justify-between gap-3 rounded-lg border border-ink-100 px-3 py-2.5">
+              <div>
+                <p className="text-sm font-semibold text-ink-800">Clientes sumidas</p>
+                <p className="mt-0.5 text-xs text-ink-500">
+                  Toda segunda-feira, às 9h, um aviso com quantas clientes passaram da hora de voltar, para você chamar no WhatsApp.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={overdue}
+                aria-label="Avisar sobre clientes sumidas"
+                onClick={() => chooseOverdue(!overdue)}
+                className={cn(
+                  "relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors",
+                  overdue ? "bg-ink-800" : "bg-ink-200"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 size-5 rounded-full bg-white shadow transition-all",
+                    overdue ? "left-[22px]" : "left-0.5"
+                  )}
+                />
+              </button>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" onClick={sendTest}>
               Testar neste aparelho

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { classifyClose, extractText, isIgnorableJid, isOptOutWord, mapStatus, phoneToJid, pickRemoteJid } from '../../src/wa-utils.js'
+import { classifyClose, describeClose, extractText, isIgnorableJid, isOptOutWord, mapStatus, phoneToJid, pickRemoteJid } from '../../src/wa-utils.js'
 import { nextDelayMs } from '../../src/backoff.js'
 import { maskPhone } from '../../src/logger.js'
 
@@ -29,10 +29,19 @@ test('confirmações: entregue, lida, falha; o resto é ignorado', () => {
   assert.equal(mapStatus(0), 'failed'); assert.equal(mapStatus(2), null); assert.equal(mapStatus(1), null)
 })
 test('fechamento: o que fazer em cada código do WhatsApp', () => {
-  assert.equal(classifyClose(401), 'logged_out'); assert.equal(classifyClose(500), 'logged_out')
+  assert.equal(classifyClose(401), 'logged_out')
+  // 500 e 411 NÃO são desconexão: são erros do WhatsApp/da sessão e nunca apagam credenciais
+  assert.equal(classifyClose(500), 'bad_session'); assert.equal(classifyClose(411), 'bad_session')
   assert.equal(classifyClose(440), 'replaced'); assert.equal(classifyClose(403), 'forbidden')
   assert.equal(classifyClose(515), 'restart')
   for (const c of [408, 428, 503, null, 999]) assert.equal(classifyClose(c), 'reconnect')
+})
+test('motivo da queda em texto curto, sem dados pessoais', () => {
+  assert.match(describeClose(401, 'logged_out'), /desconectou.*401.*QR/)
+  assert.match(describeClose(500, 'bad_session'), /500.*Conectar/)
+  assert.match(describeClose(null, 'bad_session'), /sem código/)
+  assert.equal(describeClose(440, 'replaced'), 'Sessão aberta em outro lugar')
+  assert.match(describeClose(428, 'reconnect'), /428/)
 })
 test('palavras de saída iguais às do banco', () => {
   for (const w of ['SAIR', ' sair! ', 'Parar.', 'stop']) assert.ok(isOptOutWord(w), w)

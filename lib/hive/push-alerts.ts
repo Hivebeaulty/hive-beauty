@@ -34,3 +34,18 @@ export function urlBase64ToUint8Array(base64: string) {
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
 }
+
+// --- IGUAIS a overdueNotification de supabase/functions/push-appointment-alerts/index.ts (o teste compara) ---
+/** Aviso semanal de clientes sumidas: quantas são e o que fazer. */
+export function overdueNotification(count: number) {
+  const one = count === 1;
+  return {
+    title: one ? "1 cliente sumida" : `${count} clientes sumidas`,
+    body: one
+      ? "Dê uma olhada na lista e entre em contato com ela."
+      : "Dê uma olhada na lista e entre em contato com elas.",
+    url: "/clientes?segmento=sumidas",
+    tag: "overdue-clients",
+  };
+}
+// -------------------------------------------------------------------------------------------------------------
