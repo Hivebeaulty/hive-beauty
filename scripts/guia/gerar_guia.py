@@ -409,7 +409,8 @@ def p_inicio(c):
         "<b>Previsão de faturamento</b>: para hoje, esta semana e este mês, soma o que já foi atendido (realizado) "
         "com o que está agendado. Cancelamentos e faltas ficam de fora.",
         "A previsão muda sozinha: cada atendimento marcado, remarcado ou cancelado já entra na conta.",
-        "No Financeiro, a previsão acompanha o período que você escolher, inclusive um período personalizado.",
+        "Na Agenda, a previsão acompanha o dia, a semana ou o mês que você estiver vendo. No Financeiro, o período que "
+        "você escolher, inclusive um período personalizado.",
         "Só a administração do negócio vê os valores.",
     ]:
         y = bullet(c, M, y, t, W - 2 * M) - 9
@@ -423,6 +424,8 @@ def p_agenda(c):
     y = title(c, [("Seu dia, sua semana,", False), ("seu mês.", True)], H - M - 34, width=tw)
     y = para(c, "Alterne entre <b>Dia</b>, <b>Semana</b> e <b>Mês</b> no topo da Agenda. No mês, os pontos mostram "
                 "os dias com atendimento: dourado para em aberto e verde para concluído.", M, y - 14, tw, BODY_MUTED)
+    y = para(c, "Logo abaixo das datas, o <b>Previsto</b> soma o que já foi realizado e o que está agendado no período "
+                "que você está vendo, e acompanha as setas e o filtro de profissional.", M, y - 6, tw, BODY_MUTED)
     kicker(c, "Novo atendimento", y - 24)
     y -= 40
     for t in [
