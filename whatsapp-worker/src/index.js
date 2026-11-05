@@ -6,7 +6,7 @@ import { createPool, WorkerDb } from './db.js'
 import { useDbAuthState } from './auth-state.js'
 import { SessionManager, makeSessionFactory } from './manager.js'
 
-const VERSION = '0.4.0'
+const VERSION = '0.4.1'
 
 async function main() {
   guardConsole()   // antes de carregar o Baileys: chaves da libsignal nunca vão para o log

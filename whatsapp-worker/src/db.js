@@ -56,6 +56,11 @@ export class WorkerDb {
   putQr(companyId, qr) {
     return this.pool.query('select whatsapp_private.put_qr($1, $2, $3)', [companyId, this.workerId, qr])
   }
+  // Histórico de aberturas e quedas com o código (migration 0050), para diagnosticar desconexões.
+  recordConnectionEvent(companyId, event, code = null, kind = null, attempt = null) {
+    return this.pool.query('select whatsapp_private.record_connection_event($1, $2, $3, $4, $5, $6)',
+      [companyId, this.workerId, event, code, kind, attempt])
+  }
   async authRead(companyId, category, keyIds) {
     const r = await this.pool.query('select * from whatsapp_private.auth_read($1, $2, $3, $4)',
       [companyId, this.workerId, category, keyIds])

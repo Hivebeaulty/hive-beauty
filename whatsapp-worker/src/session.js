@@ -6,8 +6,8 @@
 import { nextDelayMs } from './backoff.js'
 import { maskPhone } from './logger.js'
 import {
-  classifyClose, closeStatusCode, extractText, isIgnorableJid, mapStatus, messageIdFor, normalizePnJid, phoneToJid,
-  pickRemoteJid,
+  classifyClose, closeStatusCode, describeClose, extractText, isIgnorableJid, mapStatus, messageIdFor, normalizePnJid,
+  phoneToJid, pickRemoteJid,
 } from './wa-utils.js'
 
 export class NonRetryableError extends Error {}
@@ -26,6 +26,7 @@ export class CompanySession {
     this.state = 'idle'                 // idle | connecting | open | stopping | stopped
     this.attempt = 0
     this.qrCycles = 0
+    this.badSessionCount = 0            // quedas 500/411 seguidas, sem conectar no meio
     this.reconnectTimer = null
     this.lastSendAt = 0
     this.sendChain = Promise.resolve()
@@ -82,9 +83,11 @@ export class CompanySession {
       this.state = 'open'
       this.attempt = 0
       this.qrCycles = 0
+      this.badSessionCount = 0
       const me = this.provider.selfIdentity(this.sock)
       this.log.info({ phone: maskPhone(me.phone) }, 'conectado')
       await this.#safe(() => this.db.setState(this.companyId, 'connected', { phone: me.phone, jid: me.jid }), 'estado connected')
+      await this.#record('open')
       return
     }
     if (connection === 'close') {
@@ -92,10 +95,24 @@ export class CompanySession {
       const kind = classifyClose(code)
       this.log.warn({ code, kind }, 'conexão fechada')
       this.state = 'connecting'
+      await this.#record('close', code, kind)
       if (kind === 'logged_out') {
-        // credenciais inválidas: o banco apaga credenciais e QR; precisa novo QR
-        await this.#safe(() => this.db.setState(this.companyId, 'logged_out'), 'estado logged_out')
+        // o WhatsApp/celular removeu este aparelho (401): o banco apaga credenciais e QR; precisa novo QR.
+        // O motivo fica em last_error, para sabermos depois por que caiu.
+        await this.#safe(() => this.db.setState(this.companyId, 'logged_out', { error: describeClose(code, kind) }), 'estado logged_out')
         await this.stop({ reason: 'logged_out' })
+      } else if (kind === 'bad_session') {
+        // 500/411: erro do WhatsApp ou da sessão, quase sempre passageiro. NÃO apaga as credenciais:
+        // tenta de novo com espera crescente. Se não voltar, para em "erro" COM as credenciais
+        // (o botão Conectar reabre sem pedir QR).
+        this.badSessionCount += 1
+        if (this.badSessionCount > (this.config.badSessionMaxRetries ?? 10)) {
+          this.log.warn({ code, tries: this.badSessionCount }, 'falha repetida: parando em erro (credenciais preservadas)')
+          await this.#safe(() => this.db.setState(this.companyId, 'error', { error: describeClose(code, kind) }), 'estado error')
+          await this.stop({ reason: 'bad_session' })
+        } else {
+          this.#scheduleReconnect(this.#delay())
+        }
       } else if (kind === 'replaced' || kind === 'forbidden') {
         const msg = kind === 'replaced' ? 'Sessão aberta em outro lugar' : 'Acesso negado pelo WhatsApp'
         await this.#safe(() => this.db.setState(this.companyId, 'error', { error: msg }), 'estado error')
@@ -104,6 +121,11 @@ export class CompanySession {
         this.#scheduleReconnect(kind === 'restart' ? 0 : this.#delay())
       }
     }
+  }
+
+  // Histórico de aberturas e quedas (com o código) no banco, para diagnóstico. Nunca derruba a sessão.
+  #record(event, code = null, kind = null) {
+    return this.#safe(() => this.db.recordConnectionEvent?.(this.companyId, event, code, kind, this.attempt), 'registrar evento de conexão')
   }
 
   #scheduleReconnect(delayMs) {

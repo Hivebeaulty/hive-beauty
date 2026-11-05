@@ -55,6 +55,9 @@ export function readConfig(env = process.env) {
     outboxLockSec: int(env, 'OUTBOX_LOCK_SECONDS', 60, 10, 600),
     reconnectBaseMs: int(env, 'RECONNECT_BASE_MS', 2000, 10, 60000),
     reconnectMaxMs: int(env, 'RECONNECT_MAX_MS', 60000, 100, 600000),
+    // Quedas 500/411 seguidas (sem conectar no meio) toleradas antes de parar em "erro". As credenciais
+    // NUNCA são apagadas por esses códigos; só o 401 (aparelho removido) apaga.
+    badSessionMaxRetries: int(env, 'BAD_SESSION_MAX_RETRIES', 10, 1, 50),
     sendIntervalMs: int(env, 'SEND_INTERVAL_MS', 3000, 0, 60000),
     // Receber e enviar andam juntos. Ligar só com autorização (roteiro de implantação W5).
     messagingEnabled: env.WA_MESSAGING_ENABLED === 'true',

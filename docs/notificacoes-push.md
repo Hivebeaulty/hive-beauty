@@ -1,6 +1,6 @@
 # Aviso no celular antes do atendimento (notificação push)
 
-A profissional ativa em **Mais → Configurações → Aviso antes do atendimento**, escolhe a antecedência
+A profissional ativa em **Mais → Configurações → Avisos no celular**, escolhe a antecedência
 (15 min, 30 min, 1 h, 2 h ou desligado) e recebe no celular: **"Daqui a 30 min: Ana"** / **"Gel nas mãos às 14:30"**.
 Ao tocar, abre a Agenda. Migration `0048`; função `push-appointment-alerts`; service worker `public/sw.js`.
 
@@ -41,3 +41,19 @@ só se o horário do aviso chegou nos últimos 15 minutos (sem aviso atrasado); 
 
 Pela profissional: Configurações → "Desligado" (ou "Desativar neste aparelho").
 Geral: `select cron.unschedule('aurea-push-alerts');`
+
+## Aviso semanal de clientes sumidas (migration 0049)
+
+Toda **segunda-feira, a partir das 9h (Brasília)**, quem tem aparelho inscrito recebe um aviso com quantas clientes
+passaram da hora de voltar: **"5 clientes sumidas"** / **"Dê uma olhada na lista e entre em contato com elas."**
+Ao tocar, abre **Clientes → Sumidas**. Só chega se houver pelo menos 1 sumida; cada pessoa pode desligar em
+Configurações → Avisos no celular → Clientes sumidas.
+
+- **Quem é "sumida":** a mesma regra da aba Sumidas (`lib/hive/relationship.ts`): cliente ativa que passou de 1,5x o
+  intervalo médio das visitas dela (ou de 60 dias, com 0 ou 1 visita). Quem foi inativada não conta. A contagem é feita
+  pela função `push-appointment-alerts` com uma cópia dessa regra (`isOverdueClient`); `tests/push-overdue.test.cjs`
+  compara as duas.
+- **Uma vez por semana:** `push_claim_weekly_overdue()` reserva o aviso em `push_weekly_log` (membro + semana). Se a
+  função ficar fora do ar na segunda, a semana passa.
+- **Teste manual (fora de segunda):** chamar a função com o segredo do cron e o corpo
+  `{"forceOverdueMember":"<id do membro>"}`. Ignora o dia/hora e o limite semanal e envia só a esse membro.

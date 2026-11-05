@@ -77,9 +77,9 @@ export function mapStatus(status) {
 // O que fazer quando a conexão fecha (códigos de DisconnectReason do Baileys).
 export function classifyClose(statusCode) {
   switch (statusCode) {
-    case 401: return 'logged_out'          // desconectado pelo celular: precisa novo QR
-    case 500: return 'logged_out'          // sessão corrompida: precisa novo QR
-    case 411: return 'logged_out'          // incompatibilidade de multi-dispositivo
+    case 401: return 'logged_out'          // o WhatsApp/celular removeu este aparelho: precisa novo QR (único caso que apaga credenciais)
+    case 500: return 'bad_session'         // erro do servidor/sessão (também falha passageira no login): NÃO apaga credenciais
+    case 411: return 'bad_session'         // incompatibilidade de multi-dispositivo: idem; tenta de novo e, se persistir, para em erro
     case 440: return 'replaced'            // a mesma sessão foi aberta em outro lugar
     case 403: return 'forbidden'           // acesso negado pelo WhatsApp (possível bloqueio)
     case 515: return 'restart'             // o próprio WhatsApp pede reinício (ex.: após o QR)
@@ -90,6 +90,18 @@ export function classifyClose(statusCode) {
 export function closeStatusCode(lastDisconnect) {
   const e = lastDisconnect?.error
   return e?.output?.statusCode ?? e?.statusCode ?? null
+}
+
+// Texto curto (sem dados pessoais) com o motivo da queda, para o banco e para a tela de conexão.
+export function describeClose(statusCode, kind) {
+  const c = statusCode ?? 'sem código'
+  switch (kind) {
+    case 'logged_out': return `O WhatsApp desconectou este aparelho (código ${c}). Conecte de novo com o QR.`
+    case 'bad_session': return `Falha repetida de conexão com o WhatsApp (código ${c}). Toque em Conectar para tentar de novo.`
+    case 'replaced': return 'Sessão aberta em outro lugar'
+    case 'forbidden': return 'Acesso negado pelo WhatsApp'
+    default: return `Conexão fechada (código ${c})`
+  }
 }
 
 export function isOptOutWord(text) {
