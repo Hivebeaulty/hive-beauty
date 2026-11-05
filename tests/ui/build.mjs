@@ -22,6 +22,8 @@ await build({
   jsx: "automatic",
   tsconfig: join(ROOT, "tsconfig.json"),
   define: { "process.env.NODE_ENV": '"production"' },
+  // next/link (usado pela Agenda) lê outras variáveis de process.env no navegador
+  banner: { js: 'var process = globalThis.process || { env: { NODE_ENV: "production" } };' },
   logLevel: "error",
   plugins: [
     {

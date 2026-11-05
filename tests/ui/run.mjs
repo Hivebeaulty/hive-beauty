@@ -707,3 +707,203 @@ test("U29 mensagens automáticas: 6 datas; liga na hora; personalizar com prévi
   await page.screenshot({ path: join(SHOTS, "98-auto-mensagens.png"), fullPage: true });
   await page.close();
 });
+
+// ============================================================ Agenda: previsão do período (roadmap 0.1)
+// Página REAL da Agenda com o banco em memória (window.__db) e o relógio parado
+// em quinta, 05/11/2026, 13h em Brasília. Semana exibida: 02 a 08/11. Mês: novembro
+// (a grade vai de 26/10 a 06/12, mas só os dias de novembro entram na previsão).
+const NOTO = (await import("node:fs")).readFileSync(join(HERE, "../../public/fonts/noto-serif.woff2")).toString("base64");
+const brt = (day, hm) => new Date(`2026-${day}T${hm}:00-03:00`).toISOString();
+function agendaRows(big = false) {
+  const v = (n) => (big ? 123456.78 : n);
+  let n = 0;
+  const a = (day, hm, status, price, member = "m1", client = "Carla Dias", service = "Alongamento em gel") => ({
+    id: `a${++n}`, company_id: "00000000-0000-0000-0000-000000000001", scheduled_start: brt(day, hm),
+    scheduled_end: new Date(Date.parse(brt(day, hm)) + 3600e3).toISOString(), status, price, professional_member_id: member,
+    clients: { name: client }, services: { name: service },
+  });
+  if (big) return [a("11-05", "10:00", "concluido", v(0)), a("11-05", "15:00", "agendado", v(0))];
+  return [
+    a("11-05", "10:00", "concluido", 100, "m1", "Ana Paula", "Manicure"),
+    a("11-05", "15:00", "agendado", 80.5, "m1", "Juliana Rocha", "Esmaltação em gel"),
+    a("11-05", "16:00", "agendado", 70, "m2", "Fernanda Lopes", "Design de sobrancelha"),
+    a("11-05", "12:00", "cancelado", 999, "m1", "Cancelada", "Manicure"),
+    a("11-05", "09:00", "nao_compareceu", 999, "m1", "Faltou", "Manicure"),
+    a("11-03", "14:00", "concluido", 60),
+    a("11-07", "11:00", "confirmado", 120),
+    a("11-08", "23:30", "agendado", 40),   // domingo 23h30 em Brasília: ainda é desta semana
+    a("11-01", "10:00", "concluido", 150), // domingo 01/11: do mês, mas da semana anterior
+    a("11-20", "10:00", "agendado", 200),
+    a("10-30", "10:00", "agendado", 500),  // na grade de novembro, fora do mês
+    a("12-02", "10:00", "agendado", 300),  // na grade de novembro, fora do mês
+  ];
+}
+async function openAgenda({ role = "owner", width = 390, height = 900, theme = "", big = false, forecastDelay = 20, failForecast = false } = {}) {
+  const page = await browser.newPage();
+  await page.setViewport({ width, height, deviceScaleFactor: 1 });
+  await page.emulateTimezone("America/Sao_Paulo");
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.evaluateOnNewDocument((rows, forecastDelay, failForecast) => {
+    // relógio parado em 05/11/2026 13h (Brasília), andando a partir daí
+    const R = Date, fixed = R.parse("2026-11-05T13:00:00-03:00"), t0 = R.now();
+    class D extends R { constructor(...a) { if (a.length === 0) super(fixed + (R.now() - t0)); else super(...a); } static now() { return fixed + (R.now() - t0); } }
+    window.Date = D;
+    const isForecast = (c) => c.table === "appointments" && c.select.includes("price");
+    window.__db = {
+      tables: {
+        appointments: rows,
+        company_members: [
+          { id: "m1", role: "owner", active: true, company_id: "00000000-0000-0000-0000-000000000001" },
+          { id: "m2", role: "professional", active: true, company_id: "00000000-0000-0000-0000-000000000001" },
+        ],
+      },
+      rpc: { get_company_member_names: [{ member_id: "m1", full_name: "Ana Lima" }, { member_id: "m2", full_name: "Bia Rocha" }] },
+      calls: [],
+      delay: (c) => (isForecast(c) ? forecastDelay : 20),
+      fail: (c) => failForecast && isForecast(c),
+    };
+  }, agendaRows(big), forecastDelay, failForecast);
+  await page.goto(`${PAGE}?view=agenda&role=${role}${theme ? `&theme=${theme}` : ""}`);
+  // fonte real do app (Noto Serif de public/fonts), para medir larguras de verdade
+  await page.addStyleTag({ content: `@font-face{font-family:"Noto Serif";src:url(data:font/woff2;base64,${NOTO}) format("woff2");font-weight:400 700}:root{--font-sans:"Noto Serif",Georgia,serif;--font-serif:"Noto Serif",Georgia,serif}` });
+  await page.evaluate(() => document.fonts.ready);
+  page.errors = errors;
+  return page;
+}
+const norm = (s) => s.replace(/\s+/g, " ").trim();
+const forecastText = (page) => page.$eval('[data-testid="agenda-forecast"]', (e) => e.innerText).then(norm);
+const waitForecast = (page) => page.waitForFunction(() => document.querySelector('[data-testid="agenda-forecast-value"]'), { timeout: 6000 });
+const pickView = (page, label) =>
+  page.evaluate((l) => [...document.querySelectorAll("button")].find((b) => b.innerText.trim() === l).click(), label);
+const waitValue = (page, v) =>
+  page.waitForFunction((v) => document.querySelector('[data-testid="agenda-forecast-value"]')?.innerText.replace(/\s+/g, " ") === v, { timeout: 6000 }, v);
+const pressNav = (page, aria) => page.$eval(`button[aria-label="${aria}"]`, (b) => b.click());
+
+test("U30 Agenda: previsão do período exibido no Dia, na Semana e no Mês; setas, Hoje e filtro de profissional", async () => {
+  const page = await openAgenda();
+  await waitForecast(page);
+  // Dia 05/11: 100 concluído + 80,50 + 70 em aberto; cancelado e falta fora
+  assert.equal(await forecastText(page), "Previsto R$ 250,50 R$ 100,00 realizado · R$ 150,50 agendado");
+  // Semana 02 a 08/11 (inclui domingo 23h30; não inclui 01/11)
+  await pickView(page, "Semana");
+  await waitValue(page, "R$ 470,50");
+  assert.equal(await forecastText(page), "Previsto R$ 470,50 R$ 160,00 realizado · R$ 310,50 agendado");
+  // Mês: só novembro (30/10 e 02/12 estão na grade, mas fora do mês)
+  await pickView(page, "Mês");
+  await waitValue(page, "R$ 820,50");
+  assert.equal(await forecastText(page), "Previsto R$ 820,50 R$ 310,00 realizado · R$ 510,50 agendado");
+  // setas: dezembro só tem o de 02/12; outubro só o de 30/10
+  await pressNav(page, "Próximo");
+  await waitValue(page, "R$ 300,00");
+  await pressNav(page, "Anterior");
+  await pressNav(page, "Anterior");
+  await waitValue(page, "R$ 500,00");
+  // Hoje volta para novembro
+  await clickButton(page, "Hoje");
+  await waitValue(page, "R$ 820,50");
+  // semana seguinte vazia: R$ 0,00
+  await pickView(page, "Semana");
+  await waitValue(page, "R$ 470,50");
+  await pressNav(page, "Próximo");
+  await waitValue(page, "R$ 0,00");
+  assert.equal(await forecastText(page), "Previsto R$ 0,00 R$ 0,00 realizado · R$ 0,00 agendado");
+  await clickButton(page, "Hoje");
+  await waitValue(page, "R$ 470,50");
+  // filtro de profissional (há duas): Ana tira os 70 da Bia
+  await pickView(page, "Dia");
+  await waitValue(page, "R$ 250,50");
+  await page.select("select", "m1");
+  await waitValue(page, "R$ 180,50");
+  await page.select("select", "m2");
+  await waitValue(page, "R$ 70,00");
+  await page.select("select", "all");
+  await waitValue(page, "R$ 250,50");
+  // a consulta da previsão é leve, só com os status que entram na conta e limites em Brasília
+  const calls = (await page.evaluate(() => window.__db.calls)).filter((c) => c.select.includes("price"));
+  assert.ok(calls.every((c) => c.select === "price, status, scheduled_start"));
+  const last = calls.at(-1).filters;
+  assert.deepEqual(last.find((f) => f[0] === "in")[2], ["concluido", "agendado", "confirmado", "em_atendimento"]);
+  assert.equal(last.find((f) => f[0] === "gte")[2], "2026-11-05T00:00:00-03:00");
+  assert.equal(last.find((f) => f[0] === "lte")[2], "2026-11-05T23:59:59.999-03:00");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("U31 Agenda: a faixa cabe de 320 a 1440 px nos dois temas, com R$ 123.456,78, e o esqueleto tem o mesmo tamanho", async () => {
+  for (const theme of ["light", "dark"]) {
+    for (const width of [320, 390, 768, 1440]) {
+      const page = await openAgenda({ width, theme, big: true, forecastDelay: 400 });
+      await page.waitForSelector('[data-testid="agenda-forecast"][aria-busy="true"]', { timeout: 6000 });
+      const box = (sel) => page.$eval(sel, (e) => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, h: r.height }; });
+      const loading = await box('[data-testid="agenda-forecast"]');
+      for (const label of ["Dia", "Semana", "Mês"]) {
+        await pickView(page, label);
+        await page.waitForFunction(() => document.querySelector('[data-testid="agenda-forecast"]')?.getAttribute("aria-busy") === "false", { timeout: 6000 });
+        const tag = `${theme} ${width}px ${label}`;
+        assert.equal(await forecastText(page), "Previsto R$ 246.913,56 R$ 123.456,78 realizado · R$ 123.456,78 agendado", tag);
+        assert.ok(await noHorizontalScroll(page), `rolagem lateral: ${tag}`);
+        const f = await box('[data-testid="agenda-forecast"]');
+        assert.ok(f.l >= 0 && f.r <= width, `faixa fora da tela: ${tag} ${JSON.stringify(f)}`);
+        // nenhum texto da faixa cortado ou passando do contêiner
+        const overflow = await page.$$eval('[data-testid="agenda-forecast"] *', (els) =>
+          els.filter((e) => e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > document.documentElement.clientWidth).map((e) => e.innerText));
+        assert.deepEqual(overflow, [], tag);
+        // a faixa fica entre a navegação de datas e o conteúdo, sem sobrepor
+        const nav = await page.$eval('button[aria-label="Anterior"]', (e) => e.parentElement.parentElement.getBoundingClientRect().bottom);
+        const content = await page.$eval('[data-testid="agenda-forecast"]', (e) => e.parentElement.nextElementSibling.getBoundingClientRect().top);
+        assert.ok(nav <= f.t + 0.5 && f.b <= content + 0.5, `sobreposição: ${tag}`);
+        assert.equal(f.h, loading.h, `esqueleto e valor com alturas diferentes: ${tag}`);
+      }
+      assert.deepEqual(page.errors, []);
+      await page.close();
+    }
+  }
+  // valores comuns: o esqueleto tem exatamente a altura da faixa carregada (a tela não pula)
+  const page = await openAgenda({ width: 320, forecastDelay: 400 });
+  await page.waitForSelector('[data-testid="agenda-forecast"][aria-busy="true"]');
+  const top0 = await page.$eval('[data-testid="agenda-forecast"]', (e) => e.parentElement.nextElementSibling.getBoundingClientRect().top);
+  await waitForecast(page);
+  const top1 = await page.$eval('[data-testid="agenda-forecast"]', (e) => e.parentElement.nextElementSibling.getBoundingClientRect().top);
+  assert.equal(top1, top0, "o conteúdo da agenda não pode mudar de lugar quando a previsão chega");
+  await page.close();
+});
+
+test("U32 Agenda: quem não vê o financeiro (profissional, recepção) não vê a faixa nem consulta valores; falha não inventa R$ 0,00", async () => {
+  for (const role of ["professional", "reception"]) {
+    const page = await openAgenda({ role });
+    await page.waitForFunction(() => document.body.innerText.includes("Ana Paula"), { timeout: 6000 });
+    for (const label of ["Dia", "Semana", "Mês"]) {
+      await pickView(page, label);
+      await sleep(150);
+      assert.equal(await page.$('[data-testid="agenda-forecast"]'), null, `${role} ${label}`);
+      assert.ok(!(await text(page)).includes("Previsto"), `${role} ${label}`);
+    }
+    const calls = await page.evaluate(() => window.__db.calls);
+    assert.ok(calls.length > 0 && calls.every((c) => !c.select.includes("price")), `${role}: nenhuma consulta de valores`);
+    assert.deepEqual(page.errors, []);
+    await page.close();
+  }
+  for (const role of ["owner", "admin"]) {
+    const page = await openAgenda({ role });
+    await waitForecast(page);
+    await page.close();
+  }
+  const page = await openAgenda({ failForecast: true });
+  await page.waitForFunction(() => document.body.innerText.includes("Não foi possível calcular agora."), { timeout: 6000 });
+  assert.ok(!(await forecastText(page)).includes("R$"), "sem valor inventado quando a consulta falha");
+  await page.close();
+});
+
+test("U33 Agenda: capturas a 390 px (Dia, Semana e Mês) nos temas claro e escuro", async () => {
+  for (const theme of ["light", "dark"]) {
+    const page = await openAgenda({ width: 390, height: 844, theme });
+    for (const [label, file] of [["Dia", "dia"], ["Semana", "semana"], ["Mês", "mes"]]) {
+      await pickView(page, label);
+      await waitValue(page, { Dia: "R$ 250,50", Semana: "R$ 470,50", "Mês": "R$ 820,50" }[label]);
+      await sleep(100);
+      await page.screenshot({ path: join(SHOTS, `agenda-${file}-390-${theme === "dark" ? "escuro" : "claro"}.png`) });
+    }
+    await page.close();
+  }
+});

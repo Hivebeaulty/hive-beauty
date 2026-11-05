@@ -359,3 +359,19 @@ banco, endereços (`hive-beauty.vercel.app`) e chaves internas (ex.: `aurea-them
 - Logotipos e ícones em `public/` com os mesmos nomes de arquivo. Ilustração dos estados vazios recolorida
   provisoriamente (as definitivas estão em produção no ChatGPT).
 - E-mails (`billing-emails`): cabeçalho framboesa, nome e cores da Sócia.
+
+## Agenda: previsão do período (05/11/2026)
+
+- Logo abaixo da navegação de datas, alinhado à direita: **Previsto** do período exibido e, em texto menor, quanto já
+  foi realizado e quanto está agendado. Dia; semana de segunda a domingo (como a visão Semana); mês do calendário, só
+  com os dias do mês (os da grade de fora ficam fora). Acompanha as setas, o "Hoje" e o filtro de profissional.
+- Regra única com o Início e o Financeiro (`lib/hive/forecast.ts`): concluídos + em aberto (agendado, confirmado, em
+  atendimento), pelo valor do atendimento; cancelados e faltas fora; dia de Brasília. O período sai de
+  `agendaPeriod(visão, refDate)`, com os limites da consulta em `-03:00`.
+- Uma consulta leve só para a previsão (`price, status, scheduled_start`, só os status que entram na conta), em
+  paralelo com a da visão. Respostas de um período que já saiu da tela são descartadas. Se a consulta falhar, a faixa
+  diz que não foi possível calcular, sem mostrar R$ 0,00.
+- Só owner e admin (`canSeeFinance`) veem a faixa; para profissional e recepção a Agenda fica igual e nenhuma consulta de
+  valores é feita.
+- Testes: `tests/forecast.test.cjs` (período da Agenda) e U30 a U33 em `tests/ui` (Agenda real com banco em memória;
+  larguras de 320 a 1440 px nos dois temas; capturas em `tests/ui/screenshots/agenda-*.png`).
