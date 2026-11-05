@@ -8,7 +8,7 @@
 // O dia de cada atendimento é o dia em Brasília (mesma regra do Financeiro).
 // ---------------------------------------------------------------------------
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from "date-fns";
-import { toSaoPauloDate } from "./period";
+import { toSaoPauloDate, periodBoundsISO } from "./period";
 
 export const FORECAST_STATUSES = ["concluido", "agendado", "confirmado", "em_atendimento"] as const;
 const OPEN = new Set(["agendado", "confirmado", "em_atendimento"]);
@@ -53,6 +53,22 @@ export function forecastRanges(reference = new Date()) {
     semana: { start: f(startOfWeek(reference, { weekStartsOn: 1 })), end: f(endOfWeek(reference, { weekStartsOn: 1 })) },
     mes: { start: f(startOfMonth(reference)), end: f(endOfMonth(reference)) },
   };
+}
+
+export type AgendaView = "dia" | "semana" | "mes";
+
+/**
+ * Período da previsão no topo da Agenda: o que a visão está EXIBINDO a partir do
+ * dia de referência (refDate, meia-noite do dia escolhido): o dia; a semana de
+ * segunda a domingo (como a WeekView); ou o mês do calendário, só com os dias do
+ * mês (os dias de fora da grade de 6 semanas ficam de fora). Devolve também os
+ * limites em Brasília para a consulta (from/to com -03:00), que casam com o dia
+ * de Brasília que forecastFor usa.
+ */
+export function agendaPeriod(view: AgendaView, reference: Date) {
+  const r = forecastRanges(reference);
+  const { start, end } = view === "dia" ? r.hoje : view === "semana" ? r.semana : r.mes;
+  return { start, end, ...periodBoundsISO(start, end) };
 }
 
 /** Um único intervalo que cobre hoje, a semana e o mês (a semana pode passar da virada do mês). */

@@ -29,6 +29,8 @@ import { AppearanceCard } from "@/components/settings/appearance-card";
 import { WhatsappAutoMessages } from "@/components/settings/whatsapp-auto-messages";
 import { Rankings } from "@/components/reports/rankings";
 import { buildRankings } from "@/lib/hive/rankings";
+import AgendaPage from "@/app/(app)/agenda/page";
+import { CompanyProvider } from "@/components/company-provider";
 
 type Scenario = { status: RpcResult; qr: RpcResult; request: RpcResult; disc: RpcResult; delayMs: number };
 const sc: Scenario = {
@@ -55,7 +57,19 @@ const view = new URLSearchParams(location.search).get("view") || "";
 // tema do palco: ?theme=dark aplica o tema Escuro (mesmo atributo do app)
 const __theme = new URLSearchParams(location.search).get("theme");
 if (__theme) document.documentElement.setAttribute("data-theme", __theme);
-createRoot(document.getElementById("root")!).render(
+// Agenda: a página REAL, dentro do mesmo contêiner do app ((app)/layout.tsx),
+// com a função da pessoa na URL (?role=) e o banco em memória (window.__db).
+if (view === "agenda") {
+  createRoot(document.getElementById("root")!).render(
+    <CompanyProvider membership={{ companyId: "00000000-0000-0000-0000-000000000001", memberId: "m1", role: role as "owner", companyName: "Studio Bella" }}>
+      <div className="min-h-screen bg-cream">
+        <main className="mx-auto max-w-3xl px-4 py-6 md:px-8">
+          <AgendaPage />
+        </main>
+      </div>
+    </CompanyProvider>
+  );
+} else createRoot(document.getElementById("root")!).render(
   <ToastProvider>
   <div className="min-h-screen bg-cream">
     <main className="mx-auto max-w-3xl px-4 py-6 md:px-8">

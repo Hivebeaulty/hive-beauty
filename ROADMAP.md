@@ -6,16 +6,18 @@ arquivo.
 
 ## 0. Esta semana (prioridade)
 
-### 0.1 Próximo passo: projeção de faturamento na Agenda
+### 0.1 Projeção de faturamento na Agenda — feita em 05/11/2026
 
-No topo da Agenda, nas visões **Dia**, **Semana** e **Mês**, mostrar o valor previsto do período exibido (como no
-app de referência: o valor fica no alto, logo abaixo da navegação de datas), acompanhando as setas de período e o
+No topo da Agenda, nas visões **Dia**, **Semana** e **Mês**, o valor previsto do período exibido (como no app de
+referência: logo abaixo da navegação de datas, alinhado à direita), acompanhando as setas de período, o "Hoje" e o
 filtro de profissional.
-- [ ] Valor previsto do período na tela = concluídos + em aberto (agendado, confirmado, em atendimento); cancelados e
-      faltas fora. Mesma regra e mesmo dia de Brasília da previsão do Início e do Financeiro (`lib/hive/forecast.ts`).
-- [ ] Abaixo do valor, em texto menor: quanto já foi realizado e quanto está agendado.
-- [ ] Respeita o filtro de profissional; só a administração do negócio vê valores (`canSeeFinance`), como no Início.
-- [ ] Cabe de 320 a 1440 px nos dois temas; testes da regra e teste de interface de largura.
+- [x] Valor previsto do período na tela = concluídos + em aberto (agendado, confirmado, em atendimento); cancelados e
+      faltas fora. Mesma regra e mesmo dia de Brasília da previsão do Início e do Financeiro (`lib/hive/forecast.ts`,
+      período em `agendaPeriod`). Semana de segunda a domingo; no Mês, só os dias do mês.
+- [x] Abaixo do valor, em texto menor: quanto já foi realizado e quanto está agendado.
+- [x] Respeita o filtro de profissional; só a administração do negócio vê valores (`canSeeFinance`), como no Início.
+- [x] Cabe de 320 a 1440 px nos dois temas (inclusive com R$ 123.456,78); testes da regra (`tests/forecast.test.cjs`)
+      e de interface (U30 a U33 em `tests/ui`).
 - [ ] Atualizar o guia em PDF (página da Agenda) depois que estiver no ar.
 
 ### 0.2 WhatsApp: sincronizações repetidas no celular e quedas
@@ -164,6 +166,7 @@ O que precisa para lançar:
   `signup-intent` e `track`); Mercado Pago com o endereço de retorno novo; Instagram com nome, foto e link novos.
 - Edição de atendimento (cliente, serviço, duração e horário, inclusive fora da grade) e previsão de faturamento no
   Início e no Financeiro.
+- Previsão do período no topo da Agenda (Dia, Semana e Mês), 05/11.
 - Guia de uso da Sócia (`public/guia-socia.pdf`, 14 páginas); `/guia-aurea.pdf` redireciona.
 - Assinatura sem webhook (incidente de 25/10): `mp-sync`, `signup-intent` e ligação manual no painel; e-mails de
   boas-vindas e de aviso antes da primeira cobrança.
