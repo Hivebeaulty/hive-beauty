@@ -73,7 +73,7 @@ export const EVENT_LABEL: Record<string, string> = {
   trialing: "Começou o teste", active: "Assinatura paga ativa", past_due: "Pagamento atrasado",
   pending: "Pagamento em análise", canceled: "Cancelada",
 };
-export const SOURCE_LABEL: Record<string, string> = { webhook: "aviso do Mercado Pago", reconcile: "conciliação", admin: "painel" };
+export const SOURCE_LABEL: Record<string, string> = { webhook: "aviso do Mercado Pago", reconcile: "conciliação", admin: "painel", owner: "a dona, pelo app" };
 export const paymentLabel = (s: string) => PAYMENT_LABEL[s] ?? s;
 export const paymentTone = (s: string): BadgeTone => PAYMENT_TONE[s] ?? "muted";
 

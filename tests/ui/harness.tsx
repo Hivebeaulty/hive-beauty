@@ -30,6 +30,7 @@ import { WhatsappAutoMessages } from "@/components/settings/whatsapp-auto-messag
 import { Rankings } from "@/components/reports/rankings";
 import { buildRankings } from "@/lib/hive/rankings";
 import AgendaPage from "@/app/(app)/agenda/page";
+import AssinaturaPage from "@/app/(app)/mais/assinatura/page";
 import { CompanyProvider } from "@/components/company-provider";
 
 type Scenario = { status: RpcResult; qr: RpcResult; request: RpcResult; disc: RpcResult; delayMs: number };
@@ -68,6 +69,19 @@ if (view === "agenda") {
         </main>
       </div>
     </CompanyProvider>
+  );
+} else if (view === "assinatura") {
+  // Mais > Assinatura (0051): página REAL, banco e função simulados em window.__db.
+  createRoot(document.getElementById("root")!).render(
+    <ToastProvider>
+      <CompanyProvider membership={{ companyId: "00000000-0000-0000-0000-000000000001", memberId: "m1", role: role as "owner", companyName: "Studio Bella" }}>
+        <div className="min-h-screen bg-cream">
+          <main className="mx-auto max-w-3xl px-4 py-6 md:px-8">
+            <AssinaturaPage />
+          </main>
+        </div>
+      </CompanyProvider>
+    </ToastProvider>
   );
 } else createRoot(document.getElementById("root")!).render(
   <ToastProvider>

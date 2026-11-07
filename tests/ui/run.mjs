@@ -907,3 +907,116 @@ test("U33 Agenda: capturas a 390 px (Dia, Semana e Mês) nos temas claro e escur
     await page.close();
   }
 });
+
+// ============================================================ Mais > Assinatura (0051)
+// Página REAL. my_subscription e a função account-billing simuladas em window.__db.
+const SUB_ACTIVE = {
+  status: "active", amount: 59.9, trial_ends_at: "2026-10-08T15:00:00Z", next_payment_at: "2026-12-01T15:00:00Z", canceled_at: null,
+  access: { status: "active", allowed: true, warning: false }, can_cancel: true, cancel_pending: false,
+  payments: [
+    { at: "2026-12-01T15:00:00Z", status: "scheduled", amount: 59.9, refunded: 0 },
+    { at: "2026-11-01T15:00:00Z", status: "approved", amount: 59.9, refunded: 0 },
+    { at: "2026-10-08T15:00:00Z", status: "rejected", amount: 59.9, refunded: 0 },
+  ],
+};
+const SUB_ENDING = { ...SUB_ACTIVE, status: "canceled", can_cancel: false, next_payment_at: null,
+  access: { status: "ending", allowed: true, warning: true, until: "2026-12-01T15:00:00Z" } };
+async function openAssinatura({ role = "owner", sub = SUB_ACTIVE, fnStatus = 200, fnError = "", width = 390, height = 900, theme = "" } = {}) {
+  const page = await browser.newPage();
+  await page.setViewport({ width, height, deviceScaleFactor: 1 });
+  await page.emulateTimezone("America/Sao_Paulo");
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.evaluateOnNewDocument((sub, ending, fnStatus, fnError) => {
+    let cancelled = false;
+    window.__db = {
+      tables: {}, calls: [],
+      rpc: { my_subscription: () => ({ data: cancelled ? ending : sub, error: null }) },
+      invoke: (name, body) => {
+        if (fnStatus === 200) { cancelled = true; return { data: { ok: true }, error: null }; }
+        const context = new Response(JSON.stringify({ error: fnError }), { status: fnStatus });
+        return { data: null, error: { message: "Edge Function returned a non-2xx status code", context } };
+      },
+    };
+  }, sub, SUB_ENDING, fnStatus, fnError);
+  await page.goto(`${PAGE}?view=assinatura&role=${role}${theme ? `&theme=${theme}` : ""}`);
+  await page.addStyleTag({ content: `@font-face{font-family:"Noto Serif";src:url(data:font/woff2;base64,${NOTO}) format("woff2");font-weight:400 700}:root{--font-sans:"Noto Serif",Georgia,serif;--font-serif:"Noto Serif",Georgia,serif}` });
+  await page.evaluate(() => document.fonts.ready);
+  page.errors = errors;
+  return page;
+}
+
+test("U34 Assinatura: a dona vê situação, valor, próxima cobrança e o histórico; cancela com motivo e vê até quando continua", async () => {
+  const page = await openAssinatura();
+  await waitText(page, "Assinatura ativa");
+  const t = norm(await text(page));
+  assert.ok(t.includes("Próxima cobrança de R$ 59,90 em 01/12/2026."), t);
+  assert.ok(t.includes("R$ 59,90 /mês"));
+  for (const s of ["Agendada", "Paga", "Recusada", "01/11/2026", "08/10/2026"]) assert.ok(t.includes(s), s);
+  assert.ok(t.includes("Trocar forma de pagamento"));
+  // cancelar: aviso, motivo opcional, chamada com a empresa e o motivo
+  await clickButton(page, "Cancelar assinatura");
+  await waitText(page, "Não haverá novas cobranças. Você continua usando a Sócia até o fim do mês que já foi pago.");
+  await clickButton(page, "Está caro para mim agora");
+  await page.type("textarea", "Volto em março");
+  const buttons = await page.$$eval('[role="dialog"] button, .fixed button', (b) => b.map((x) => x.innerText.trim()));
+  assert.ok(buttons.includes("Continuar com a Sócia"));
+  await page.evaluate(() => [...document.querySelectorAll("button")].filter((b) => b.innerText.trim() === "Cancelar assinatura").at(-1).click());
+  await waitText(page, "Você continua usando a Sócia até 01/12/2026.");
+  const call = (await page.evaluate(() => window.__db.calls)).find((c) => c.table === "fn:account-billing");
+  assert.deepEqual(call.filters[0][2], { action: "cancel", company_id: "00000000-0000-0000-0000-000000000001", reason: "Está caro para mim agora — Volto em março" });
+  const t2 = norm(await text(page));
+  assert.ok(t2.includes("Assinatura cancelada. Não haverá novas cobranças."), "toast");
+  assert.ok(!t2.includes("Trocar forma de pagamento"), "sem trocar pagamento depois de cancelar");
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => b.innerText.trim() === "Cancelar assinatura")), false);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("U35 Assinatura: erro do Mercado Pago aparece no modal; teste grátis avisa que o acesso para; equipe e cortesia não cancelam", async () => {
+  let page = await openAssinatura({ fnStatus: 502, fnError: "O Mercado Pago não confirmou o cancelamento. Tente de novo em alguns minutos." });
+  await waitText(page, "Assinatura ativa");
+  await clickButton(page, "Cancelar assinatura");
+  await page.evaluate(() => [...document.querySelectorAll("button")].filter((b) => b.innerText.trim() === "Cancelar assinatura").at(-1).click());
+  await waitText(page, "O Mercado Pago não confirmou o cancelamento.");
+  assert.ok(norm(await text(page)).includes("Assinatura ativa"), "continua ativa");
+  await page.close();
+
+  page = await openAssinatura({ sub: { ...SUB_ACTIVE, status: "trialing", trial_ends_at: "2026-11-15T15:00:00Z", next_payment_at: "2026-11-15T15:00:00Z", payments: [] } });
+  await waitText(page, "Teste grátis");
+  assert.ok(norm(await text(page)).includes("O teste vai até 15/11/2026. Nada é cobrado até lá."));
+  assert.ok(!norm(await text(page)).includes("Cobranças"), "sem histórico vazio");
+  await clickButton(page, "Cancelar assinatura");
+  await waitText(page, "o acesso é pausado assim que o Mercado Pago confirmar");
+  await page.close();
+
+  for (const role of ["admin", "professional", "reception"]) {
+    page = await openAssinatura({ role });
+    await waitText(page, "Só a dona da conta vê e muda a assinatura.");
+    assert.equal((await page.evaluate(() => window.__db.calls)).some((c) => c.table === "rpc:my_subscription"), false, `${role} não consulta`);
+    await page.close();
+  }
+
+  page = await openAssinatura({ sub: { ...SUB_ACTIVE, status: "free", amount: null, can_cancel: false, payments: [] } });
+  await waitText(page, "Cortesia");
+  const t = norm(await text(page));
+  assert.ok(!t.includes("Cancelar assinatura") && !t.includes("Trocar forma de pagamento") && !t.includes("/mês"));
+  await page.close();
+});
+
+test("U36 Assinatura: cabe de 320 a 1440 px nos dois temas, com e sem o modal aberto; capturas a 390 px", async () => {
+  for (const theme of ["light", "dark"]) {
+    for (const width of [320, 390, 768, 1440]) {
+      const page = await openAssinatura({ width, theme });
+      await waitText(page, "Assinatura ativa");
+      assert.ok(await noHorizontalScroll(page), `rolagem lateral ${theme} ${width}`);
+      if (width === 390) await page.screenshot({ path: join(SHOTS, `assinatura-390-${theme === "dark" ? "escuro" : "claro"}.png`), fullPage: true });
+      await clickButton(page, "Cancelar assinatura");
+      await waitText(page, "Se puder, conte o motivo");
+      assert.ok(await noHorizontalScroll(page), `rolagem lateral com modal ${theme} ${width}`);
+      if (width === 390) { await sleep(500); await page.screenshot({ path: join(SHOTS, `assinatura-cancelar-390-${theme === "dark" ? "escuro" : "claro"}.png`) }); }
+      assert.deepEqual(page.errors, []);
+      await page.close();
+    }
+  }
+});
