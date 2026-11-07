@@ -375,3 +375,19 @@ banco, endereços (`hive-beauty.vercel.app`) e chaves internas (ex.: `aurea-them
   valores é feita.
 - Testes: `tests/forecast.test.cjs` (período da Agenda) e U30 a U33 em `tests/ui` (Agenda real com banco em memória;
   larguras de 320 a 1440 px nos dois temas; capturas em `tests/ui/screenshots/agenda-*.png`).
+
+## Assinatura no app (0051, 07/11/2026)
+
+- **Mais > Assinatura**, só para a dona (owner): situação (teste, ativa, pagamento não aprovado, cancelada, cortesia),
+  fim do teste, próxima cobrança e valor, histórico de cobranças (sem taxas nem líquido do Mercado Pago), link para trocar
+  a forma de pagamento no Mercado Pago e **Cancelar assinatura** com motivo opcional.
+- Dados: `my_subscription(empresa)`, que só responde para a dona ativa da empresa. Equipe (admin, profissional, recepção)
+  não vê.
+- Cancelamento: a função `account-billing` (publicar com verificação de JWT) chama `owner_cancel_prepare` com a sessão da
+  dona (o banco escolhe a assinatura dela), cancela no Mercado Pago, confirma consultando de novo, grava com
+  `billing_sync` (origem `owner`) e fecha o pedido em `owner_cancel_finish`. Pedidos e motivos ficam em
+  `billing_owner_requests` (fechada para o app). Um pedido por vez (dois minutos).
+- Acesso depois de cancelar: o mesmo da 0041. Com mês pago, continua até o fim dele (status `ending`); no teste grátis,
+  pausa quando o Mercado Pago confirma. Nenhum dado é apagado.
+- Testes: `supabase/tests/local/0051_local.sh` (Postgres local), `supabase/tests/local/account-billing` (Deno),
+  `tests/subscription.test.cjs` e U34 a U36 em `tests/ui`.

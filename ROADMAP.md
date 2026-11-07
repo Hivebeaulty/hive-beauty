@@ -1,6 +1,6 @@
 # Roadmap da Sócia
 
-Atualizado em 05/11/2026. Objetivo do momento: **as primeiras assinantes pagantes**, que usam a Sócia na primeira
+Atualizado em 07/11/2026. Objetivo do momento: **as primeiras assinantes pagantes**, que usam a Sócia na primeira
 semana e continuam pagando. O que já está em produção fica no README; o que foi concluído há pouco está no fim deste
 arquivo.
 
@@ -69,6 +69,15 @@ e-mails já enviados nem o atalho instalado no celular de quem já usa.
 - [ ] **Outros links com o endereço antigo**: WhatsApp Business e materiais impressos, se houver.
 - [ ] Conferir o **e-mail de senha do Supabase Auth** e o **nome do remetente no Brevo** com o nome Sócia.
 
+### 0.6 Assinatura no app (pedido de 07/11)
+
+A dona vê e cancela a própria assinatura sem sair da Sócia (Mais > Assinatura). Os stories e o carrossel fixado dizem
+hoje "cancele pelo app do Mercado Pago"; depois de publicado, passam a dizer "cancele direto na Sócia".
+- [x] Código pronto (PR `assinatura-no-app`): tela com situação, teste, próxima cobrança, valor e histórico de cobranças;
+      link para trocar a forma de pagamento no Mercado Pago; **Cancelar assinatura** com motivo opcional.
+- [ ] Publicar: migration 0051, função `account-billing` (com verificação de JWT) e o app.
+- [ ] Atualizar o guia em PDF (página Mais) e, no Instagram, a resposta "Posso cancelar?".
+
 ## 1. Lançamento e primeiras vendas
 
 - [ ] Repetir o teste real com um **e-mail NOVO** (sem conta), pelo modal do site: pagar → e-mails → criar senha →
@@ -89,6 +98,16 @@ e-mails já enviados nem o atalho instalado no celular de quem já usa.
 - [ ] **Indicação**: "indique uma colega e ganhe um mês" (código de indicação + mês de cortesia com validade).
 - [ ] **Funil de vendas no painel**: visitas da landing → testes iniciados → pagantes, com os eventos que a função `track`
       já registra e a origem (UTM).
+
+### Relatórios e avisos (pedido de 07/11)
+
+- [ ] **Comparativo mês a mês** em Relatórios: gráfico com os 12 meses do ano (faturamento realizado por mês; o mês atual
+      mostra também o previsto) e comparação com o mesmo mês do ano anterior quando houver dados.
+- [ ] **Ociosidade por dia da semana** em Relatórios: para cada dia da semana, a parte das horas de funcionamento sem
+      atendimento nas últimas semanas, destacando os dias mais vazios.
+- [ ] **Aviso de dia com agenda mais aberta que o normal**: quando um dia das próximas semanas tiver mais horas livres do
+      que a média daquele dia da semana, a Sócia avisa (Início e notificação) e sugere chamar clientes atrasadas.
+      Depende da ociosidade; usa a lista de clientes sumidas. Bom para lançar no começo de janeiro.
 
 ## 3. Marca e comunicação
 

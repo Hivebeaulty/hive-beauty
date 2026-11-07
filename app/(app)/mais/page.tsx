@@ -14,6 +14,7 @@ export default async function MaisPage() {
   const supabase = await createClient();
   const membership = await getActiveMembership(supabase);
   const isAdmin = membership?.role === "owner" || membership?.role === "admin";
+  const isOwner = membership?.role === "owner";
 
   return (
     <div className="space-y-6 pb-4">
@@ -40,6 +41,19 @@ export default async function MaisPage() {
                 <p className="text-sm text-ink-400">Indicadores do negócio por período.</p>
               </div>
               <ChevronRight className="size-4 shrink-0 text-ink-300" />
+            </Card>
+          </Link>
+        )}
+
+        {isOwner && (
+          <Link href="/mais/assinatura">
+            <Card interactive className="flex items-center gap-3">
+              <BrandIcon name="assinatura" className="text-ink-700" />
+              <div className="flex-1">
+                <p className="font-semibold text-ink-800">Assinatura</p>
+                <p className="text-sm text-ink-400">Seu plano, cobranças e cancelamento.</p>
+              </div>
+              <ChevronRight className="size-4 shrink-0 text-ink-400" />
             </Card>
           </Link>
         )}

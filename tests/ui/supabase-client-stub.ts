@@ -6,7 +6,7 @@
 // Agenda: o teste instala window.__db (tabelas em memória). Aí o cliente também
 // tem .from(tabela) com os filtros que a Agenda usa (select, eq, in, gte, gt,
 // lt, lte, order), registra cada consulta em __db.calls e responde depois de
-// __db.delay(consulta) ms.
+// __db.delay(consulta) ms. Também simula rpc e functions.invoke (Assinatura).
 type Rpc = (fn: string, args: unknown) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
 type Filter = [op: string, column: string, value: unknown];
 type Call = { table: string; select: string; filters: Filter[] };
@@ -16,6 +16,7 @@ type Db = {
   calls: Call[];
   delay?: (call: Call) => number;
   fail?: (call: Call) => boolean;
+  invoke?: (name: string, body: unknown) => { data: unknown; error: unknown };
 };
 
 const asTime = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v) ? Date.parse(v) : v);
@@ -72,7 +73,20 @@ export function createClient() {
   if (db) {
     return {
       from: (table: string) => from(db, table),
-      rpc: async (fn: string) => ({ data: db.rpc?.[fn] ?? null, error: null }),
+      // rpc: valor fixo, ou função (args) => { data, error } para respostas que mudam (ex.: depois de cancelar)
+      rpc: async (fn: string, args?: unknown) => {
+        db.calls.push({ table: `rpc:${fn}`, select: "", filters: [["args", "", args]] });
+        const v = db.rpc?.[fn];
+        return typeof v === "function" ? (v as (a: unknown) => { data: unknown; error: unknown })(args) : { data: v ?? null, error: null };
+      },
+      // functions.invoke: o teste instala __db.invoke(nome, corpo) => { data, error }
+      functions: {
+        invoke: async (name: string, opts?: { body?: unknown }) => {
+          db.calls.push({ table: `fn:${name}`, select: "", filters: [["body", "", opts?.body]] });
+          await new Promise((r) => setTimeout(r, 30));
+          return db.invoke ? db.invoke(name, opts?.body) : { data: null, error: { message: "sem função" } };
+        },
+      },
     };
   }
   const rpc = w.__rpc;
