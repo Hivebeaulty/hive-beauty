@@ -94,7 +94,7 @@ export default function InicioPage() {
     // owner/admin (ver migration 0003), então não precisamos filtrar aqui.
     // Só decidimos o que RENDERIZAR com base no papel (canSeeFinance).
     const [
-      { data: userData },
+      session,
       { data: todayInd },
       { data: monthInd },
       { data: appts },
@@ -105,7 +105,14 @@ export default function InicioPage() {
       { count: upcomingTotal },
       { data: forecastRows },
     ] = await Promise.all([
-      supabase.auth.getUser(),
+      // Sessão local (sem ida ao servidor de login) + perfil na mesma rodada:
+      // antes, o getUser() e depois o perfil somavam duas idas e voltas à tela.
+      supabase.auth.getSession().then(async ({ data }) => {
+        const user = data.session?.user ?? null;
+        if (!user) return { user: null, profile: null };
+        const { data: profile } = await supabase.from("profiles").select("display_name, full_name").eq("id", user.id).maybeSingle();
+        return { user, profile };
+      }),
       supabase.rpc("get_period_indicators", { p_company_id: companyId, p_start: todayStr, p_end: todayStr }),
       supabase.rpc("get_period_indicators", { p_company_id: companyId, p_start: monthStart, p_end: monthEnd }),
       supabase
@@ -164,22 +171,14 @@ export default function InicioPage() {
     // Saudação: "Como você quer ser chamada?" (profiles.display_name) > 1º nome do
     // perfil > 1º nome do metadado do login (comportamento anterior). Se a coluna
     // ainda não existir, a consulta falha em silêncio e cai no metadado.
-    let displayName: string | null = null;
-    let profileFullName: string | null = null;
-    if (userData?.user?.id) {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("display_name, full_name")
-        .eq("id", userData.user.id)
-        .maybeSingle();
-      displayName = (prof?.display_name as string | null | undefined) ?? null;
-      profileFullName = (prof?.full_name as string | null | undefined) ?? null;
-    }
+    const prof = session.profile as { display_name?: string | null; full_name?: string | null } | null;
+    const displayName: string | null = prof?.display_name ?? null;
+    const profileFullName: string | null = prof?.full_name ?? null;
     setName(
       resolveGreetingName({
         displayName,
         profileFullName,
-        metadataFullName: userData?.user?.user_metadata?.full_name as string | undefined,
+        metadataFullName: session.user?.user_metadata?.full_name as string | undefined,
       })
     );
     setToday((todayInd as unknown as PeriodIndicators[])?.[0] ?? null);

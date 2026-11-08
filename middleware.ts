@@ -24,7 +24,14 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // getClaims() confere a assinatura do token na própria borda, com as chaves
+  // públicas do projeto em cache, sem ir ao servidor de login a cada tela (o
+  // getUser() fazia uma ida e volta até o Supabase em cada navegação). Se o
+  // projeto ainda assinar com a chave antiga (HS256), o próprio getClaims cai no
+  // getUser(), igual a antes. Também renova a sessão vencida e grava os cookies.
+  // A segurança dos dados continua no banco (RLS); aqui só se decide o redirect.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? data.claims : null;
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/cadastro") ||
