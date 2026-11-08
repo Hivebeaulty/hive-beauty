@@ -391,3 +391,15 @@ banco, endereços (`hive-beauty.vercel.app`) e chaves internas (ex.: `aurea-them
   pausa quando o Mercado Pago confirma. Nenhum dado é apagado.
 - Testes: `supabase/tests/local/0051_local.sh` (Postgres local), `supabase/tests/local/account-billing` (Deno),
   `tests/subscription.test.cjs` e U34 a U36 em `tests/ui`.
+
+## Desempenho (08/11/2026)
+
+- `app/(app)/loading.tsx`: esqueleto mostrado na hora ao trocar de aba (o Next também o pré-carrega pelos links do
+  menu). Sem ele, o toque não dava retorno até o servidor responder.
+- `middleware.ts`: `supabase.auth.getClaims()` no lugar de `getUser()`. Confere o token localmente com as chaves públicas
+  do projeto (em cache); se o projeto ainda assinar com a chave antiga (HS256), cai no `getUser()`, como antes. Os dados
+  continuam protegidos pela RLS.
+- Início: a sessão vem do armazenamento local (`getSession`) e o perfil entra na mesma rodada das outras consultas.
+- `vercel.json`: funções em `pdx1` (Oregon), a mesma região do banco (us-west-2).
+- Próximas fases no ROADMAP (0.7): dados das abas em memória e banco em São Paulo.
+

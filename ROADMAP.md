@@ -1,6 +1,6 @@
 # Roadmap da Sócia
 
-Atualizado em 07/11/2026. Objetivo do momento: **as primeiras assinantes pagantes**, que usam a Sócia na primeira
+Atualizado em 08/11/2026. Objetivo do momento: **as primeiras assinantes pagantes**, que usam a Sócia na primeira
 semana e continuam pagando. O que já está em produção fica no README; o que foi concluído há pouco está no fim deste
 arquivo.
 
@@ -77,6 +77,25 @@ hoje "cancele pelo app do Mercado Pago"; depois de publicado, passam a dizer "ca
       link para trocar a forma de pagamento no Mercado Pago; **Cancelar assinatura** com motivo opcional.
 - [ ] Publicar: migration 0051, função `account-billing` (com verificação de JWT) e o app.
 - [ ] Atualizar o guia em PDF (página Mais) e, no Instagram, a resposta "Posso cancelar?".
+
+### 0.7 App mais rápido (pedido de 08/11)
+
+O banco está em Oregon (us-west-2) e as clientes no Brasil: cada consulta do celular leva uma ida e volta longa.
+- [x] Fase 1 (PR `desempenho-1`): tela de transição imediata ao trocar de aba (`app/(app)/loading.tsx`); o
+      middleware confere o login pelo token (`getClaims`) em vez de ir ao servidor de login a cada tela; o Início
+      deixou de esperar o login e o perfil em sequência; funções da Vercel em Oregon (`pdx1`), perto do banco.
+- [ ] Conferir no painel do Supabase se o projeto já usa chaves de assinatura assimétricas (JWT Signing Keys); se
+      ainda usar a chave antiga, migrar, para o `getClaims` não precisar ir ao servidor de login.
+- [ ] Fase 2: guardar os dados de cada aba na memória e mostrar na hora ao voltar, atualizando por trás.
+- [ ] Fase 3: levar o banco para São Paulo (sa-east-1) e as funções para gru1. É a maior melhora (cada consulta cai de
+      cerca de 200 ms para cerca de 20 ms), mas é uma migração de projeto, com janela de manutenção, e mexe no worker do
+      WhatsApp. Planejar com cuidado.
+
+### 0.8 Teste sem cartão (pedido de 08/11)
+
+- [ ] Cadastro direto no app com senha, 7 dias de teste sem pagamento; no fim do teste, assinatura no Mercado Pago
+      (cartão). Depois, Pix pelo Asaas ou pela Cakto (sem CNPJ, Pix mensal comum; Pix Automático exige CNPJ com seis meses).
+- [ ] Atualizar o slide 3 do fixado, o story do período grátis em Dúvidas e a landing.
 
 ## 1. Lançamento e primeiras vendas
 
