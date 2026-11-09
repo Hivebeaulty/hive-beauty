@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clearScreenCache } from "@/lib/hive/screen-cache";
 
 // Usado tanto na sidebar (desktop) quanto em Mais (mobile). Zera a sessão do
 // Supabase de verdade e força reload completo pra /login — não usa
@@ -15,6 +16,8 @@ export function LogoutButton({ className, variant = "block" }: { className?: str
   async function handleLogout() {
     setLoading(true);
     const supabase = createClient();
+    // Esquece a memória das telas: a próxima pessoa a entrar não vê dados antigos.
+    clearScreenCache();
     await supabase.auth.signOut();
     window.location.href = "/login";
   }

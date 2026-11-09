@@ -5,6 +5,7 @@ import Link from "next/link";
 import { addDays, addWeeks, addMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
+import { readScreenCache, writeScreenCache } from "@/lib/hive/screen-cache";
 import { useCompany } from "@/components/company-provider";
 import {
   getActiveProfessionals,
@@ -39,6 +40,11 @@ function weekRangeLabel(start: Date, end: Date) {
   return `${format(start, "d 'de' MMM", { locale: ptBR })} – ${format(end, "d 'de' MMM", { locale: ptBR })}`;
 }
 
+// Chave da memória da Agenda: empresa, visão, dia de referência e profissional.
+function agendaKey(companyId: string, view: View, refDate: Date, professional: string) {
+  return `agenda:${companyId}:${view}:${refDate.toISOString()}:${professional}`;
+}
+
 export default function AgendaPage() {
   const { companyId, role } = useCompany();
   // Valores só para a administração do negócio, como no card do Início.
@@ -46,11 +52,19 @@ export default function AgendaPage() {
 
   const [view, setView] = useState<View>("dia");
   const [refDate, setRefDate] = useState(() => startOfDay(new Date()));
-  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  // Fase 2 do desempenho: ao voltar para a Agenda, o dia de hoje aparece na hora
+  // com o que já tinha e atualiza por trás.
+  const [professionals, setProfessionals] = useState<Professional[]>(
+    () => readScreenCache<Professional[]>(`agenda-prof:${companyId}`) ?? []
+  );
   const [selectedProfessional, setSelectedProfessional] = useState<string>("all");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => !readScreenCache(agendaKey(companyId, "dia", startOfDay(new Date()), "all"))
+  );
 
-  const [dayAppointments, setDayAppointments] = useState<TimelineAppointment[]>([]);
+  const [dayAppointments, setDayAppointments] = useState<TimelineAppointment[]>(
+    () => readScreenCache<TimelineAppointment[]>(agendaKey(companyId, "dia", startOfDay(new Date()), "all")) ?? []
+  );
   const [weekAppointments, setWeekAppointments] = useState<WeekAppointment[]>([]);
   const [monthByDay, setMonthByDay] = useState<Map<string, { total: number; hasPending: boolean }>>(new Map());
   // Previsão do período exibido: null = carregando; "erro" = consulta falhou.
@@ -59,11 +73,23 @@ export default function AgendaPage() {
   // Profissionais ativas — carregado uma vez. Se só houver uma, o filtro
   // nem aparece (não cria complexidade desnecessária pra quem trabalha sozinha).
   useEffect(() => {
-    getActiveProfessionals(createClient(), companyId).then(setProfessionals);
+    getActiveProfessionals(createClient(), companyId).then((list) => {
+      setProfessionals(list);
+      writeScreenCache(`agenda-prof:${companyId}`, list);
+    });
   }, [companyId]);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const key = agendaKey(companyId, view, refDate, selectedProfessional);
+    const hit = readScreenCache<unknown>(key);
+    if (hit !== undefined) {
+      if (view === "dia") setDayAppointments(hit as TimelineAppointment[]);
+      if (view === "semana") setWeekAppointments(hit as WeekAppointment[]);
+      if (view === "mes") setMonthByDay(hit as Map<string, { total: number; hasPending: boolean }>);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     const supabase = createClient();
 
     if (view === "dia") {
@@ -75,7 +101,9 @@ export default function AgendaPage() {
         .lt("scheduled_start", addDays(refDate, 1).toISOString());
       if (selectedProfessional !== "all") query = query.eq("professional_member_id", selectedProfessional);
       const { data } = await query;
-      setDayAppointments((data as unknown as TimelineAppointment[]) ?? []);
+      const rows = (data as unknown as TimelineAppointment[]) ?? [];
+      setDayAppointments(rows);
+      if (data) writeScreenCache(key, rows);
     }
 
     if (view === "semana") {
@@ -89,7 +117,9 @@ export default function AgendaPage() {
         .order("scheduled_start");
       if (selectedProfessional !== "all") query = query.eq("professional_member_id", selectedProfessional);
       const { data } = await query;
-      setWeekAppointments((data as unknown as WeekAppointment[]) ?? []);
+      const rows = (data as unknown as WeekAppointment[]) ?? [];
+      setWeekAppointments(rows);
+      if (data) writeScreenCache(key, rows);
     }
 
     if (view === "mes") {
@@ -117,6 +147,7 @@ export default function AgendaPage() {
         map.set(key, cur);
       }
       setMonthByDay(map);
+      if (data) writeScreenCache(key, map);
     }
 
     setLoading(false);
@@ -133,8 +164,9 @@ export default function AgendaPage() {
   useEffect(() => {
     if (!canSeeFinance) return;
     let current = true;
-    setForecast(null);
     const period = agendaPeriod(view, refDate);
+    const fKey = `agenda-prev:${companyId}:${view}:${period.start}:${selectedProfessional}`;
+    setForecast(readScreenCache<Forecast>(fKey) ?? null);
     let query = createClient()
       .from("appointments")
       .select("price, status, scheduled_start")
@@ -146,7 +178,10 @@ export default function AgendaPage() {
     query.then(({ data, error }) => {
       // descarta respostas de um período que já saiu da tela (setas clicadas rápido)
       if (!current) return;
-      setForecast(error ? "erro" : forecastFor((data as ForecastRow[] | null) ?? [], period.start, period.end));
+      if (error) return setForecast("erro");
+      const f = forecastFor((data as ForecastRow[] | null) ?? [], period.start, period.end);
+      setForecast(f);
+      writeScreenCache(fKey, f);
     });
     return () => {
       current = false;

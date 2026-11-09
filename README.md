@@ -402,4 +402,7 @@ banco, endereços (`hive-beauty.vercel.app`) e chaves internas (ex.: `aurea-them
 - Início: a sessão vem do armazenamento local (`getSession`) e o perfil entra na mesma rodada das outras consultas.
 - `vercel.json`: funções em `pdx1` (Oregon), a mesma região do banco (us-west-2).
 - Próximas fases no ROADMAP (0.7): dados das abas em memória e banco em São Paulo.
+- Fase 2: `lib/hive/screen-cache.ts` guarda na memória o último resultado do Início, da Agenda (por visão, dia,
+  profissional, e a previsão do período) e de Clientes. Ao voltar para a aba, a tela aparece na hora e atualiza por
+  trás; se a atualização falhar, a lista que já estava na tela continua. A memória some ao recarregar e ao sair.
 
