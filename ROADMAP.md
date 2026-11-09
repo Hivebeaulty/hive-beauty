@@ -84,9 +84,10 @@ O banco está em Oregon (us-west-2) e as clientes no Brasil: cada consulta do ce
 - [x] Fase 1 (PR `desempenho-1`): tela de transição imediata ao trocar de aba (`app/(app)/loading.tsx`); o
       middleware confere o login pelo token (`getClaims`) em vez de ir ao servidor de login a cada tela; o Início
       deixou de esperar o login e o perfil em sequência; funções da Vercel em Oregon (`pdx1`), perto do banco.
-- [ ] Conferir no painel do Supabase se o projeto já usa chaves de assinatura assimétricas (JWT Signing Keys); se
-      ainda usar a chave antiga, migrar, para o `getClaims` não precisar ir ao servidor de login.
-- [ ] Fase 2: guardar os dados de cada aba na memória e mostrar na hora ao voltar, atualizando por trás.
+- [x] Chaves de assinatura assimétricas no Supabase (08/11): o middleware confere o login sem ir ao servidor
+      (nos registros, a consulta de 580 ms por navegação sumiu depois do deploy).
+- [x] Fase 2 (PR `desempenho-2`): Início, Agenda (com a previsão) e Clientes guardam o último resultado na memória;
+      ao voltar para a aba, a tela aparece na hora e atualiza por trás. A memória some ao recarregar e ao sair.
 - [ ] Fase 3: levar o banco para São Paulo (sa-east-1) e as funções para gru1. É a maior melhora (cada consulta cai de
       cerca de 200 ms para cerca de 20 ms), mas é uma migração de projeto, com janela de manutenção, e mexe no worker do
       WhatsApp. Planejar com cuidado.

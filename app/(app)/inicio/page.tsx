@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { readScreenCache, writeScreenCache } from "@/lib/hive/screen-cache";
 import Link from "next/link";
 import { subDays, format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
@@ -60,24 +61,41 @@ function addDays(d: Date, n: number) {
   return x;
 }
 
+type InicioSnapshot = {
+  name: string | null;
+  today: PeriodIndicators | null;
+  month: PeriodIndicators | null;
+  appointments: Appointment[];
+  pending: PendingPayment[];
+  activeClients: number;
+  upcomingCount: number;
+  overdueCount: number;
+  birthdaysWeekCount: number;
+  forecast: { hoje: Forecast; semana: Forecast; mes: Forecast } | null;
+};
+
 export default function InicioPage() {
   const { companyId, role } = useCompany();
   const canSeeFinance = role === "owner" || role === "admin";
 
-  const [loading, setLoading] = useState(true);
-  const [name, setName] = useState<string | null>(null);
-  const [today, setToday] = useState<PeriodIndicators | null>(null);
-  const [month, setMonth] = useState<PeriodIndicators | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [pending, setPending] = useState<PendingPayment[]>([]);
-  const [activeClients, setActiveClients] = useState<number>(0);
-  const [upcomingCount, setUpcomingCount] = useState(0);
-  const [overdueCount, setOverdueCount] = useState(0);
-  const [birthdaysWeekCount, setBirthdaysWeekCount] = useState(0);
-  const [forecast, setForecast] = useState<{ hoje: Forecast; semana: Forecast; mes: Forecast } | null>(null);
+  // Fase 2 do desempenho: ao voltar para o Início, mostra na hora o que já tinha
+  // e atualiza por trás (sem o esqueleto).
+  const cacheKey = `inicio:${companyId}`;
+  const cached = readScreenCache<InicioSnapshot>(cacheKey);
+  const [loading, setLoading] = useState(!cached);
+  const [name, setName] = useState<string | null>(cached?.name ?? null);
+  const [today, setToday] = useState<PeriodIndicators | null>(cached?.today ?? null);
+  const [month, setMonth] = useState<PeriodIndicators | null>(cached?.month ?? null);
+  const [appointments, setAppointments] = useState<Appointment[]>(cached?.appointments ?? []);
+  const [pending, setPending] = useState<PendingPayment[]>(cached?.pending ?? []);
+  const [activeClients, setActiveClients] = useState<number>(cached?.activeClients ?? 0);
+  const [upcomingCount, setUpcomingCount] = useState(cached?.upcomingCount ?? 0);
+  const [overdueCount, setOverdueCount] = useState(cached?.overdueCount ?? 0);
+  const [birthdaysWeekCount, setBirthdaysWeekCount] = useState(cached?.birthdaysWeekCount ?? 0);
+  const [forecast, setForecast] = useState<InicioSnapshot["forecast"]>(cached?.forecast ?? null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!readScreenCache(cacheKey)) setLoading(true);
     const supabase = createClient();
     const now = new Date();
     const todayStr = format(now, "yyyy-MM-dd");
@@ -158,35 +176,13 @@ export default function InicioPage() {
         .lte("scheduled_start", fWin.to),
     ]);
 
-    {
-      const fr = (forecastRows as ForecastRow[] | null) ?? [];
-      const r = forecastRanges(now);
-      setForecast({
-        hoje: forecastFor(fr, r.hoje.start, r.hoje.end),
-        semana: forecastFor(fr, r.semana.start, r.semana.end),
-        mes: forecastFor(fr, r.mes.start, r.mes.end),
-      });
-    }
+    const fr = (forecastRows as ForecastRow[] | null) ?? [];
+    const r = forecastRanges(now);
 
     // Saudação: "Como você quer ser chamada?" (profiles.display_name) > 1º nome do
     // perfil > 1º nome do metadado do login (comportamento anterior). Se a coluna
     // ainda não existir, a consulta falha em silêncio e cai no metadado.
     const prof = session.profile as { display_name?: string | null; full_name?: string | null } | null;
-    const displayName: string | null = prof?.display_name ?? null;
-    const profileFullName: string | null = prof?.full_name ?? null;
-    setName(
-      resolveGreetingName({
-        displayName,
-        profileFullName,
-        metadataFullName: session.user?.user_metadata?.full_name as string | undefined,
-      })
-    );
-    setToday((todayInd as unknown as PeriodIndicators[])?.[0] ?? null);
-    setMonth((monthInd as unknown as PeriodIndicators[])?.[0] ?? null);
-    setAppointments((appts as unknown as Appointment[]) ?? []);
-    setPending((pend as unknown as PendingPayment[]) ?? []);
-    setActiveClients(activeCount ?? 0);
-    setUpcomingCount(upcomingTotal ?? 0);
 
     const visitsByClient = new Map<string, string[]>();
     for (const a of apptsForRelationship ?? []) {
@@ -200,11 +196,41 @@ export default function InicioPage() {
       const days = daysUntilNextBirthday(c.birth_date);
       if (days !== null && days <= 7) birthdaysWeek += 1;
     }
-    setOverdueCount(overdue);
-    setBirthdaysWeekCount(birthdaysWeek);
+
+    const snap: InicioSnapshot = {
+      forecast: {
+        hoje: forecastFor(fr, r.hoje.start, r.hoje.end),
+        semana: forecastFor(fr, r.semana.start, r.semana.end),
+        mes: forecastFor(fr, r.mes.start, r.mes.end),
+      },
+      name: resolveGreetingName({
+        displayName: prof?.display_name ?? null,
+        profileFullName: prof?.full_name ?? null,
+        metadataFullName: session.user?.user_metadata?.full_name as string | undefined,
+      }),
+      today: (todayInd as unknown as PeriodIndicators[])?.[0] ?? null,
+      month: (monthInd as unknown as PeriodIndicators[])?.[0] ?? null,
+      appointments: (appts as unknown as Appointment[]) ?? [],
+      pending: (pend as unknown as PendingPayment[]) ?? [],
+      activeClients: activeCount ?? 0,
+      upcomingCount: upcomingTotal ?? 0,
+      overdueCount: overdue,
+      birthdaysWeekCount: birthdaysWeek,
+    };
+    setForecast(snap.forecast);
+    setName(snap.name);
+    setToday(snap.today);
+    setMonth(snap.month);
+    setAppointments(snap.appointments);
+    setPending(snap.pending);
+    setActiveClients(snap.activeClients);
+    setUpcomingCount(snap.upcomingCount);
+    setOverdueCount(snap.overdueCount);
+    setBirthdaysWeekCount(snap.birthdaysWeekCount);
+    writeScreenCache(cacheKey, snap);
 
     setLoading(false);
-  }, [companyId]);
+  }, [companyId, cacheKey]);
 
   useEffect(() => {
     load();

@@ -17,6 +17,7 @@ import { birthdayLabel, normalizeSegmentParam, type ClientSegment } from "@/lib/
 import { keepVisibleSelection } from "@/lib/hive/bulk-clients";
 import { ClientesBulkActions } from "@/components/clientes-bulk-actions";
 import { loadClientRows, type ClientRow } from "@/lib/hive/clients-data";
+import { readScreenCache, writeScreenCache } from "@/lib/hive/screen-cache";
 import { phoneDisplay } from "@/lib/hive/phone";
 import { formatDateOnly } from "@/lib/hive/format";
 import { cn } from "@/lib/utils";
@@ -50,10 +51,13 @@ export default function ClientesPage() {
   const { companyId } = useCompany();
   const searchParams = useSearchParams();
   const param = normalizeSegmentParam(searchParams.get("segmento") ?? "");
-  const [clients, setClients] = useState<ClientRow[]>([]);
+  // Fase 2 do desempenho: ao voltar para Clientes, a lista aparece na hora e
+  // atualiza por trás.
+  const cacheKey = `clientes:${companyId}`;
+  const [clients, setClients] = useState<ClientRow[]>(() => readScreenCache<ClientRow[]>(cacheKey) ?? []);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<View>(VALID_VIEWS.has(param) ? (param as View) : "todas");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !readScreenCache(cacheKey));
   const [failed, setFailed] = useState(false);
 
   // Seleção múltipla (exclusão / inativação em massa)
@@ -62,23 +66,29 @@ export default function ClientesPage() {
 
   const reload = useCallback(async () => {
     const { rows, failed } = await loadClientRows(createClient(), companyId);
+    // Falha ao atualizar com a lista já na tela: mantém o que já estava (a próxima
+    // atualização corrige). Sem nada guardado, mostra o aviso de erro, como antes.
+    if (failed && readScreenCache(cacheKey)) return setLoading(false);
     setClients(rows);
     setFailed(failed);
     setLoading(false);
-  }, [companyId]);
+    if (!failed) writeScreenCache(cacheKey, rows);
+  }, [companyId, cacheKey]);
 
   useEffect(() => {
     let cancelled = false;
     loadClientRows(createClient(), companyId).then(({ rows, failed }) => {
       if (cancelled) return;
+      if (failed && readScreenCache(cacheKey)) return setLoading(false);
       setClients(rows);
       setFailed(failed);
       setLoading(false);
+      if (!failed) writeScreenCache(cacheKey, rows);
     });
     return () => {
       cancelled = true;
     };
-  }, [companyId]);
+  }, [companyId, cacheKey]);
 
   const active = useMemo(() => clients.filter((c) => !c.archived_at), [clients]);
   const archivedCount = clients.length - active.length;
