@@ -45,7 +45,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <MobileHeader companyName={membership.companyName} />
           {access.warning && (
             <div role="status" className="border-b border-ink-100 bg-sand px-4 py-2.5 text-center text-sm text-ink-700">
-              {access.status === "ending" ? (
+              {access.status === "trialing" ? (
+                // Teste sem cartão (0052): aviso nos últimos 3 dias.
+                membership.role === "owner" ? (
+                  <>
+                    Seu teste grátis termina em {formatUntil(access.until)}.{" "}
+                    <a href="/mais/assinatura" className="font-semibold underline">
+                      Assinar para continuar
+                    </a>
+                  </>
+                ) : (
+                  `O teste grátis deste negócio termina em ${formatUntil(access.until)}.`
+                )
+              ) : access.status === "ending" ? (
                 membership.role === "owner" ? (
                   <>
                     Sua assinatura foi cancelada. O acesso continua até {formatUntil(access.until)}.{" "}

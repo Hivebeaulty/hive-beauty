@@ -406,3 +406,18 @@ banco, endereços (`hive-beauty.vercel.app`) e chaves internas (ex.: `aurea-them
   profissional, e a previsão do período) e de Clientes. Ao voltar para a aba, a tela aparece na hora e atualiza por
   trás; se a atualização falhar, a lista que já estava na tela continua. A memória some ao recarregar e ao sair.
 
+## Teste grátis sem cartão (0052, 09/11/2026)
+
+- A conta nasce em `/cadastro` (nome, e-mail e senha). A função `trial-signup` (publicar SEM verificação de JWT) reserva
+  o teste com `billing_start_trial` (só e-mail que nunca teve login nem assinatura; até 5 cadastros por hora por IP),
+  cria o login já confirmado com a senha escolhida e registra a origem no funil do painel. Se a criação do login
+  falhar, `billing_trial_release` desfaz a reserva.
+- `billing_accounts` ganha `trial_ends_at` (provedor `trial`). `get_company_access` e `get_my_access` liberam até o
+  fim do teste, avisam nos últimos 3 dias e depois devolvem `trial_ended` (sem acesso, dados guardados).
+- Para continuar, a dona assina no Mercado Pago com o MESMO e-mail; `billing_sync` atualiza a mesma linha e o acesso
+  passa a seguir a assinatura. `checkoutUrlFor` escolhe o link: depois do teste, `CHECKOUT_AFTER_TRIAL_URL` (plano sem
+  teste, a criar no Mercado Pago; até lá, o link de sempre).
+- A landing pode abrir `/cadastro?email=...&nome=...&utm_source=...`.
+- Testes: `supabase/tests/local/0052_local.sh`, `supabase/tests/local/trial-signup`, `tests/access.test.cjs`,
+  `tests/subscription.test.cjs` e U37 e U38 em `tests/ui`.
+

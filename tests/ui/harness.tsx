@@ -31,6 +31,7 @@ import { Rankings } from "@/components/reports/rankings";
 import { buildRankings } from "@/lib/hive/rankings";
 import AgendaPage from "@/app/(app)/agenda/page";
 import AssinaturaPage from "@/app/(app)/mais/assinatura/page";
+import CadastroPage from "@/app/(auth)/cadastro/page";
 import { CompanyProvider } from "@/components/company-provider";
 
 type Scenario = { status: RpcResult; qr: RpcResult; request: RpcResult; disc: RpcResult; delayMs: number };
@@ -70,6 +71,9 @@ if (view === "agenda") {
       </div>
     </CompanyProvider>
   );
+} else if (view === "cadastro") {
+  // Cadastro do teste sem cartão (0052): página REAL, função e login simulados em window.__db.
+  createRoot(document.getElementById("root")!).render(<CadastroPage />);
 } else if (view === "assinatura") {
   // Mais > Assinatura (0051): página REAL, banco e função simulados em window.__db.
   createRoot(document.getElementById("root")!).render(

@@ -84,3 +84,17 @@ test("cancelWarning: no teste o acesso para na hora; com mês pago, vai até o f
   assert.match(s.cancelWarning(s.parseSubscription(base({ status: "trialing" }), null)), /pausado assim que o Mercado Pago confirmar/);
   assert.match(s.cancelWarning(s.parseSubscription(base(), null)), /até o fim do mês que já foi pago/);
 });
+
+test("teste sem cartão (provider trial): mostra até quando, sem cobrança, e oferece assinar", () => {
+  const d = s.describeSubscription(s.parseSubscription(base({ status: "trialing", provider: "trial", can_cancel: false,
+    trial_ends_at: "2026-11-15T15:00:00Z", next_payment_at: null, payments: [],
+    access: { status: "trialing", allowed: true, warning: false, until: "2026-11-15T15:00:00Z" } }), null));
+  assert.equal(d.title, "Teste grátis, sem cartão");
+  assert.match(d.lines[0], /até 15\/11\/2026\. Nada é cobrado\./);
+  assert.equal(d.canSubscribe, true);
+  const end = s.describeSubscription(s.parseSubscription(base({ status: "trialing", provider: "trial", can_cancel: false,
+    access: { status: "trial_ended", allowed: false, warning: false } }), null));
+  assert.equal(end.title, "Seu teste grátis terminou");
+  assert.equal(end.canSubscribe, true);
+  assert.equal(s.parseSubscription(base({ provider: 7 }), null).provider, null);
+});

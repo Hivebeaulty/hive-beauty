@@ -5,7 +5,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { LANDING_URL } from "@/lib/hive/access";
+import { SIGNUP_PATH } from "@/lib/hive/access";
 import { safeNextPath } from "@/lib/hive/next-path";
 import { LegalLinks } from "@/components/legal-links";
 
@@ -63,8 +63,8 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <a href={LANDING_URL} className="mt-6 block text-center text-sm font-medium text-ink-600 hover:text-ink-800">
-          Ainda não tem conta? Criar conta
+        <a href={SIGNUP_PATH} className="mt-6 block text-center text-sm font-medium text-ink-600 hover:text-ink-800">
+          Ainda não tem conta? Teste grátis por 7 dias, sem cartão
         </a>
         <LegalLinks className="mt-6" />
       </div>

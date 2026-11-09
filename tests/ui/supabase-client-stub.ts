@@ -17,6 +17,7 @@ type Db = {
   delay?: (call: Call) => number;
   fail?: (call: Call) => boolean;
   invoke?: (name: string, body: unknown) => { data: unknown; error: unknown };
+  signIn?: (creds: unknown) => { data: unknown; error: unknown };
 };
 
 const asTime = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v) ? Date.parse(v) : v);
@@ -78,6 +79,13 @@ export function createClient() {
         db.calls.push({ table: `rpc:${fn}`, select: "", filters: [["args", "", args]] });
         const v = db.rpc?.[fn];
         return typeof v === "function" ? (v as (a: unknown) => { data: unknown; error: unknown })(args) : { data: v ?? null, error: null };
+      },
+      // auth.signInWithPassword: registra a chamada; o teste pode instalar __db.signIn
+      auth: {
+        signInWithPassword: async (creds: unknown) => {
+          db.calls.push({ table: "auth:signIn", select: "", filters: [["creds", "", creds]] });
+          return db.signIn ? db.signIn(creds) : { data: {}, error: null };
+        },
       },
       // functions.invoke: o teste instala __db.invoke(nome, corpo) => { data, error }
       functions: {
