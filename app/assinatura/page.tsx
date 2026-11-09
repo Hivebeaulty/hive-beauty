@@ -6,7 +6,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveMembership } from "@/lib/hive/membership";
-import { accessCopy, parseAccess, CHECKOUT_URL } from "@/lib/hive/access";
+import { accessCopy, parseAccess, checkoutUrlFor } from "@/lib/hive/access";
 import { LogoutButton } from "@/components/logout-button";
 import { LegalLinks } from "@/components/legal-links";
 
@@ -41,7 +41,7 @@ export default async function AssinaturaPage() {
 
         {copy.canSubscribe && (
           <>
-            <a href={CHECKOUT_URL} target="_blank" rel="noopener noreferrer"
+            <a href={checkoutUrlFor(access.status)} target="_blank" rel="noopener noreferrer"
                className="btn-gold mt-6 flex h-12 w-full items-center justify-center rounded px-5 text-base font-semibold">
               Assinar agora
             </a>

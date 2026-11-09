@@ -1,6 +1,6 @@
 # Roadmap da Sócia
 
-Atualizado em 08/11/2026. Objetivo do momento: **as primeiras assinantes pagantes**, que usam a Sócia na primeira
+Atualizado em 09/11/2026. Objetivo do momento: **as primeiras assinantes pagantes**, que usam a Sócia na primeira
 semana e continuam pagando. O que já está em produção fica no README; o que foi concluído há pouco está no fim deste
 arquivo.
 
@@ -94,9 +94,16 @@ O banco está em Oregon (us-west-2) e as clientes no Brasil: cada consulta do ce
 
 ### 0.8 Teste sem cartão (pedido de 08/11)
 
-- [ ] Cadastro direto no app com senha, 7 dias de teste sem pagamento; no fim do teste, assinatura no Mercado Pago
-      (cartão). Depois, Pix pelo Asaas ou pela Cakto (sem CNPJ, Pix mensal comum; Pix Automático exige CNPJ com seis meses).
-- [ ] Atualizar o slide 3 do fixado, o story do período grátis em Dúvidas e a landing.
+- [x] Código pronto (PR `trial-sem-cartao`, migration 0052, função `trial-signup`): cadastro em `/cadastro` com nome,
+      e-mail e senha, 7 dias sem cartão, entrada direta no app e onboarding. Aviso nos últimos 3 dias; depois, tela de
+      assinatura. Um teste por e-mail; no máximo 5 cadastros por hora por aparelho.
+- [ ] Publicar: migration 0052, função `trial-signup` (SEM verificação de JWT) e o app.
+- [ ] Mercado Pago: criar um plano igual ao atual, mas SEM os 7 dias grátis, e trocar `CHECKOUT_AFTER_TRIAL_URL` em
+      `lib/hive/access.ts`. Até lá, quem assina depois do teste ganha mais 7 dias antes da primeira cobrança.
+- [ ] Landing (Lovable): o botão "Testar 7 dias grátis" passa a abrir `/cadastro` no app, levando e-mail, nome e UTMs.
+- [ ] Instagram: slide 3 do fixado ("Preciso de cartão?"), story do período grátis em Dúvidas e a legenda do fixado.
+- [ ] Depois: e-mail ou WhatsApp lembrando do fim do teste (hoje o aviso é só dentro do app).
+- [ ] Depois: Pix pelo Asaas ou pela Cakto (sem CNPJ, Pix mensal comum; Pix Automático exige CNPJ com seis meses).
 
 ## 1. Lançamento e primeiras vendas
 

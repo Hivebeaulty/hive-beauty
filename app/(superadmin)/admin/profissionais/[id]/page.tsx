@@ -129,7 +129,7 @@ export default async function AdminContaPage({ params }: { params: Promise<{ id:
           {d.billing ? (
             <dl className="divide-y divide-ink-50">
               <Row label="Situação">{BILLING_LABEL[status]}</Row>
-              <Row label="Origem">{d.billing.provider === "cortesia" ? "Cortesia" : d.billing.provider === "mercadopago" ? "Mercado Pago" : d.billing.provider ?? "—"}</Row>
+              <Row label="Origem">{d.billing.provider === "cortesia" ? "Cortesia" : d.billing.provider === "mercadopago" ? "Mercado Pago" : d.billing.provider === "trial" ? "Teste sem cartão (no app)" : d.billing.provider ?? "—"}</Row>
               <Row label={status === "trialing" ? "Fim do teste (1ª cobrança)" : "Próxima cobrança"}>{fmtDate(d.billing.next_payment_at)}</Row>
               {d.billing.plan_amount !== null && <Row label="Valor mensal">{formatBRL(Number(d.billing.plan_amount))}</Row>}
               {d.billing.started_at && <Row label="Assinou em">{fmtDate(d.billing.started_at)}</Row>}

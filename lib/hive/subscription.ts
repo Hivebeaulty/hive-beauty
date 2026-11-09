@@ -6,6 +6,8 @@ import { parseAccess, type Access } from "./access";
 export type SubPayment = { at: string; status: string; amount: number | null; refunded: number };
 export type Subscription = {
   status: "free" | "trialing" | "active" | "past_due" | "canceled" | "pending" | "none";
+  /** "trial" = teste grátis sem cartão (0052); "mercadopago"; "cortesia"; ou null. */
+  provider: string | null;
   amount: number | null;
   trialEndsAt: string | null;
   nextPaymentAt: string | null;
@@ -32,6 +34,7 @@ export function parseSubscription(data: unknown, error: unknown): Subscription |
     : [];
   return {
     status: d.status as Subscription["status"],
+    provider: typeof d.provider === "string" ? d.provider : null,
     amount: num(d.amount),
     trialEndsAt: iso(d.trial_ends_at),
     nextPaymentAt: iso(d.next_payment_at),
@@ -67,6 +70,21 @@ export function describeSubscription(s: Subscription): SubSummary {
       tone: "warn",
       lines: [`Você continua usando a Sócia até ${formatDayBR(s.access.until)}. Não haverá novas cobranças.`, keep],
       canSubscribe: false,
+    };
+  }
+  // Teste grátis sem cartão (0052): nada é cobrado; para continuar, ela assina.
+  if (s.provider === "trial") {
+    if (s.access.status === "trial_ended") {
+      return { title: "Seu teste grátis terminou", tone: "warn", lines: ["Assine para continuar usando a Sócia.", keep], canSubscribe: true };
+    }
+    return {
+      title: "Teste grátis, sem cartão",
+      tone: "ok",
+      lines: [
+        s.trialEndsAt ? `Seu teste vai até ${formatDayBR(s.trialEndsAt)}. Nada é cobrado.` : "Nada é cobrado durante o teste.",
+        "Para continuar depois, assine: R$ 59,90 por mês, sem fidelidade.",
+      ],
+      canSubscribe: true,
     };
   }
   switch (s.status) {

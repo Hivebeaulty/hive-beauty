@@ -30,6 +30,8 @@ await build({
       name: "stub-supabase",
       setup(b) {
         b.onResolve({ filter: /^@\/lib\/supabase\/client$/ }, () => ({ path: join(HERE, "supabase-client-stub.ts") }));
+        // next/image fora do Next: <img> simples (tela de cadastro).
+        b.onResolve({ filter: /^next\/image$/ }, () => ({ path: join(HERE, "next-image-stub.tsx") }));
       },
     },
   ],

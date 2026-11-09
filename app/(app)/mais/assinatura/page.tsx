@@ -13,7 +13,7 @@ import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { CHECKOUT_URL } from "@/lib/hive/access";
+import { checkoutUrlFor } from "@/lib/hive/access";
 import { formatMoney } from "@/lib/hive/format";
 import {
   CANCEL_REASONS, MP_SUBSCRIPTIONS_URL, cancelWarning, describeSubscription, formatDayBR, parseSubscription, paymentLabel,
@@ -135,14 +135,19 @@ export default function AssinaturaPage() {
               <p key={l} className="text-sm leading-relaxed text-ink-600">{l}</p>
             ))}
             {sub.cancelPending && <p className="text-sm text-ink-500">Estamos confirmando o cancelamento com o Mercado Pago…</p>}
+            {summary.canSubscribe && (
+              <p className="rounded-lg bg-sand px-4 py-3 text-xs text-ink-700">
+                No Mercado Pago, use o mesmo e-mail desta conta, para a assinatura ser ligada a ela.
+              </p>
+            )}
 
             <div className="flex flex-col gap-2 pt-1 sm:flex-row">
               {summary.canSubscribe && (
-                <a href={CHECKOUT_URL} target="_blank" rel="noopener noreferrer" className="sm:flex-1">
-                  <Button variant="accent" className="w-full">Assinar de novo</Button>
+                <a href={checkoutUrlFor(sub.access.status, sub.provider)} target="_blank" rel="noopener noreferrer" className="sm:flex-1">
+                  <Button variant="accent" className="w-full">{sub.provider === "trial" ? "Assinar agora" : "Assinar de novo"}</Button>
                 </a>
               )}
-              {!summary.canSubscribe && sub.status !== "free" && sub.access.status !== "ending" && (
+              {!summary.canSubscribe && sub.status !== "free" && sub.provider !== "trial" && sub.access.status !== "ending" && (
                 <a href={MP_SUBSCRIPTIONS_URL} target="_blank" rel="noopener noreferrer" className="sm:flex-1">
                   <Button variant="secondary" className="w-full">
                     Trocar forma de pagamento <ExternalLink className="size-4" />

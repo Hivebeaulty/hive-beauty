@@ -73,3 +73,37 @@ test("cancelada com mês pago (0041): liberada até a data, com aviso; sem data 
   assert.equal(a.parseAccess({ status: "ending", allowed: false, until: "2026-11-20T15:00:00Z" }, null).allowed, false);
   assert.equal(a.formatUntil(undefined), "");
 });
+
+// --- teste grátis sem cartão (0052) ---------------------------------------------------------
+const { parseAccess, accessCopy } = a;
+test("teste sem cartão: libera com a data do fim; aviso só quando o banco avisa (últimos 3 dias)", () => {
+  const until = "2026-11-15T15:00:00Z";
+  const a = parseAccess({ status: "trialing", allowed: true, warning: false, until }, null);
+  assert.deepEqual(a, { status: "trialing", allowed: true, warning: false, until });
+  const b = parseAccess({ status: "trialing", allowed: true, warning: true, until }, null);
+  assert.equal(b.warning, true);
+  // teste do Mercado Pago (sem "until") continua como antes: sem aviso e sem data
+  assert.deepEqual(parseAccess({ status: "trialing", allowed: true, warning: false }, null), { status: "trialing", allowed: true, warning: false });
+  // data inválida não vira aviso
+  assert.equal(parseAccess({ status: "trialing", allowed: true, warning: true, until: "ontem" }, null).warning, false);
+});
+
+test("teste sem cartão acabou: sem acesso e a dona vê o botão de assinar", () => {
+  const a = parseAccess({ status: "trial_ended", allowed: false, warning: false }, null);
+  assert.deepEqual(a, { status: "trial_ended", allowed: false, warning: false });
+  const own = accessCopy("trial_ended", true);
+  assert.equal(own.title, "Seu teste grátis terminou");
+  assert.equal(own.canSubscribe, true);
+  assert.match(own.text, /R\$ 59,90 por mês/);
+  assert.equal(accessCopy("trial_ended", false).canSubscribe, false);
+  // "trial_ended" com allowed=true (formato estranho) não libera
+  assert.equal(parseAccess({ status: "trial_ended", allowed: true }, null).allowed, false);
+});
+
+test("checkoutUrlFor: depois do teste sem cartão usa o link do plano sem teste; nos outros casos, o de sempre", () => {
+  const a = load("lib/hive/access.ts");
+  assert.equal(a.checkoutUrlFor("trial_ended"), a.CHECKOUT_AFTER_TRIAL_URL);
+  assert.equal(a.checkoutUrlFor("trialing", "trial"), a.CHECKOUT_AFTER_TRIAL_URL);
+  assert.equal(a.checkoutUrlFor("canceled", "mercadopago"), a.CHECKOUT_URL);
+  assert.equal(a.checkoutUrlFor(undefined), a.CHECKOUT_URL);
+});

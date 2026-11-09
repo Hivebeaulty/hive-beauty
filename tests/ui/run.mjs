@@ -1020,3 +1020,98 @@ test("U36 Assinatura: cabe de 320 a 1440 px nos dois temas, com e sem o modal ab
     }
   }
 });
+
+// ============================================================ Cadastro do teste sem cartão (0052)
+async function openCadastro({ query = "", width = 390, height = 900, theme = "", invoke = "ok" } = {}) {
+  const fs = await import("node:fs");
+  for (const f of ["logo-lockup.png", "logo-lockup-dark.png"]) {
+    const dst = join(HERE, "dist", f);
+    if (!fs.existsSync(dst)) fs.copyFileSync(join(HERE, "../../public", f), dst);
+  }
+  const page = await browser.newPage();
+  await page.setViewport({ width, height, deviceScaleFactor: 1 });
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.nav = null;
+  page.reported = [];
+  // A navegação final troca o documento; o que a página chamou é registrado aqui, no Node.
+  await page.exposeFunction("__report", (x) => page.reported.push(JSON.parse(x)));
+  await page.setRequestInterception(true);
+  page.on("request", (r) => {
+    if (r.isNavigationRequest() && r.frame() === page.mainFrame() && /\/(onboarding|login)$/.test(r.url())) { page.nav = r.url(); r.abort(); }
+    else r.continue();
+  });
+  await page.evaluateOnNewDocument((invoke) => {
+    window.__db = {
+      tables: {}, calls: [],
+      signIn: (creds) => { window.__report(JSON.stringify({ kind: "signIn", creds })); return { data: {}, error: null }; },
+      invoke: (name, body) => {
+        window.__report(JSON.stringify({ kind: "invoke", name, body }));
+        if (invoke === "ok") return { data: { ok: true, trial_ends_at: "2026-11-16T12:00:00Z" }, error: null };
+        const status = invoke === "exists" ? 409 : 500;
+        const msg = invoke === "exists" ? "Este e-mail já tem conta na Sócia. Entre com a sua senha." : "Não foi possível criar a conta agora. Tente de novo.";
+        return { data: null, error: { message: "non-2xx", context: new Response(JSON.stringify({ error: msg, code: invoke === "exists" ? "23505" : undefined }), { status }) } };
+      },
+    };
+  }, invoke);
+  await page.goto(`${PAGE}?view=cadastro${theme ? `&theme=${theme}` : ""}${query}`);
+  await page.addStyleTag({ content: `@font-face{font-family:"Noto Serif";src:url(data:font/woff2;base64,${NOTO}) format("woff2");font-weight:400 700}:root{--font-sans:"Noto Serif",Georgia,serif;--font-serif:"Noto Serif",Georgia,serif}` });
+  await page.evaluate(() => document.fonts.ready);
+  page.errors = errors;
+  return page;
+}
+
+test("U37 Cadastro sem cartão: preenche pela landing, valida a senha, cria a conta, entra e vai para o onboarding", async () => {
+  const page = await openCadastro({ query: "&email=ana%40exemplo.com&nome=Ana&utm_source=instagram&utm_campaign=reel" });
+  await waitText(page, "Teste grátis por 7 dias");
+  const t = norm(await text(page));
+  assert.ok(t.includes("Sem cartão de crédito. Depois, R$ 59,90 por mês, se quiser continuar."), t);
+  assert.equal(await page.$eval('input[type="email"]', (e) => e.value), "ana@exemplo.com");
+  assert.equal(await page.$eval('input[autocomplete="name"]', (e) => e.value), "Ana");
+  // senha curta: mensagem na tela, sem chamar a função
+  await page.type('input[type="password"]', "1234567");
+  await clickButton(page, "Começar meu teste grátis");
+  await waitText(page, "A senha precisa ter pelo menos 8 caracteres.");
+  assert.equal((await page.evaluate(() => window.__db.calls)).length, 0);
+  await page.type('input[type="password"]', "8");
+  await clickButton(page, "Começar meu teste grátis");
+  for (let i = 0; i < 80 && !page.nav; i++) await sleep(50);
+  const inv = page.reported.find((r) => r.kind === "invoke");
+  assert.equal(inv.name, "trial-signup");
+  assert.deepEqual(inv.body, { name: "Ana", email: "ana@exemplo.com", password: "12345678", utm: { utm_source: "instagram", utm_campaign: "reel" }, website: "" });
+  assert.deepEqual(page.reported.find((r) => r.kind === "signIn").creds, { email: "ana@exemplo.com", password: "12345678" });
+  assert.ok(page.nav && page.nav.endsWith("/onboarding"), `foi para ${page.nav}`);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("U38 Cadastro sem cartão: e-mail com conta mostra o motivo e o link Entrar; cabe de 320 a 1440 px nos dois temas", async () => {
+  let page = await openCadastro({ invoke: "exists" });
+  await waitText(page, "Teste grátis por 7 dias");
+  await page.type('input[autocomplete="name"]', "Bia");
+  await page.type('input[type="email"]', "bia@x.com");
+  await page.type('input[type="password"]', "senha-forte");
+  await clickButton(page, "Começar meu teste grátis");
+  await waitText(page, "Este e-mail já tem conta na Sócia. Entre com a sua senha.");
+  assert.equal(await page.$eval('[role="alert"] a', (a) => a.getAttribute("href")), "/login");
+  assert.equal(page.reported.some((r) => r.kind === "signIn"), false);
+  await page.close();
+  page = await openCadastro({ invoke: "falha" });
+  await page.type('input[autocomplete="name"]', "Bia");
+  await page.type('input[type="email"]', "bia@x.com");
+  await page.type('input[type="password"]', "senha-forte");
+  await clickButton(page, "Começar meu teste grátis");
+  await waitText(page, "Não foi possível criar a conta agora.");
+  assert.equal(await page.$('[role="alert"] a'), null, "sem link Entrar em erro comum");
+  await page.close();
+  for (const theme of ["light", "dark"]) {
+    for (const width of [320, 390, 768, 1440]) {
+      page = await openCadastro({ width, theme });
+      await waitText(page, "Teste grátis por 7 dias");
+      assert.ok(await noHorizontalScroll(page), `rolagem lateral ${theme} ${width}`);
+      if (width === 390) await page.screenshot({ path: join(SHOTS, `cadastro-390-${theme === "dark" ? "escuro" : "claro"}.png`), fullPage: true });
+      assert.deepEqual(page.errors, []);
+      await page.close();
+    }
+  }
+});
