@@ -55,14 +55,23 @@ export async function hasAnyBusinessHours(supabase: SupabaseClient, companyId: s
   return (count ?? 0) > 0;
 }
 
-export async function getAvailableSlots(params: {
+export type SlotInfo = { time: string; occupied: boolean };
+
+type SlotParams = {
   supabase: SupabaseClient;
   companyId: string;
   professionalId: string;
   dateStr: string; // yyyy-MM-dd
   durationMinutes: number;
   excludeAppointmentId?: string;
-}): Promise<string[]> {
+};
+
+/**
+ * Grade completa de horários do dia, dentro do expediente. `occupied` = já existe atendimento da
+ * profissional nesse horário (com a opção "mais de uma cliente no mesmo horário" ligada, a tela deixa
+ * escolher esses horários depois de perguntar). Bloqueios de agenda (blocked_times) nunca entram.
+ */
+export async function getSlotGrid(params: SlotParams): Promise<SlotInfo[]> {
   const { supabase, companyId, professionalId, dateStr, durationMinutes, excludeAppointmentId } = params;
   const weekday = new Date(`${dateStr}T00:00:00`).getDay();
   const dayStart = new Date(`${dateStr}T00:00:00`);
@@ -101,17 +110,15 @@ export async function getAvailableSlots(params: {
   );
   if (windows.length === 0) return [];
 
-  const busyRanges = [
-    ...(((blocks as { start_at: string; end_at: string }[]) ?? []).map((b) => ({
-      start: new Date(b.start_at),
-      end: new Date(b.end_at),
-    }))),
-    ...(((appts as { id: string; scheduled_start: string; scheduled_end: string }[]) ?? [])
-      .filter((a) => a.id !== excludeAppointmentId)
-      .map((a) => ({ start: new Date(a.scheduled_start), end: new Date(a.scheduled_end) }))),
-  ];
+  const blockedRanges = ((blocks as { start_at: string; end_at: string }[]) ?? []).map((b) => ({
+    start: new Date(b.start_at),
+    end: new Date(b.end_at),
+  }));
+  const apptRanges = ((appts as { id: string; scheduled_start: string; scheduled_end: string }[]) ?? [])
+    .filter((a) => a.id !== excludeAppointmentId)
+    .map((a) => ({ start: new Date(a.scheduled_start), end: new Date(a.scheduled_end) }));
 
-  const slots: string[] = [];
+  const slots: SlotInfo[] = [];
   const now = new Date();
   const isToday = dateStr === format(now, "yyyy-MM-dd");
 
@@ -120,11 +127,19 @@ export async function getAvailableSlots(params: {
       const slotStart = new Date(`${dateStr}T${minutesToTime(start)}:00`);
       const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
       if (isToday && slotStart < now) continue;
-      const overlaps = busyRanges.some((b) => slotStart < b.end && slotEnd > b.start);
-      if (!overlaps) slots.push(minutesToTime(start));
+      const blocked = blockedRanges.some((b) => slotStart < b.end && slotEnd > b.start);
+      if (blocked) continue;
+      const occupied = apptRanges.some((b) => slotStart < b.end && slotEnd > b.start);
+      slots.push({ time: minutesToTime(start), occupied });
     }
   }
   return slots;
+}
+
+/** Só os horários LIVRES — o comportamento de sempre (aviso antecipado; o banco decide). */
+export async function getAvailableSlots(params: SlotParams): Promise<string[]> {
+  const grid = await getSlotGrid(params);
+  return grid.filter((s) => !s.occupied).map((s) => s.time);
 }
 
 // ---------------------------------------------------------------------------

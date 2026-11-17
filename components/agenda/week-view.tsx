@@ -33,13 +33,13 @@ const minutesOfDay = (iso: string) => {
   return d.getHours() * 60 + d.getMinutes();
 };
 
-// Atendimentos de profissionais diferentes podem se sobrepor no tempo (a
-// exclusion constraint só impede sobreposição da MESMA profissional). Coloca
-// os que se sobrepõem lado a lado, em faixas.
-function layoutOverlaps(appts: WeekAppointment[]) {
+// Atendimentos se sobrepõem no tempo quando são de profissionais diferentes ou, com a opção "mais de
+// uma cliente no mesmo horário" ligada (0053), da MESMA profissional. Coloca os que se sobrepõem lado
+// a lado, em faixas. Também usada pela agenda do dia (day-timeline).
+export function layoutOverlaps<T extends { scheduled_start: string; scheduled_end: string }>(appts: T[]) {
   const sorted = [...appts].sort((a, b) => a.scheduled_start.localeCompare(b.scheduled_start));
-  const out: { a: WeekAppointment; lane: number; lanes: number }[] = [];
-  let cluster: { a: WeekAppointment; lane: number; end: number }[] = [];
+  const out: { a: T; lane: number; lanes: number }[] = [];
+  let cluster: { a: T; lane: number; end: number }[] = [];
   let clusterEnd = -1;
 
   const flush = () => {

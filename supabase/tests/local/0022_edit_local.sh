@@ -145,7 +145,7 @@ check "S3 o concluído e o recebimento dele ficaram intactos" \
   "(select a.status = 'concluido' and exists (select 1 from payments p where p.appointment_id = a.id) from appointments a where a.id = '$past')"
 errc P0002 "S4 dona de OUTRA empresa não enxerga o agendamento (RLS)" edit "$OWNB" "$a2" "$K2" "$SA" "$MA" "$T0 + interval '5 hours'" 60 50
 errc 42501 "S5 anon não chama a edição" "${PSQL[@]}" -c "begin; set local role anon; select update_appointment('$a2', '$K2', '$SA', '$MA', now(), now() + interval '1 hour', 1, null, '{}'::jsonb); commit;"
-check "S6 service_role não chama a edição" "not has_function_privilege('service_role', 'update_appointment(uuid,uuid,uuid,uuid,timestamptz,timestamptz,numeric,text,jsonb)', 'execute')"
+check "S6 service_role não chama a edição" "not has_function_privilege('service_role', 'update_appointment(uuid,uuid,uuid,uuid,timestamptz,timestamptz,numeric,text,jsonb,boolean)', 'execute')"
 
 # ================================================================ I. integridade
 check "I1 editar não criou histórico de status nem recebimento para agendamentos em aberto" \
