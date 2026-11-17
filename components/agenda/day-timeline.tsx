@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Professional } from "@/lib/hive/schedule";
 import { cn } from "@/lib/utils";
+import { layoutOverlaps } from "@/components/agenda/week-view";
 
 export type TimelineAppointment = {
   id: string;
@@ -114,21 +115,26 @@ export function DayTimeline({
                     </div>
                   )}
 
-                  {laneAppts.map((a) => {
+                  {layoutOverlaps(laneAppts).map(({ a, lane: col, lanes: cols }) => {
                     const top = (minutesSinceMidnight(a.scheduled_start) - start) * PX_PER_MIN;
                     const height = Math.max(
                       (minutesSinceMidnight(a.scheduled_end) - minutesSinceMidnight(a.scheduled_start)) * PX_PER_MIN,
                       28
                     );
+                    // Mais de uma cliente no mesmo horário (0053): ficam lado a lado, cada uma na sua faixa.
+                    const side = cols > 1;
+                    const width = 100 / cols;
                     return (
                       <Link
                         key={a.id}
                         href={`/agenda/${a.id}`}
+                        title={side ? "Mesmo horário que outra cliente" : undefined}
                         className={cn(
-                          "absolute inset-x-0.5 overflow-hidden rounded-md border-l-2 px-2 py-1 text-left transition-opacity hover:opacity-80",
+                          "absolute overflow-hidden rounded-md border-l-2 px-2 py-1 text-left transition-opacity hover:opacity-80",
+                          side ? "px-1.5" : "inset-x-0.5",
                           BLOCK_TONE[a.status] ?? BLOCK_TONE.agendado
                         )}
-                        style={{ top, height }}
+                        style={side ? { top, height, left: `calc(${col * width}% + 2px)`, width: `calc(${width}% - 4px)` } : { top, height }}
                       >
                         <p className="truncate text-xs font-semibold leading-tight">{a.clients?.name}</p>
                         {height > 34 && <p className="truncate text-[11px] leading-tight opacity-80">{a.services?.name}</p>}

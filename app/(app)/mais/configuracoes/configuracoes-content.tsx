@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCompany } from "@/components/company-provider";
 import { ProfileNameCard } from "@/components/settings/profile-name-card";
 import { PushAlertsCard } from "@/components/settings/push-alerts-card";
+import { SimultaneousCard } from "@/components/settings/simultaneous-card";
 import { CompanyNameCard } from "@/components/settings/company-name-card";
 import { BusinessHoursCard } from "@/components/settings/business-hours-card";
 import { TeamCard } from "@/components/settings/team-card";
@@ -30,6 +31,9 @@ export function ConfiguracoesContent({ isAdmin }: { isAdmin: boolean }) {
 
       {/* Aviso no celular antes do atendimento: pessoal, vale para qualquer papel (0048) */}
       <PushAlertsCard />
+
+      {/* Mais de uma cliente no mesmo horário: pessoal, desligado por padrão (0053) */}
+      <SimultaneousCard />
 
       {/* WhatsApp: todas veem o status; conectar e desconectar só a administração */}
       <Link href="/mais/configuracoes/whatsapp">

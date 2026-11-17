@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
-import { getActiveProfessionals, getAvailableSlots, hasAnyBusinessHours, type Professional } from "@/lib/hive/schedule";
+import { getActiveProfessionals, getSlotGrid, hasAnyBusinessHours, type Professional, type SlotInfo } from "@/lib/hive/schedule";
+import { findOverlaps, needsOverlapConfirmation, OCCUPIED_SLOT_HINT, type OverlapInfo } from "@/lib/hive/simultaneous";
+import { SimultaneousDialog } from "@/components/agenda/simultaneous-dialog";
 import { formatDuration } from "@/lib/hive/format";
 import { buildConfirmationMessage } from "@/lib/hive/appointment-message";
 import { resolveSignatureName } from "@/lib/hive/display-name";
@@ -70,8 +72,12 @@ export default function NovoAgendamentoPage() {
   const [payStatus, setPayStatus] = useState("pago");
   const [payMethod, setPayMethod] = useState("pix");
 
-  const [slots, setSlots] = useState<string[]>([]);
+  // Grade do dia: livres e (com "mais de uma cliente no mesmo horário" ligado) também os ocupados.
+  const [grid, setGrid] = useState<SlotInfo[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  // 0053: a profissional escolhida aceita agendar junto? Quando sim, perguntamos antes de gravar.
+  const [allowSimul, setAllowSimul] = useState(false);
+  const [pendingOverlap, setPendingOverlap] = useState<OverlapInfo[] | null>(null);
   const [hoursConfigured, setHoursConfigured] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +122,24 @@ export default function NovoAgendamentoPage() {
     });
   }, [companyId, memberId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setAllowSimul(false);
+    if (!professionalId) return;
+    createClient()
+      .rpc("member_allows_simultaneous", { p_member_id: professionalId })
+      .then(({ data, error }) => {
+        if (!cancelled) setAllowSimul(!error && data === true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [professionalId]);
+
+  // Horários que a tela oferece: só os livres; com a opção ligada, também os ocupados (com pergunta).
+  const slots = (allowSimul ? grid : grid.filter((g) => !g.occupied)).map((g) => g.time);
+  const occupiedTimes = new Set(grid.filter((g) => g.occupied).map((g) => g.time));
+
   function handleServiceChange(id: string) {
     setServiceId(id);
     const svc = services.find((s) => s.id === id);
@@ -130,21 +154,21 @@ export default function NovoAgendamentoPage() {
   // final contra conflito (exclusion constraint), como já era.
   const reloadSlots = useCallback(async () => {
     if (!professionalId || !date || !duration) {
-      setSlots([]);
+      setGrid([]);
       return;
     }
     setSlotsLoading(true);
-    const list = await getAvailableSlots({
+    const list = await getSlotGrid({
       supabase: createClient(),
       companyId,
       professionalId,
       dateStr: date,
       durationMinutes: totals({ price: 0, minutes: duration }, extras).minutes,
     });
-    setSlots(list);
+    setGrid(list);
     setSlotsLoading(false);
     // no lançamento retroativo o horário é digitado (já passou): não está na grade
-    if (!retro) setTime((t) => (list.includes(t) ? t : ""));
+    if (!retro) setTime((t) => (list.some((g) => g.time === t) ? t : ""));
   }, [companyId, professionalId, date, duration, retro, extras]);
 
   useEffect(() => {
@@ -203,6 +227,39 @@ export default function NovoAgendamentoPage() {
       setError("Escolha um horário disponível.");
       return;
     }
+    // 0053: horário já ocupado e a opção ligada -> pergunta antes de gravar.
+    if (allowSimul && occupiedTimes.has(time)) {
+      const overlaps = await loadOverlaps();
+      if (overlaps.length > 0) {
+        setPendingOverlap(overlaps);
+        return;
+      }
+    }
+    await save(false);
+  }
+
+  // Quem já está no horário escolhido (nome e hora), para a pergunta.
+  async function loadOverlaps(): Promise<OverlapInfo[]> {
+    const tot = totals({ price, minutes: duration }, extras);
+    const start = new Date(`${date}T${time}:00`);
+    const end = new Date(start.getTime() + tot.minutes * 60000);
+    const dayStart = new Date(`${date}T00:00:00`);
+    const dayEnd = new Date(`${date}T23:59:59`);
+    const { data } = await createClient()
+      .from("appointments")
+      .select("id, scheduled_start, scheduled_end, status, clients(name)")
+      .eq("company_id", companyId)
+      .eq("professional_member_id", professionalId)
+      .gte("scheduled_start", dayStart.toISOString())
+      .lt("scheduled_start", dayEnd.toISOString());
+    return findOverlaps((data as unknown as Parameters<typeof findOverlaps>[0]) ?? [], start, end);
+  }
+
+  async function confirmSimultaneous() {
+    await save(true);
+  }
+
+  async function save(allowOverlap: boolean) {
     setSaving(true);
     setError(null);
 
@@ -218,6 +275,7 @@ export default function NovoAgendamentoPage() {
           p_company_id: companyId, p_client_id: clientId, p_service_id: serviceId, p_professional_member_id: professionalId,
           p_scheduled_start: scheduledStart.toISOString(), p_scheduled_end: scheduledEnd.toISOString(),
           p_price: tot.price, p_notes: notes || null, p_extras: extras,
+          ...(allowOverlap ? { p_allow_overlap: true } : {}),
         }).then((r) => ({ data: r.data ? { id: r.data as string } : null, error: r.error }))
       // .select("id").single(): só seguimos (e só oferecemos o WhatsApp) quando o
       // banco CONFIRMOU a gravação e devolveu o registro.
@@ -231,14 +289,21 @@ export default function NovoAgendamentoPage() {
       price: tot.price,
       notes: notes || null,
       status: "agendado",
+      ...(allowOverlap ? { overlap_ok: true } : {}),
     }).select("id").single();
 
     setSaving(false);
     if (error) {
+      setPendingOverlap(null);
       // 23P01 = violação da exclusion constraint de conflito de horário —
       // a autoridade final continua sendo o banco, mesmo com o aviso
       // antecipado da grade de horários acima.
-      if (error.code === "23P01") {
+      if (needsOverlapConfirmation(error.code)) {
+        // o banco pediu a confirmação (ligado, mas a tela ainda não tinha perguntado): pergunta agora
+        const overlaps = await loadOverlaps();
+        setPendingOverlap(overlaps);
+      } else if (error.code === "23P01") {
+        setPendingOverlap(null);
         setError("Esse horário acabou de ser ocupado por outro atendimento. Escolha outro horário.");
         reloadSlots();
       } else if (error.code === "AUE04" || error.code === "AUE06") {
@@ -507,22 +572,32 @@ export default function NovoAgendamentoPage() {
             </p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
-              {slots.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setTime(s)}
-                  className={cn(
-                    "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-                    time === s
-                      ? "border-ink-800 bg-ink-800 text-cream"
-                      : "border-ink-200 bg-surface text-ink-700 hover:bg-ink-50"
-                  )}
-                >
-                  {s}
-                </button>
-              ))}
+              {slots.map((s) => {
+                const occupied = allowSimul && occupiedTimes.has(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setTime(s)}
+                    title={occupied ? OCCUPIED_SLOT_HINT : undefined}
+                    aria-label={occupied ? `${s}. ${OCCUPIED_SLOT_HINT}` : undefined}
+                    className={cn(
+                      "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+                      time === s
+                        ? "border-ink-800 bg-ink-800 text-cream"
+                        : occupied
+                          ? "border-dashed border-gold-500 bg-surface text-ink-700 hover:bg-sand/60"
+                          : "border-ink-200 bg-surface text-ink-700 hover:bg-ink-50"
+                    )}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
             </div>
+          )}
+          {allowSimul && occupiedTimes.size > 0 && slots.length > 0 && (
+            <p className="mt-2 text-xs text-ink-500">Horário com borda pontilhada já tem cliente: o app pergunta antes de agendar junto.</p>
           )}
         </div>
         )}
@@ -565,6 +640,15 @@ export default function NovoAgendamentoPage() {
           {saving ? "Salvando..." : "Criar agendamento"}
         </Button>
       </form>
+
+      <SimultaneousDialog
+        open={pendingOverlap !== null}
+        existing={pendingOverlap ?? []}
+        clientName={clients.find((c) => c.id === clientId)?.name ?? ""}
+        busy={saving}
+        onConfirm={confirmSimultaneous}
+        onCancel={() => setPendingOverlap(null)}
+      />
     </div>
   );
 }

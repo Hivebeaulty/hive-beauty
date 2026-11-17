@@ -406,6 +406,20 @@ banco, endereços (`hive-beauty.vercel.app`) e chaves internas (ex.: `aurea-them
   profissional, e a previsão do período) e de Clientes. Ao voltar para a aba, a tela aparece na hora e atualiza por
   trás; se a atualização falhar, a lista que já estava na tela continua. A memória some ao recarregar e ao sair.
 
+## Mais de uma cliente no mesmo horário (0053, 16/11/2026)
+
+- Opcional, por profissional, **desligado por padrão**: Mais > Configurações > "Mais de uma cliente no mesmo horário".
+- Banco: `member_scheduling_prefs` (fechada à API, acesso por `get_my_allow_simultaneous`, `set_my_allow_simultaneous` e
+  `member_allows_simultaneous`), `appointments.overlap_ok` e o gatilho `appointments_overlap_guard`. A exclusion constraint
+  `no_overlap_per_professional` continua valendo para quem não é "agendado junto".
+- Regra: sem conflito, grava; com conflito e opção desligada, 23P01 (como antes); ligada e sem confirmação, `AOV01`
+  (a tela pergunta "agendar junto?"); com a confirmação, grava e marca. Mexer só em status, pagamento ou observação não reavalia.
+- `create_appointment_with_extras` e `update_appointment` ganharam `p_allow_overlap` (padrão falso); o app antigo segue funcionando.
+- Fica rígido: lançamento retroativo e edição de atendimento concluído.
+- Agenda do dia: atendimentos simultâneos lado a lado (`layoutOverlaps`, de `week-view.tsx`).
+- Relatórios futuros (ociosidade): o tempo ocupado deve juntar horários que se sobrepõem.
+- Testes: `supabase/tests/local/0053_local.sh` (51), `tests/simultaneous.test.cjs`. Reversão: `supabase/operations/0053_reversao.sql`.
+
 ## Teste grátis sem cartão (0052, 09/11/2026)
 
 - A conta nasce em `/cadastro` (nome, e-mail e senha). A função `trial-signup` (publicar SEM verificação de JWT) reserva

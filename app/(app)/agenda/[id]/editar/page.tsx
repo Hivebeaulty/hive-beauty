@@ -10,7 +10,9 @@ import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
-import { getActiveProfessionals, getAvailableSlots, type Professional } from "@/lib/hive/schedule";
+import { getActiveProfessionals, getSlotGrid, type Professional, type SlotInfo } from "@/lib/hive/schedule";
+import { findOverlaps, needsOverlapConfirmation, OCCUPIED_SLOT_HINT, type OverlapInfo } from "@/lib/hive/simultaneous";
+import { SimultaneousDialog } from "@/components/agenda/simultaneous-dialog";
 import { formatDuration } from "@/lib/hive/format";
 import {
   canEditAppointment,
@@ -74,7 +76,12 @@ export default function EditarAgendamentoPage() {
   const [origExtras, setOrigExtras] = useState<ExtraItem[]>([]);
   const [primaryOrig, setPrimaryOrig] = useState({ minutes: 60, price: 0 });
 
-  const [slots, setSlots] = useState<string[]>([]);
+  // Grade do dia (0053: com "mais de uma cliente no mesmo horário" ligado, os ocupados também entram, com pergunta).
+  const [grid, setGrid] = useState<SlotInfo[]>([]);
+  const [allowSimul, setAllowSimul] = useState(false);
+  const [pendingOverlap, setPendingOverlap] = useState<OverlapInfo[] | null>(null);
+  const slots = (allowSimul ? grid : grid.filter((g) => !g.occupied)).map((g) => g.time);
+  const occupiedTimes = new Set(grid.filter((g) => g.occupied).map((g) => g.time));
   // "Outro horário": digitar a hora livremente (o banco ainda recusa conflito com outro atendimento)
   const [manualTime, setManualTime] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -164,11 +171,11 @@ export default function EditarAgendamentoPage() {
   // Horários livres (aviso antecipado; o banco continua sendo a autoridade).
   const reloadSlots = useCallback(async () => {
     if (!professionalId || !date || !duration) {
-      setSlots([]);
+      setGrid([]);
       return;
     }
     setSlotsLoading(true);
-    const list = await getAvailableSlots({
+    const list = await getSlotGrid({
       supabase: createClient(),
       companyId,
       professionalId,
@@ -176,13 +183,27 @@ export default function EditarAgendamentoPage() {
       durationMinutes: totals({ price: 0, minutes: duration }, extras).minutes,
       excludeAppointmentId: id,
     });
-    setSlots(list);
+    setGrid(list);
     setSlotsLoading(false);
   }, [companyId, professionalId, date, duration, id, extras]);
 
   useEffect(() => {
     reloadSlots();
   }, [reloadSlots]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAllowSimul(false);
+    if (!professionalId) return;
+    createClient()
+      .rpc("member_allows_simultaneous", { p_member_id: professionalId })
+      .then(({ data, error }) => {
+        if (!cancelled) setAllowSimul(!error && data === true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [professionalId]);
 
   // O horário atual continua disponível no mesmo dia e com a mesma profissional, mesmo que a
   // duração ou o serviço mudem (se a nova duração bater em outro atendimento, o banco recusa).
@@ -280,6 +301,42 @@ export default function EditarAgendamentoPage() {
       setDone({ changed: false, notice: null, clientChanged: false });
       return;
     }
+    // 0053: mudou horário/duração/profissional e já tem cliente no horário (opção ligada) -> pergunta antes.
+    const scheduleChanged =
+      start.getTime() !== new Date(original.scheduled_start).getTime() ||
+      tot.minutes !== Math.round((new Date(original.scheduled_end).getTime() - new Date(original.scheduled_start).getTime()) / 60000) ||
+      professionalId !== original.professional_member_id;
+    if (allowSimul && mainChanged && scheduleChanged) {
+      const overlaps = await loadOverlaps(start, new Date(start.getTime() + tot.minutes * 60000));
+      if (overlaps.length > 0) {
+        setPendingOverlap(overlaps);
+        return;
+      }
+    }
+    await persist(false);
+  }
+
+  // Quem já está no horário escolhido (sem contar este atendimento), para a pergunta.
+  async function loadOverlaps(start: Date, end: Date): Promise<OverlapInfo[]> {
+    const dayStart = new Date(`${date}T00:00:00`);
+    const dayEnd = new Date(`${date}T23:59:59`);
+    const { data } = await createClient()
+      .from("appointments")
+      .select("id, scheduled_start, scheduled_end, status, clients(name)")
+      .eq("company_id", companyId)
+      .eq("professional_member_id", professionalId)
+      .gte("scheduled_start", dayStart.toISOString())
+      .lt("scheduled_start", dayEnd.toISOString());
+    return findOverlaps((data as unknown as Parameters<typeof findOverlaps>[0]) ?? [], start, end, id);
+  }
+
+  async function persist(allowOverlap: boolean) {
+    if (!original) return;
+    const start = new Date(`${date}T${time}:00`);
+    const tot = totals({ price, minutes: duration }, extras);
+    const form = { clientId, serviceId, professionalId, start, durationMinutes: tot.minutes, price: tot.price, notes };
+    const extrasChanged = !sameExtras(extras, origExtras);
+    const mainChanged = hasChanges(original, form);
     setSaving(true);
     setError(null);
     const supabase = createClient();
@@ -293,9 +350,16 @@ export default function EditarAgendamentoPage() {
       p_price: tot.price,
       p_notes: notes,
       p_expected: expectedFrom(original),
+      ...(allowOverlap ? { p_allow_overlap: true } : {}),
     });
     if (err) {
       setSaving(false);
+      setPendingOverlap(null);
+      if (needsOverlapConfirmation(err.code)) {
+        // o banco pediu a confirmação (a tela ainda não tinha perguntado): pergunta agora
+        setPendingOverlap(await loadOverlaps(start, new Date(start.getTime() + tot.minutes * 60000)));
+        return;
+      }
       const m = editErrorMessage(err.code);
       setError(m.message);
       if (m.reload) await loadAppointment();
@@ -450,20 +514,29 @@ export default function EditarAgendamentoPage() {
             <p className="text-sm text-ink-400">Nenhum horário livre nesse dia. Tente outra data.</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
-              {timeOptions.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setTime(s)}
-                  className={cn(
-                    "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-                    time === s ? "border-ink-800 bg-ink-800 text-cream" : "border-ink-200 bg-surface text-ink-700 hover:bg-ink-50"
-                  )}
-                >
-                  {s}
-                  {keepsOriginalSlot && s === originalTime ? " · atual" : ""}
-                </button>
-              ))}
+              {timeOptions.map((s) => {
+                const occupied = allowSimul && occupiedTimes.has(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setTime(s)}
+                    title={occupied ? OCCUPIED_SLOT_HINT : undefined}
+                    aria-label={occupied ? `${s}. ${OCCUPIED_SLOT_HINT}` : undefined}
+                    className={cn(
+                      "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+                      time === s
+                        ? "border-ink-800 bg-ink-800 text-cream"
+                        : occupied
+                          ? "border-dashed border-gold-500 bg-surface text-ink-700 hover:bg-sand/60"
+                          : "border-ink-200 bg-surface text-ink-700 hover:bg-ink-50"
+                    )}
+                  >
+                    {s}
+                    {keepsOriginalSlot && s === originalTime ? " · atual" : ""}
+                  </button>
+                );
+              })}
             </div>
           )}
           <button
@@ -521,6 +594,15 @@ export default function EditarAgendamentoPage() {
           </Button>
         </div>
       </form>
+
+      <SimultaneousDialog
+        open={pendingOverlap !== null}
+        existing={pendingOverlap ?? []}
+        clientName={clients.find((c) => c.id === clientId)?.name ?? ""}
+        busy={saving}
+        onConfirm={() => persist(true)}
+        onCancel={() => setPendingOverlap(null)}
+      />
     </div>
   );
 }
