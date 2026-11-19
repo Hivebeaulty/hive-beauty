@@ -13,7 +13,10 @@ export const CHECKOUT_URL = "https://mpago.la/2gCWhAH";
 export const CHECKOUT_AFTER_TRIAL_URL: string = CHECKOUT_URL;
 /** Link de assinatura certo para a situação: depois do teste no app, o plano sem teste. */
 export function checkoutUrlFor(status: AccessStatus | undefined, provider?: string | null): string {
-  return status === "trial_ended" || provider === "trial" ? CHECKOUT_AFTER_TRIAL_URL : CHECKOUT_URL;
+  // Depois do teste sem cartão ou de uma cortesia (0054) também vale o plano sem os 7 dias grátis.
+  return status === "trial_ended" || status === "courtesy_ended" || status === "courtesy" || provider === "trial" || provider === "cortesia"
+    ? CHECKOUT_AFTER_TRIAL_URL
+    : CHECKOUT_URL;
 }
 export const TERMS_URL = `${LANDING_URL}/termos`;
 export const PRIVACY_URL = `${LANDING_URL}/privacidade`;
@@ -22,14 +25,16 @@ export const PRIVACY_URL = `${LANDING_URL}/privacidade`;
 // "ending" (0041): cancelada, mas com o mês já pago ainda valendo (acesso até "until").
 // "trialing" com "until" (0052): teste grátis sem cartão, até "until".
 // "trial_ended" (0052): o teste sem cartão acabou e ela ainda não assinou.
-export type AccessStatus = "free" | "trialing" | "active" | "past_due" | "pending" | "canceled" | "none" | "suspended" | "ending" | "trial_ended" | "error";
+// "courtesy" (0054): cortesia com prazo, até "until" (a dona oferece pelo painel); avisa nos últimos 7 dias.
+// "courtesy_ended" (0054): a cortesia acabou e ela ainda não assinou. Dados guardados.
+export type AccessStatus = "courtesy" | "courtesy_ended" | "free" | "trialing" | "active" | "past_due" | "pending" | "canceled" | "none" | "suspended" | "ending" | "trial_ended" | "error";
 export type Access = { status: AccessStatus; allowed: boolean; warning: boolean; until?: string };
 
-const KNOWN: AccessStatus[] = ["free", "trialing", "active", "past_due", "pending", "canceled", "none", "suspended", "ending", "trial_ended"];
+const KNOWN: AccessStatus[] = ["courtesy", "courtesy_ended", "free", "trialing", "active", "past_due", "pending", "canceled", "none", "suspended", "ending", "trial_ended"];
 
 // Cadastro do teste grátis sem cartão, no próprio app (0052).
 export const SIGNUP_PATH = "/cadastro";
-const ALLOWED: AccessStatus[] = ["free", "trialing", "active", "past_due", "ending"];
+const ALLOWED: AccessStatus[] = ["courtesy", "free", "trialing", "active", "past_due", "ending"];
 
 export function parseAccess(data: unknown, error: unknown): Access {
   if (error || !data || typeof data !== "object") return { status: "error", allowed: false, warning: false };
@@ -38,6 +43,9 @@ export function parseAccess(data: unknown, error: unknown): Access {
   // "allowed" é recalculado aqui com a mesma regra do banco: as duas precisam concordar.
   const allowed = ALLOWED.includes(status) && (data as { allowed?: unknown }).allowed === true;
   const until = (data as { until?: unknown }).until;
+  // Cortesia sem data válida não libera: sem saber até quando, falha fechada.
+  const courtesyUntil = status === "courtesy" && typeof until === "string" && !isNaN(Date.parse(until)) ? until : undefined;
+  if (status === "courtesy" && !courtesyUntil) return { status: "courtesy_ended", allowed: false, warning: false };
   // "ending" sem data válida não libera: sem saber até quando, falha fechada.
   if (status === "ending" && (typeof until !== "string" || isNaN(Date.parse(until)))) {
     return { status: "canceled", allowed: false, warning: false };
@@ -47,9 +55,10 @@ export function parseAccess(data: unknown, error: unknown): Access {
   return {
     status,
     allowed,
-    warning: allowed && (status === "past_due" || status === "ending" || (!!trialUntil && (data as { warning?: unknown }).warning === true)),
+    warning: allowed && (status === "past_due" || status === "ending" || ((!!trialUntil || !!courtesyUntil) && (data as { warning?: unknown }).warning === true)),
     ...(status === "ending" ? { until: until as string } : {}),
     ...(trialUntil ? { until: trialUntil } : {}),
+    ...(courtesyUntil ? { until: courtesyUntil } : {}),
   };
 }
 
@@ -87,6 +96,13 @@ export function accessCopy(status: AccessStatus, isOwner: boolean): AccessCopy {
     return {
       title: "Seu teste grátis terminou",
       text: `Assine para continuar usando a Sócia: R$ 59,90 por mês, sem fidelidade. ${keep}`,
+      canSubscribe: true,
+    };
+  }
+  if (status === "courtesy_ended") {
+    return {
+      title: "Sua cortesia terminou",
+      text: `Foi um prazer ter você com a gente. Para continuar usando a Sócia, é só assinar: R$ 59,90 por mês, sem fidelidade. ${keep}`,
       canSubscribe: true,
     };
   }

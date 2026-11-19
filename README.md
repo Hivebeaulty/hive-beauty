@@ -406,6 +406,20 @@ banco, endereços (`hive-beauty.vercel.app`) e chaves internas (ex.: `aurea-them
   profissional, e a previsão do período) e de Clientes. Ao voltar para a aba, a tela aparece na hora e atualiza por
   trás; se a atualização falhar, a lista que já estava na tela continua. A memória some ao recarregar e ao sair.
 
+## Cortesia com prazo (0054, 18/11/2026)
+
+- Só a dona oferece, no painel SuperAdmin > **Cortesias** (e-mail que ela digita, prazo de 30, 90 ou outro número de dias, origem e motivo).
+  A pessoa não se cadastra sozinha: se o e-mail não tem conta, a função `admin-courtesy` cria o login e envia o e-mail de criar senha.
+- Vale até 23:59:59 (Brasília) do último dia. O prazo vence **sozinho no acesso** (`billing_effective_status`), sem cron e sem apagar dado.
+  Estados novos: `courtesy` (liberado; `until`; aviso nos últimos 7 dias) e `courtesy_ended` (bloqueado, convida a assinar).
+- Quem assina durante a cortesia segue ativa no fim (`billing_accounts.sub_status`). As cortesias antigas continuam sem prazo.
+- Registro de quem recebeu: `billing_courtesies` (fechada à API). Funções: `admin_courtesy_grant`, `_extend`, `_revoke`, `admin_list_courtesies`,
+  todas com `admin_assert()` (superadmin + duas etapas), motivo de 5 a 500 caracteres e auditoria (`courtesy_grant`, `courtesy_extend`, `courtesy_revoke`).
+- Recusas: assinatura ativa ou atrasada, assinatura em análise, cortesia ativa duplicada. Teste grátis e assinatura cancelada podem virar cortesia.
+- No app: aviso no topo nos últimos 7 dias; no fim, tela "Sua cortesia terminou" com o link do plano sem os 7 dias grátis.
+- Limite conhecido: quem assina durante a cortesia só cancela pelo painel ou pelo Mercado Pago até a cortesia acabar.
+- Testes: `supabase/tests/local/0054_local.sh` (73), `tests/courtesy.test.cjs`. Reversão: `supabase/operations/0054_reversao.sql`.
+
 ## Mais de uma cliente no mesmo horário (0053, 16/11/2026)
 
 - Opcional, por profissional, **desligado por padrão**: Mais > Configurações > "Mais de uma cliente no mesmo horário".
