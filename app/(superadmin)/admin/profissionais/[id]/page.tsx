@@ -39,7 +39,7 @@ type Detail = {
   };
   company: { phone: string | null; email: string | null } | null;
   owner: { created_at: string; email_confirmed_at: string | null; last_sign_in_at: string | null } | null;
-  billing: { status: string; provider: string | null; preapproval_id: string | null; next_payment_at: string | null; updated_at: string;
+  billing: { status: string; effective_status?: string; courtesy_ends_at?: string | null; provider: string | null; preapproval_id: string | null; next_payment_at: string | null; updated_at: string;
              mp_status: string | null; plan_amount: number | null; started_at: string | null; canceled_at: string | null } | null;
   payments: { id: string; status: string; status_detail: string | null; amount: number | null; refunded: number; fee: number | null;
               net: number | null; paid_at: string | null; debit_date: string | null; retry: number | null; created_at: string }[];
@@ -130,6 +130,11 @@ export default async function AdminContaPage({ params }: { params: Promise<{ id:
             <dl className="divide-y divide-ink-50">
               <Row label="Situação">{BILLING_LABEL[status]}</Row>
               <Row label="Origem">{d.billing.provider === "cortesia" ? "Cortesia" : d.billing.provider === "mercadopago" ? "Mercado Pago" : d.billing.provider === "trial" ? "Teste sem cartão (no app)" : d.billing.provider ?? "—"}</Row>
+              {d.billing.courtesy_ends_at && (
+                <Row label="Cortesia até">
+                  <Link href="/admin/cortesias" className="underline">{fmtDate(d.billing.courtesy_ends_at)}</Link>
+                </Row>
+              )}
               <Row label={status === "trialing" ? "Fim do teste (1ª cobrança)" : "Próxima cobrança"}>{fmtDate(d.billing.next_payment_at)}</Row>
               {d.billing.plan_amount !== null && <Row label="Valor mensal">{formatBRL(Number(d.billing.plan_amount))}</Row>}
               {d.billing.started_at && <Row label="Assinou em">{fmtDate(d.billing.started_at)}</Row>}

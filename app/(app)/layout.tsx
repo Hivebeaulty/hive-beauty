@@ -45,7 +45,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <MobileHeader companyName={membership.companyName} />
           {access.warning && (
             <div role="status" className="border-b border-ink-100 bg-sand px-4 py-2.5 text-center text-sm text-ink-700">
-              {access.status === "trialing" ? (
+              {access.status === "courtesy" ? (
+                // Cortesia com prazo (0054): aviso nos últimos 7 dias.
+                membership.role === "owner" ? (
+                  <>
+                    Sua cortesia termina em {formatUntil(access.until)}.{" "}
+                    <a href="/mais/assinatura" className="font-semibold underline">
+                      Assinar para continuar
+                    </a>
+                  </>
+                ) : (
+                  `A cortesia deste negócio termina em ${formatUntil(access.until)}.`
+                )
+              ) : access.status === "trialing" ? (
                 // Teste sem cartão (0052): aviso nos últimos 3 dias.
                 membership.role === "owner" ? (
                   <>

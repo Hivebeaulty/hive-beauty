@@ -10,6 +10,8 @@ export type Subscription = {
   provider: string | null;
   amount: number | null;
   trialEndsAt: string | null;
+  /** Fim da cortesia com prazo (0054); nulo na cortesia sem prazo. */
+  courtesyEndsAt: string | null;
   nextPaymentAt: string | null;
   canceledAt: string | null;
   access: Access;
@@ -37,6 +39,7 @@ export function parseSubscription(data: unknown, error: unknown): Subscription |
     provider: typeof d.provider === "string" ? d.provider : null,
     amount: num(d.amount),
     trialEndsAt: iso(d.trial_ends_at),
+    courtesyEndsAt: iso(d.courtesy_ends_at),
     nextPaymentAt: iso(d.next_payment_at),
     canceledAt: iso(d.canceled_at),
     access: parseAccess(d.access, null),
@@ -71,6 +74,20 @@ export function describeSubscription(s: Subscription): SubSummary {
       lines: [`Você continua usando a Sócia até ${formatDayBR(s.access.until)}. Não haverá novas cobranças.`, keep],
       canSubscribe: false,
     };
+  }
+  // Cortesia com prazo (0054): nada é cobrado; no fim, ela assina se quiser continuar.
+  if (s.provider === "cortesia" && s.courtesyEndsAt) {
+    if (s.access.status === "courtesy_ended") {
+      return { title: "Sua cortesia terminou", tone: "warn", lines: ["Para continuar usando a Sócia, é só assinar.", keep], canSubscribe: true };
+    }
+    if (s.access.status === "courtesy") {
+      return {
+        title: "Cortesia",
+        tone: "ok",
+        lines: [`Sua cortesia vai até ${formatDayBR(s.courtesyEndsAt)}. Nada é cobrado.`, "Para continuar depois, assine: R$ 59,90 por mês, sem fidelidade."],
+        canSubscribe: true,
+      };
+    }
   }
   // Teste grátis sem cartão (0052): nada é cobrado; para continuar, ela assina.
   if (s.provider === "trial") {

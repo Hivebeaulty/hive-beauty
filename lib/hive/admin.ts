@@ -252,6 +252,9 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   export_accounts: "Exportou a lista de profissionais",
   cancel_subscription: "Cancelamento de assinatura no Mercado Pago",
   reconcile: "Conferiu as cobranças com o Mercado Pago",
+  courtesy_grant: "Ofereceu uma cortesia",
+  courtesy_extend: "Estendeu uma cortesia",
+  courtesy_revoke: "Encerrou uma cortesia",
 };
 export const auditLabel = (action: string, result?: string) =>
   `${AUDIT_ACTION_LABEL[action] ?? action}${
