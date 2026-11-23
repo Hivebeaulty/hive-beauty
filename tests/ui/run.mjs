@@ -908,6 +908,84 @@ test("U33 Agenda: capturas a 390 px (Dia, Semana e Mês) nos temas claro e escur
   }
 });
 
+// ============================================================ Agenda: eixo de meia em meia hora e dia na URL
+const axisLabels = (page) =>
+  page.evaluate(() => [...document.querySelectorAll("div.select-none > div")].map((d) => d.innerText.trim()).filter(Boolean));
+const agendaLabel = (page) => page.evaluate(() => document.querySelector("span.capitalize")?.innerText.trim());
+const urlSearch = (page) => page.evaluate(() => location.search);
+
+test("U39 Agenda: eixo lateral de meia em meia hora, alinhado às linhas, com uma e com duas profissionais", async () => {
+  const page = await openAgenda();
+  await page.waitForFunction(() => document.body.innerText.includes("Ana Paula"), { timeout: 6000 });
+  // dia 05/11 tem atendimento das 09h às 17h: o eixo vai de 08:00 a 20:00 (25 marcas)
+  const two = await axisLabels(page);
+  assert.equal(two.length, 25);
+  assert.deepEqual(two.slice(0, 5), ["08:00", "08:30", "09:00", "09:30", "10:00"]);
+  assert.equal(two.at(-1), "20:00");
+  // cada marca fica exatamente sobre a sua linha (mesmo com o título da profissional acima da coluna)
+  const off = await page.evaluate(() => {
+    const labels = [...document.querySelectorAll("div.select-none > div")].filter((d) => d.innerText.trim());
+    const lane = document.querySelector("div.rounded-md.bg-ink-50\\/40");
+    const lines = [...lane.querySelectorAll(":scope > div.border-t")].map((l) => l.getBoundingClientRect().top);
+    return labels.map((d, i) => { const r = d.getBoundingClientRect(); return Math.abs(r.top + 8 - lines[i]); });
+  });
+  assert.ok(off.every((x) => x < 1.5), `marcas desalinhadas: ${off.slice(0, 5)}`);
+  // uma profissional só (filtro): sem o espaço do título, mesmas marcas
+  await page.select("select", "m1");
+  await sleep(150);
+  assert.equal((await axisLabels(page)).length, 25);
+  assert.ok(await noHorizontalScroll(page));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("U40 Agenda: o dia consultado fica na URL; ao remontar a tela (Voltar) ela abre nesse dia, e não em hoje", async () => {
+  const base = `${PAGE}?view=agenda&role=owner`;
+  const open2 = async (query = "") => {
+    const page = await openAgenda();
+    if (query) {
+      await page.goto(base + query);
+      await page.waitForFunction(() => document.body.innerText.includes("Agenda"), { timeout: 6000 });
+    }
+    return page;
+  };
+  // sem parâmetros: hoje (quinta, 05/11)
+  let page = await open2();
+  await waitForecast(page);
+  assert.match(await agendaLabel(page), /Quinta-Feira, 05 De Novembro/);
+  assert.equal(await urlSearch(page), "?view=agenda&role=owner", "hoje deixa a URL limpa");
+  // navegar grava o dia; parâmetros de outros assuntos ficam
+  await pressNav(page, "Próximo"); await pressNav(page, "Próximo");
+  await page.waitForFunction(() => location.search.includes("data=2026-11-07"), { timeout: 4000 });
+  const p = new URLSearchParams(await urlSearch(page));
+  assert.deepEqual([p.get("view"), p.get("role"), p.get("data")], ["agenda", "owner", "2026-11-07"]);
+  await pickView(page, "Semana");
+  await page.waitForFunction(() => location.search.includes("visao=semana"), { timeout: 4000 });
+  await clickButton(page, "Hoje");
+  await page.waitForFunction(() => !location.search.includes("data="), { timeout: 4000 });
+  assert.equal(new URLSearchParams(await urlSearch(page)).get("visao"), "semana");
+  assert.equal(new URLSearchParams(await urlSearch(page)).get("role"), "owner");
+  await page.close();
+  // "voltar": a tela é montada de novo com a URL do dia consultado
+  page = await open2("&data=2026-11-12");
+  await page.waitForFunction(() => document.querySelector("span.capitalize")?.innerText.includes("12"), { timeout: 6000 });
+  assert.match(await agendaLabel(page), /Quinta-Feira, 12 De Novembro/);
+  assert.ok((await buttons(page)).includes("Hoje"), "aparece o atalho Hoje, pois não é o dia de hoje");
+  await page.close();
+  // semana + profissional também voltam como estavam
+  page = await open2("&visao=semana&data=2026-11-12&prof=m2");
+  await page.waitForFunction(() => document.querySelector("span.capitalize")?.innerText.includes("–"), { timeout: 6000 });
+  assert.match(await agendaLabel(page), /^9–15 de novembro/i);
+  assert.equal(await page.$eval("select", (s) => s.value), "m2");
+  await page.close();
+  // URL estragada não quebra: cai em hoje
+  page = await open2("&data=2026-02-31&visao=ano&prof=%27%3B--");
+  await page.waitForFunction(() => document.querySelector("span.capitalize"), { timeout: 6000 });
+  assert.match(await agendaLabel(page), /05 De Novembro/);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 // ============================================================ Mais > Assinatura (0051)
 // Página REAL. my_subscription e a função account-billing simuladas em window.__db.
 const SUB_ACTIVE = {
