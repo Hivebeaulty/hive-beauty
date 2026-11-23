@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { addDays, addWeeks, addMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
@@ -24,6 +25,7 @@ import { WeekView, localDayKey, type WeekAppointment } from "@/components/agenda
 import { MonthGrid } from "@/components/agenda/month-grid";
 import { FORECAST_STATUSES, agendaPeriod, forecastFor, type AgendaView, type Forecast, type ForecastRow } from "@/lib/hive/forecast";
 import { formatMoney } from "@/lib/hive/format";
+import { readAgendaState, writeAgendaSearch } from "@/lib/hive/agenda-url";
 import { CalendarPlus, ChevronLeft, ChevronRight, ChevronDown, CalendarX } from "lucide-react";
 
 type View = AgendaView;
@@ -50,20 +52,31 @@ export default function AgendaPage() {
   // Valores só para a administração do negócio, como no card do Início.
   const canSeeFinance = role === "owner" || role === "admin";
 
-  const [view, setView] = useState<View>("dia");
-  const [refDate, setRefDate] = useState(() => startOfDay(new Date()));
+  // Visão, dia e profissional vêm da URL (?visao=&data=&prof=). É isso que faz o
+  // "Voltar" de um atendimento devolver o dia que estava sendo consultado, e não hoje.
+  // Sem parâmetros: Dia, hoje, todas. Lido só na montagem; depois a tela é quem manda.
+  const searchParams = useSearchParams();
+  const [initial] = useState(() => readAgendaState(searchParams, new Date()));
+  const [view, setView] = useState<View>(initial.view);
+  const [refDate, setRefDate] = useState(() => initial.date);
   // Fase 2 do desempenho: ao voltar para a Agenda, o dia de hoje aparece na hora
   // com o que já tinha e atualiza por trás.
   const [professionals, setProfessionals] = useState<Professional[]>(
     () => readScreenCache<Professional[]>(`agenda-prof:${companyId}`) ?? []
   );
-  const [selectedProfessional, setSelectedProfessional] = useState<string>("all");
+  const [selectedProfessional, setSelectedProfessional] = useState<string>(initial.professional);
+  // Só o Dia aparece "na hora" com o que já estava na memória; Semana e Mês carregam.
   const [loading, setLoading] = useState(
-    () => !readScreenCache(agendaKey(companyId, "dia", startOfDay(new Date()), "all"))
+    () =>
+      !(initial.view === "dia" &&
+        readScreenCache(agendaKey(companyId, "dia", initial.date, initial.professional)))
   );
 
   const [dayAppointments, setDayAppointments] = useState<TimelineAppointment[]>(
-    () => readScreenCache<TimelineAppointment[]>(agendaKey(companyId, "dia", startOfDay(new Date()), "all")) ?? []
+    () =>
+      (initial.view === "dia"
+        ? readScreenCache<TimelineAppointment[]>(agendaKey(companyId, "dia", initial.date, initial.professional))
+        : undefined) ?? []
   );
   const [weekAppointments, setWeekAppointments] = useState<WeekAppointment[]>([]);
   const [monthByDay, setMonthByDay] = useState<Map<string, { total: number; hasPending: boolean }>>(new Map());
@@ -76,8 +89,26 @@ export default function AgendaPage() {
     getActiveProfessionals(createClient(), companyId).then((list) => {
       setProfessionals(list);
       writeScreenCache(`agenda-prof:${companyId}`, list);
+      // profissional da URL que não existe (mais) na empresa: volta para "Todas"
+      setSelectedProfessional((cur) => (cur === "all" || list.some((p) => p.id === cur) ? cur : "all"));
     });
   }, [companyId]);
+
+  // Espelha visão, dia e profissional na URL (sem recarregar nem empilhar histórico).
+  // `null` no primeiro argumento deixa o Next manter o estado interno dele.
+  useEffect(() => {
+    const next = writeAgendaSearch(
+      window.location.search,
+      { view, date: refDate, professional: selectedProfessional },
+      new Date()
+    );
+    if (next === window.location.search) return;
+    try {
+      window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
+    } catch {
+      // ambiente sem permissão para reescrever a URL: a tela segue funcionando, só não lembra o dia
+    }
+  }, [view, refDate, selectedProfessional]);
 
   const load = useCallback(async () => {
     const key = agendaKey(companyId, view, refDate, selectedProfessional);

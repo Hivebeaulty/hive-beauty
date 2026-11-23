@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Professional } from "@/lib/hive/schedule";
 import { cn } from "@/lib/utils";
 import { layoutOverlaps } from "@/components/agenda/week-view";
+import { MARK_STEP_MIN, isFullHour, markLabel, timeMarks } from "@/lib/hive/timeline-marks";
 
 export type TimelineAppointment = {
   id: string;
@@ -57,7 +58,9 @@ export function DayTimeline({
   const hidden = appointments.filter((a) => HIDDEN_STATUSES.includes(a.status));
   const { start, end } = computeRange(visible);
   const totalMin = end - start;
-  const hourMarks = Array.from({ length: Math.floor(totalMin / 60) + 1 }, (_, i) => start + i * 60);
+  // Eixo de meia em meia hora (08:00, 08:30, 09:00...). O início e o fim do dia
+  // continuam em hora cheia (computeRange), então a última marca é sempre :00.
+  const marks = timeMarks(start, end);
 
   const lanes: Professional[] =
     laneFilter === "all" && professionals.length > 1
@@ -78,9 +81,12 @@ export function DayTimeline({
       <div className="flex overflow-x-auto">
         {/* Eixo de horas — uma vez só, compartilhado por todas as lanes */}
         <div className="w-12 shrink-0 select-none pr-2 text-right">
-          {hourMarks.map((m) => (
-            <div key={m} style={{ height: 60 * PX_PER_MIN }} className="relative -top-2 text-[11px] text-ink-300">
-              {String(Math.floor(m / 60)).padStart(2, "0")}:00
+          {/* Com mais de uma profissional cada coluna tem um título (h-4 + mb-1.5):
+              o eixo ganha o mesmo espaço para os horários ficarem na linha certa. */}
+          {effectiveLanes.length > 1 && <div className="mb-1.5 h-4" aria-hidden="true" />}
+          {marks.map((m) => (
+            <div key={m} style={{ height: MARK_STEP_MIN * PX_PER_MIN }} className="relative -top-2 text-[11px] text-ink-300">
+              {markLabel(m)}
             </div>
           ))}
         </div>
@@ -91,16 +97,16 @@ export function DayTimeline({
             return (
               <div key={lane?.id ?? "__all__"} className="relative min-w-[168px] flex-1">
                 {effectiveLanes.length > 1 && (
-                  <p className="mb-1.5 truncate text-xs font-semibold text-ink-500">{lane?.name}</p>
+                  <p className="mb-1.5 h-4 truncate text-xs font-semibold text-ink-500">{lane?.name}</p>
                 )}
                 <div
                   className="relative rounded-md bg-ink-50/40"
                   style={{ height: totalMin * PX_PER_MIN }}
                 >
-                  {hourMarks.map((m) => (
+                  {marks.map((m) => (
                     <div
                       key={m}
-                      className="absolute inset-x-0 border-t border-ink-100"
+                      className={cn("absolute inset-x-0 border-t", isFullHour(m) ? "border-ink-100" : "border-ink-100/50")}
                       style={{ top: (m - start) * PX_PER_MIN }}
                     />
                   ))}

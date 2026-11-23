@@ -33,6 +33,8 @@ import AgendaPage from "@/app/(app)/agenda/page";
 import AssinaturaPage from "@/app/(app)/mais/assinatura/page";
 import CadastroPage from "@/app/(auth)/cadastro/page";
 import { CompanyProvider } from "@/components/company-provider";
+// O Next entrega a URL à Agenda por este contexto; no palco ele é montado à mão.
+import { SearchParamsContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
 
 type Scenario = { status: RpcResult; qr: RpcResult; request: RpcResult; disc: RpcResult; delayMs: number };
 const sc: Scenario = {
@@ -66,7 +68,9 @@ if (view === "agenda") {
     <CompanyProvider membership={{ companyId: "00000000-0000-0000-0000-000000000001", memberId: "m1", role: role as "owner", companyName: "Studio Bella" }}>
       <div className="min-h-screen bg-cream">
         <main className="mx-auto max-w-3xl px-4 py-6 md:px-8">
-          <AgendaPage />
+          <SearchParamsContext.Provider value={new URLSearchParams(location.search)}>
+            <AgendaPage />
+          </SearchParamsContext.Provider>
         </main>
       </div>
     </CompanyProvider>
