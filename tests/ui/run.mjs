@@ -1076,13 +1076,13 @@ test("U42 Agenda: bloqueio na Semana em tela larga; sem bloqueios nada muda; fal
   await page.close();
 });
 
-async function openBlockForm({ role = "owner", member = "m1", query = "", blocks = AGENDA_BLOCKS, failWrites = false, width = 390 } = {}) {
+async function openBlockForm({ role = "owner", member = "m1", query = "", blocks = AGENDA_BLOCKS, failWrites = false, width = 390, errorCode = "", noReminderColumn = false } = {}) {
   const page = await browser.newPage();
   await page.setViewport({ width, height: 900, deviceScaleFactor: 1 });
   await page.emulateTimezone("America/Sao_Paulo");
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.evaluateOnNewDocument((rows, blocks, failWrites) => {
+  await page.evaluateOnNewDocument((rows, blocks, failWrites, errorCode, noReminderColumn) => {
     const R = Date, fixed = R.parse("2026-11-05T13:00:00-03:00"), t0 = R.now();
     class D extends R { constructor(...a) { if (a.length === 0) super(fixed + (R.now() - t0)); else super(...a); } static now() { return fixed + (R.now() - t0); } }
     window.Date = D;
@@ -1097,9 +1097,10 @@ async function openBlockForm({ role = "owner", member = "m1", query = "", blocks
       },
       rpc: { get_company_member_names: [{ member_id: "m1", full_name: "Ana Lima" }, { member_id: "m2", full_name: "Bia Rocha" }] },
       calls: [],
-      fail: (c) => failWrites && !!c.op,
+      fail: (c) => (failWrites && !!c.op) || (noReminderColumn && c.table === "blocked_times" && c.select.includes("remind_before_minutes")),
+      error: (c) => (errorCode && c.op ? { code: errorCode, message: "coluna inexistente" } : null),
     };
-  }, agendaRows(), blocks, failWrites);
+  }, agendaRows(), blocks, failWrites, errorCode, noReminderColumn);
   await page.goto(`${PAGE}?view=bloquear&role=${role}&member=${member}${query}`);
   await page.waitForFunction(() => document.querySelector('[data-testid="block-form"]') || document.body.innerText.includes("Bloqueio não encontrado"), { timeout: 6000 });
   page.errors = errors;
@@ -1274,6 +1275,102 @@ test("U49 Bloquear horário: capturas a 390 px (formulário e agenda com bloquei
     await ag.screenshot({ path: join(SHOTS, `agenda-bloqueio-dia-390-${theme || "claro"}.png`), fullPage: true });
     await ag.close();
   }
+});
+
+// ============================================================ Lembrete no celular do compromisso (0056)
+const REMIND_LABEL = "Lembrete no celular";
+const remindLabels = (page) => page.evaluate(`[...${fieldEl(REMIND_LABEL)}.options].map((o) => o.text)`);
+const DENTISTA = { ...BLK("b6", "m1", "11-06", "15:00", "11-06", "16:00", "Dentista"), remind_before_minutes: 30 };
+
+test("U50 Lembrete: escolher o aviso, ver as opções de horário e de dia todo, e gravar na hora certa", async () => {
+  const page = await openBlockForm({ query: "&data=2026-11-10" });
+  assert.equal(await fieldValue(page, REMIND_LABEL), "", "começa sem lembrete");
+  assert.deepEqual(await remindLabels(page), ["Sem lembrete", "Na hora", "15 minutos antes", "30 minutos antes", "1 hora antes", "2 horas antes", "1 dia antes"]);
+  assert.equal(await page.$$eval('[data-testid="remind-hint"]', (e) => e.length), 0, "sem lembrete, sem aviso de como ativar");
+  await fillField(page, REMIND_LABEL, "30");
+  const hint = norm(await page.$eval('[data-testid="remind-hint"]', (e) => e.innerText));
+  assert.match(hint, /O aviso chega no celular de Ana Lima, para quem ativou os avisos\. Ativar avisos no celular/);
+  assert.equal(await page.$eval('[data-testid="remind-hint"] a', (a) => a.getAttribute("href")), "/mais/configuracoes");
+  // "Dia todo" troca as opções; "30 min antes" não existe para o dia todo e volta para "sem lembrete"
+  await toggleAllDay(page);
+  assert.deepEqual(await remindLabels(page), ["Sem lembrete", "No próprio dia, às 8h", "Na véspera, às 18h"]);
+  assert.equal(await fieldValue(page, REMIND_LABEL), "");
+  await fillField(page, REMIND_LABEL, "-480");
+  await toggleAllDay(page); // volta para horário: -480 não vale lá
+  assert.equal(await fieldValue(page, REMIND_LABEL), "");
+  await toggleAllDay(page);
+  await fillField(page, REMIND_LABEL, "360");
+  await fillField(page, "Para quem", "all");
+  assert.match(norm(await page.$eval('[data-testid="remind-hint"]', (e) => e.innerText)), /celular de toda a equipe/);
+  await clickButton(page, "Bloquear");
+  await waitNav(page);
+  const w = await writes(page);
+  assert.deepEqual(w[0].payload, {
+    company_id: CO, professional_member_id: null,
+    start_at: brt("11-10", "00:00"), end_at: brt("11-11", "00:00"), reason: null, remind_before_minutes: 360,
+  });
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("U51 Lembrete: horário com aviso grava o valor; editar mostra o que estava salvo; tirar o lembrete grava nulo", async () => {
+  let page = await openBlockForm({ query: "&data=2026-11-10" });
+  await fillField(page, "Observação (aparece na agenda)", "Consulta médica");
+  await fillField(page, REMIND_LABEL, "1440");
+  await clickButton(page, "Bloquear");
+  await waitNav(page);
+  assert.equal((await writes(page))[0].payload.remind_before_minutes, 1440);
+  await page.close();
+  // abre o compromisso que já tinha aviso de 30 min
+  page = await openBlockForm({ query: "&id=b6", blocks: [...AGENDA_BLOCKS, DENTISTA] });
+  assert.equal(await fieldValue(page, REMIND_LABEL), "30");
+  await fillField(page, REMIND_LABEL, "");
+  await clickButton(page, "Salvar");
+  await waitNav(page);
+  const w = await writes(page);
+  assert.equal(w[0].op, "update");
+  assert.ok("remind_before_minutes" in w[0].payload && w[0].payload.remind_before_minutes === null, "tirar o lembrete grava nulo");
+  await page.close();
+  // sem lembrete antes e sem lembrete depois: a gravação nem menciona a coluna (funciona antes da 0056)
+  page = await openBlockForm({ query: "&id=b1" });
+  assert.equal(await fieldValue(page, REMIND_LABEL), "");
+  await fillField(page, "Observação (aparece na agenda)", "Almoço longo");
+  await clickButton(page, "Salvar");
+  await waitNav(page);
+  assert.ok(!("remind_before_minutes" in (await writes(page))[0].payload));
+  await page.close();
+});
+
+test("U52 Lembrete: banco ainda sem a atualização (0056) — editar abre, salvar sem lembrete funciona, com lembrete explica", async () => {
+  let page = await openBlockForm({ query: "&id=b1", noReminderColumn: true });
+  assert.equal(await fieldValue(page, "Observação (aparece na agenda)"), "Almoço", "leu o bloqueio mesmo sem a coluna");
+  assert.equal(await fieldValue(page, REMIND_LABEL), "");
+  await clickButton(page, "Salvar");
+  await waitNav(page);
+  assert.equal((await writes(page)).length, 1);
+  await page.close();
+  page = await openBlockForm({ query: "&data=2026-11-10", errorCode: "42703" });
+  await fillField(page, REMIND_LABEL, "15");
+  await clickButton(page, "Bloquear");
+  await page.waitForFunction(() => document.body.innerText.includes("O lembrete ainda não está disponível"), { timeout: 4000 });
+  assert.deepEqual(await navs(page), []);
+  // sem lembrete, o mesmo erro mostra a mensagem comum
+  await fillField(page, REMIND_LABEL, "");
+  await clickButton(page, "Bloquear");
+  await page.waitForFunction(() => document.body.innerText.includes("Não foi possível salvar o bloqueio."), { timeout: 4000 });
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("U53 Lembrete: profissional só vê o lembrete como leitura em bloqueio de outra pessoa; formulário cabe a 320 px", async () => {
+  let page = await openBlockForm({ role: "professional", member: "m2", query: "&id=b6", blocks: [...AGENDA_BLOCKS, DENTISTA] });
+  assert.equal(await page.evaluate(`${fieldEl(REMIND_LABEL)}.disabled`), true);
+  await page.close();
+  page = await openBlockForm({ width: 320, query: "&data=2026-11-10" });
+  await fillField(page, REMIND_LABEL, "30");
+  assert.ok(await noHorizontalScroll(page));
+  await page.screenshot({ path: join(SHOTS, "bloquear-lembrete-320.png"), fullPage: true });
+  await page.close();
 });
 
 // ============================================================ Mais > Assinatura (0051)

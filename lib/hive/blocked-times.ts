@@ -16,9 +16,13 @@ export type BlockedTime = {
   start_at: string;
   end_at: string;
   reason: string | null;
+  /** Lembrete no celular, em minutos ANTES do início (0056). null/ausente = sem lembrete. */
+  remind_before_minutes?: number | null;
 };
 
 export const BLOCK_SELECT = "id, professional_member_id, start_at, end_at, reason";
+/** Só a tela de edição lê o lembrete; a agenda não precisa dele (e segue funcionando antes da 0056). */
+export const BLOCK_SELECT_WITH_REMINDER = `${BLOCK_SELECT}, remind_before_minutes`;
 export const REASON_MAX = 200;
 export const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -166,4 +170,55 @@ export function blockToForm(b: Pick<BlockedTime, "start_at" | "end_at">): BlockI
 /** Dois períodos se sobrepõem? (fim exclusivo) */
 export function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart < bEnd && aEnd > bStart;
+}
+
+// ---------------------------------------------------------------------------
+// Lembrete no celular (0056). O valor é "minutos antes do início do bloqueio":
+//   horário  -> 0 (na hora), 15, 30, 60, 120 ou 1440 (1 dia antes);
+//   dia todo -> o início é a meia-noite, então: 360 (véspera às 18h) ou -480 (no próprio dia, às 8h).
+// null = sem lembrete (o padrão).
+// ---------------------------------------------------------------------------
+export type RemindOption = { value: number | null; label: string };
+
+export const REMIND_TIMED: readonly RemindOption[] = [
+  { value: null, label: "Sem lembrete" },
+  { value: 0, label: "Na hora" },
+  { value: 15, label: "15 minutos antes" },
+  { value: 30, label: "30 minutos antes" },
+  { value: 60, label: "1 hora antes" },
+  { value: 120, label: "2 horas antes" },
+  { value: 1440, label: "1 dia antes" },
+];
+export const REMIND_ALL_DAY: readonly RemindOption[] = [
+  { value: null, label: "Sem lembrete" },
+  { value: -480, label: "No próprio dia, às 8h" },
+  { value: 360, label: "Na véspera, às 18h" },
+];
+export const REMIND_MIN = -1440;
+export const REMIND_MAX = 10080;
+
+export function remindOptions(allDay: boolean): readonly RemindOption[] {
+  return allDay ? REMIND_ALL_DAY : REMIND_TIMED;
+}
+
+/** O valor existe nas opções do tipo de bloqueio (horário ou dia todo)? null (sem lembrete) sempre vale. */
+export function isValidRemind(allDay: boolean, v: number | null): boolean {
+  return v === null || remindOptions(allDay).some((o) => o.value === v);
+}
+
+/** Ao trocar entre "horário" e "dia todo": mantém o lembrete se ele existir no outro tipo; senão, sem lembrete. */
+export function remindAfterModeChange(allDay: boolean, current: number | null): number | null {
+  return isValidRemind(allDay, current) ? current : null;
+}
+
+/** Quando o aviso chega: início menos a antecedência (negativa = depois do início, como "no dia, às 8h"). */
+export function remindAt(startAt: string | Date, minutes: number): Date {
+  return new Date(new Date(startAt).getTime() - minutes * 60000);
+}
+
+/** Texto do lembrete já salvo (para a lista); vazio se não houver. */
+export function remindText(allDay: boolean, v: number | null | undefined): string {
+  if (v === null || v === undefined) return "";
+  const hit = remindOptions(allDay).find((o) => o.value === v) ?? REMIND_TIMED.find((o) => o.value === v) ?? REMIND_ALL_DAY.find((o) => o.value === v);
+  return hit ? hit.label : "";
 }

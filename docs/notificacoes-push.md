@@ -57,3 +57,42 @@ Configurações → Avisos no celular → Clientes sumidas.
   função ficar fora do ar na segunda, a semana passa.
 - **Teste manual (fora de segunda):** chamar a função com o segredo do cron e o corpo
   `{"forceOverdueMember":"<id do membro>"}`. Ignora o dia/hora e o limite semanal e envia só a esse membro.
+
+## Lembrete dos compromissos da agenda (migration 0056)
+
+Ao **bloquear um horário** (folga, almoço, consulta, compromisso pessoal; botão **Bloquear** na Agenda) a profissional
+escolhe **Lembrete no celular** e recebe o aviso antes do compromisso, como numa agenda pessoal:
+**"Daqui a 30 min: Almoço"** / **"12:00–13:00"**. Ao tocar, abre a Agenda no dia do compromisso (`/agenda?data=…`).
+
+- **Opções (horário):** sem lembrete (padrão), na hora, 15 min, 30 min, 1 h, 2 h ou 1 dia antes.
+  **Dia todo:** no próprio dia às 8h, ou na véspera às 18h (horário de Brasília).
+- **Quem recebe:** a profissional do bloqueio; se o bloqueio é de **toda a equipe**, todos os membros ativos. Só chega a quem
+  ativou os avisos no celular (Configurações → Avisos no celular). A opção "Desligado" do aviso de atendimento **não** desliga
+  este lembrete: ele vale por compromisso.
+- **Mesmo caminho do aviso de atendimento:** o `pg_cron` do minuto chama `push-appointment-alerts`, que agora também chama
+  `push_claim_due_block_reminders()`. Os avisos reservados ficam em `push_block_alert_log` (bloqueio + horário do aviso).
+- **Regras:** só se o horário do aviso chegou nos últimos 15 minutos (sem aviso atrasado); só enquanto o compromisso não
+  terminou; mudar o horário do bloqueio gera um aviso novo, mudar só a observação não repete; se ninguém do bloqueio tem
+  aparelho inscrito, o aviso não é gasto (quem inscrever a tempo ainda recebe); empresa inativa não recebe.
+
+### Ordem de publicação
+
+1. Aplicar a migration `0056` (coluna `blocked_times.remind_before_minutes` + função + registro).
+2. Publicar de novo a função `push-appointment-alerts` (**sem JWT**, como antes).
+3. O app (a Vercel publica o `main`).
+
+O app aguenta a ordem trocada: **sem a 0056** a agenda e o bloqueio funcionam normalmente, só não há lembrete (escolher um
+mostra "o lembrete ainda não está disponível"). **Sem a função nova**, os lembretes ficam guardados no banco e o aviso de
+atendimento segue igual (um erro no lembrete nunca derruba o aviso de atendimento).
+
+### Como testar
+
+- Bloquear um horário daqui a ~20 minutos com "15 minutos antes" e esperar o aviso (com os avisos ativos no aparelho).
+- Logs da função: `{"alerts":0,…,"blocks":{"reminders":1,"sent":1,"failed":0,"dropped":0,"missing":false,"error":false}}`.
+  `"missing":true` = a 0056 ainda não foi aplicada.
+- Banco: `supabase/tests/local/0056_local.sh` (Postgres local) e `tests/push-block-reminders.test.cjs`.
+
+### Desligar
+
+Pela profissional: escolher **Sem lembrete** no compromisso. Geral: `update blocked_times set remind_before_minutes = null;`
+(o aviso de atendimento e o de clientes sumidas não são afetados).

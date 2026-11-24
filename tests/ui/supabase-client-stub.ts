@@ -18,6 +18,8 @@ type Db = {
   calls: Call[];
   delay?: (call: Call) => number;
   fail?: (call: Call) => boolean;
+  // erro com código (ex.: 42703, coluna que não existe) para a consulta que o teste escolher
+  error?: (call: Call) => { code?: string; message: string } | null;
   invoke?: (name: string, body: unknown) => { data: unknown; error: unknown };
   signIn?: (creds: unknown) => { data: unknown; error: unknown };
 };
@@ -101,6 +103,8 @@ function from(db: Db, table: string) {
       return new Promise((r) => setTimeout(r, ms))
         .then(() => {
           if (db.fail?.(call)) return { data: null, error: { message: "falha simulada" } };
+          const forced = db.error?.(call);
+          if (forced) return { data: null, error: forced };
           const all = (db.tables[table] ??= []);
           let rows: Record<string, unknown>[];
           if (call.op === "insert") {
