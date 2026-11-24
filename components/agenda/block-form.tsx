@@ -7,7 +7,9 @@
 // "Novo atendimento" já não oferece horários bloqueados. Atendimentos que já
 // estavam marcados ali continuam na agenda; a tela só avisa quantos são.
 // A observação aparece na Agenda (Dia, Semana e Mês).
+// Também serve de agenda pessoal: o compromisso pode avisar no celular com antecedência (0056).
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCompany } from "@/components/company-provider";
@@ -15,11 +17,14 @@ import { getActiveProfessionals, type Professional } from "@/lib/hive/schedule";
 import { dayParam, parseDayParam } from "@/lib/hive/agenda-url";
 import {
   BLOCK_SELECT,
+  BLOCK_SELECT_WITH_REMINDER,
   REASON_MAX,
   blockRange,
   blockToForm,
   cleanReason,
   reasonProblem,
+  remindAfterModeChange,
+  remindOptions,
   type BlockedTime,
 } from "@/lib/hive/blocked-times";
 import { Input } from "@/components/ui/input";
@@ -30,7 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle, Bell, Info } from "lucide-react";
 
 const TEAM = "all"; // "toda a equipe" (professional_member_id nulo)
 
@@ -56,6 +61,8 @@ export function BlockForm({ blockId }: { blockId?: string }) {
   const [start, setStart] = useState("12:00");
   const [end, setEnd] = useState("13:00");
   const [reason, setReason] = useState("");
+  // Lembrete no celular, em minutos antes do início (null = sem lembrete). Ver lib/hive/blocked-times.ts.
+  const [remind, setRemind] = useState<number | null>(null);
   const [locked, setLocked] = useState(false); // período que o formulário não reescreve: só observação e remoção
 
   const [conflicts, setConflicts] = useState(0);
@@ -84,35 +91,34 @@ export function BlockForm({ blockId }: { blockId?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId]);
 
-  // edição: carrega o bloqueio
+  // edição: carrega o bloqueio (e o lembrete; se o banco ainda não tem a coluna da 0056, lê sem ele)
   useEffect(() => {
     if (!blockId) return;
     let alive = true;
-    createClient()
-      .from("blocked_times")
-      .select(BLOCK_SELECT)
-      .eq("id", blockId)
-      .maybeSingle()
-      .then(({ data }: { data: unknown }) => {
-        if (!alive) return;
-        const b = data as BlockedTime | null;
-        if (!b) {
-          setNotFound(true);
-          setBlockLoaded(true);
-          return;
-        }
-        const f = blockToForm(b);
-        setOriginal(b);
-        setTarget(b.professional_member_id ?? TEAM);
-        setDate(f.date);
-        setEndDate(f.endDate);
-        setAllDay(f.allDay);
-        setStart(f.start);
-        setEnd(f.end);
-        setReason(b.reason ?? "");
-        setLocked(!f.representable);
+    (async () => {
+      const supabase = createClient();
+      let res = await supabase.from("blocked_times").select(BLOCK_SELECT_WITH_REMINDER).eq("id", blockId).maybeSingle();
+      if (res.error) res = await supabase.from("blocked_times").select(BLOCK_SELECT).eq("id", blockId).maybeSingle();
+      if (!alive) return;
+      const b = res.data as BlockedTime | null;
+      if (!b) {
+        setNotFound(true);
         setBlockLoaded(true);
-      });
+        return;
+      }
+      const f = blockToForm(b);
+      setOriginal(b);
+      setTarget(b.professional_member_id ?? TEAM);
+      setDate(f.date);
+      setEndDate(f.endDate);
+      setAllDay(f.allDay);
+      setStart(f.start);
+      setEnd(f.end);
+      setReason(b.reason ?? "");
+      setRemind(typeof b.remind_before_minutes === "number" ? b.remind_before_minutes : null);
+      setLocked(!f.representable);
+      setBlockLoaded(true);
+    })();
     return () => {
       alive = false;
     };
@@ -165,13 +171,18 @@ export function BlockForm({ blockId }: { blockId?: string }) {
     setError(null);
     const supabase = createClient();
     const text = cleanReason(reason);
+    // O lembrete só vai na gravação quando há um escolhido (ou quando se está tirando um que existia):
+    // assim salvar SEM lembrete continua funcionando mesmo antes da atualização do banco (0056).
+    const reminder =
+      remind !== null || (original?.remind_before_minutes ?? null) !== null ? { remind_before_minutes: remind } : {};
     const fields = locked
-      ? { reason: text }
+      ? { reason: text, ...reminder }
       : {
           professional_member_id: target === TEAM ? null : target,
           start_at: range.start.toISOString(),
           end_at: range.end.toISOString(),
           reason: text,
+          ...reminder,
         };
     let ok = false;
     let code: string | undefined;
@@ -194,7 +205,9 @@ export function BlockForm({ blockId }: { blockId?: string }) {
       setError(
         code === "42501"
           ? "Você não tem permissão para fazer isso."
-          : "Não foi possível salvar o bloqueio. Tente de novo."
+          : (code === "42703" || code === "PGRST204") && remind !== null
+            ? "O lembrete ainda não está disponível: falta aplicar a atualização do banco. Salve sem lembrete por enquanto."
+            : "Não foi possível salvar o bloqueio. Tente de novo."
       );
       return;
     }
@@ -250,8 +263,8 @@ export function BlockForm({ blockId }: { blockId?: string }) {
       <div>
         <h1 className="page-title">{editing ? "Bloqueio de horário" : "Bloquear horário"}</h1>
         <p className="mt-1 text-sm text-ink-500">
-          Para folga, almoço, consulta ou qualquer período sem atendimento. Ninguém consegue marcar novos atendimentos
-          nesse período, e a observação aparece na agenda.
+          Para folga, almoço, consulta ou qualquer compromisso seu. Ninguém consegue marcar novos atendimentos nesse
+          período, a observação aparece na agenda e você pode pedir um lembrete no celular.
         </p>
       </div>
 
@@ -288,7 +301,15 @@ export function BlockForm({ blockId }: { blockId?: string }) {
             </p>
           </div>
           <div className="pt-0.5">
-            <Switch checked={allDay} onChange={setAllDay} disabled={locked || readOnly} label="Dia todo" />
+            <Switch
+              checked={allDay}
+              onChange={(v) => {
+                setAllDay(v);
+                setRemind((r) => remindAfterModeChange(v, r)); // "30 min antes" não existe para dia todo, e vice-versa
+              }}
+              disabled={locked || readOnly}
+              label="Dia todo"
+            />
           </div>
         </div>
 
@@ -336,6 +357,32 @@ export function BlockForm({ blockId }: { blockId?: string }) {
           disabled={readOnly}
           onChange={(e) => setReason(e.target.value)}
         />
+
+        <div className="space-y-1.5">
+          <Select
+            label="Lembrete no celular"
+            value={remind === null ? "" : String(remind)}
+            disabled={readOnly}
+            onChange={(e) => setRemind(e.target.value === "" ? null : Number(e.target.value))}
+          >
+            {remindOptions(allDay).map((o) => (
+              <option key={String(o.value)} value={o.value === null ? "" : String(o.value)}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+          {remind !== null && (
+            <p className="flex items-start gap-1.5 text-xs text-ink-500" data-testid="remind-hint">
+              <Bell className="mt-0.5 size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
+              <span>
+                O aviso chega no celular de {who}, para quem ativou os avisos.{" "}
+                <Link href="/mais/configuracoes" className="font-semibold text-ink-700 underline underline-offset-2">
+                  Ativar avisos no celular
+                </Link>
+              </span>
+            </p>
+          )}
+        </div>
 
         {conflicts > 0 && (
           <div

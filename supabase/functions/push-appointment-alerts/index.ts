@@ -1,6 +1,8 @@
 // push-appointment-alerts — avisos no celular da profissional (Web Push). Roda a cada minuto pelo pg_cron
-// (segredo do Vault em x-cron-secret) e faz duas coisas:
+// (segredo do Vault em x-cron-secret) e faz três coisas:
 //   1) Aviso antes de cada atendimento (0048): push_claim_due_alerts reserva e devolve o que chegou na hora.
+//   1b) Lembrete dos compromissos da agenda — bloqueios de horário com lembrete (0056):
+//      push_claim_due_block_reminders. Um erro aqui (ou a 0056 ainda não aplicada) não derruba o aviso de atendimento.
 //   2) Aviso semanal de clientes sumidas (0049): às segundas, push_claim_weekly_overdue devolve quem deve
 //      receber; a função conta as sumidas da empresa (mesma regra de lib/hive/relationship.ts) e envia se
 //      houver pelo menos uma. Aparelho que o serviço de push recusa (404/410) é removido.
@@ -24,6 +26,10 @@ type Sub = { id: string; endpoint: string; p256dh: string; auth_key: string };
 type Alert = {
   alert_appointment_id: string; alert_start: string; alert_minutes: number;
   client_name: string; service_name: string; subs: Sub[] | null;
+};
+type BlockAlert = {
+  alert_block_id: string; alert_remind_at: string; alert_start: string; alert_end: string;
+  alert_all_day: boolean; alert_reason: string | null; alert_before: number; subs: Sub[] | null;
 };
 type Recipient = { out_member_id: string; out_company_id: string; subs: Sub[] | null };
 type Payload = { title: string; body: string; url: string; tag: string };
@@ -67,6 +73,35 @@ export function isOverdueClient(visitDates: string[], nowMs: number): boolean {
 // -------------------------------------------------------------------------------------------------------
 
 const clock = new Intl.DateTimeFormat("pt-BR", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hour12: false });
+
+// --- Texto do lembrete de compromisso (0056). O teste tests/push-block-reminders.test.cjs executa ESTE trecho. ---
+const dayKeyFmt = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" });
+const dayMonthFmt = new Intl.DateTimeFormat("pt-BR", { timeZone: TIME_ZONE, day: "2-digit", month: "2-digit" });
+
+/** "Daqui a 30 min: Almoço" / "Agora: Reunião" / "Amanhã: Folga" / "Hoje: Folga", e quando é no corpo. */
+export function blockReminderNotification(r: {
+  id: string; start: string; end: string; allDay: boolean; reason: string | null; before: number;
+}) {
+  const cleaned = (r.reason ?? "").replace(/\s+/g, " ").trim();
+  const label = cleaned ? (cleaned.length > 80 ? `${cleaned.slice(0, 79)}…` : cleaned) : r.allDay ? "Dia bloqueado" : "Horário bloqueado";
+  const startMs = Date.parse(r.start);
+  const endMs = Date.parse(r.end);
+  const startDay = dayKeyFmt.format(new Date(startMs));
+  let when: string;
+  if (r.allDay) {
+    const lastDay = dayKeyFmt.format(new Date(endMs - 1));
+    when = lastDay === startDay ? "Dia todo" : `Dia todo · até ${dayMonthFmt.format(new Date(endMs - 1))}`;
+  } else {
+    when = `${clock.format(new Date(startMs))}–${clock.format(new Date(endMs))}`;
+  }
+  let lead: string;
+  if (r.before < 0 || (r.allDay && r.before === 0)) lead = "Hoje";
+  else if (r.before === 0) lead = "Agora";
+  else if (r.before === 1440 || (r.allDay && r.before < 1440)) lead = "Amanhã";
+  else lead = `Daqui a ${minutesLabel(r.before)}`;
+  return { title: `${lead}: ${label}`, body: when, url: `/agenda?data=${startDay}`, tag: `block-${r.id}` };
+}
+// ---------------------------------------------------------------------------------------------------------------
 
 /** Texto do aviso antes do atendimento: "Daqui a 30 min: Ana" / "Gel nas mãos às 14:30". */
 export function buildPayload(a: Alert): Payload {
@@ -154,6 +189,31 @@ Deno.serve(async (req) => {
     await pushTo(a.subs ?? [], buildPayload(a), ttl, appt, dead, { appointmentId: a.alert_appointment_id });
   }
 
+  // 1b) Lembrete dos compromissos da agenda (0056). Um erro aqui não derruba o aviso de atendimento;
+  //     "função não existe" (PGRST202) = a 0056 ainda não foi aplicada: segue sem lembrete e sem ruído no log.
+  const blocks = { reminders: 0, sent: 0, failed: 0, dropped: 0, missing: false, error: false };
+  try {
+    const { data: bd, error: e3 } = await admin.rpc("push_claim_due_block_reminders");
+    if (e3) {
+      if (e3.code === "PGRST202") blocks.missing = true;
+      else throw new Error(e3.message);
+    } else {
+      const due = (bd as BlockAlert[]) ?? [];
+      blocks.reminders = due.length;
+      for (const b of due) {
+        const payload = blockReminderNotification({
+          id: b.alert_block_id, start: b.alert_start, end: b.alert_end, allDay: b.alert_all_day, reason: b.alert_reason, before: b.alert_before,
+        });
+        // O lembrete vale até o compromisso terminar (no máximo 24 h).
+        const ttl = Math.max(300, Math.min(86400, Math.floor((Date.parse(b.alert_end) - Date.now()) / 1000)));
+        await pushTo(b.subs ?? [], payload, ttl, blocks, dead, { blockId: b.alert_block_id, kind: "block" });
+      }
+    }
+  } catch (e) {
+    blocks.error = true;
+    log({ kind: "block", error: (e as Error).message });
+  }
+
   // 2) Aviso semanal de clientes sumidas (um erro aqui não derruba o aviso de atendimento)
   const overdue = { members: 0, sent: 0, failed: 0, dropped: 0, none: 0, error: false };
   try {
@@ -174,6 +234,6 @@ Deno.serve(async (req) => {
   }
 
   if (dead.length) await admin.rpc("push_drop_subscriptions", { p_ids: dead });
-  if (appt.alerts || overdue.members) log({ ...appt, overdue });
-  return new Response(JSON.stringify({ ...appt, overdue }), { status: 200, headers: { "Content-Type": "application/json" } });
+  if (appt.alerts || overdue.members || blocks.reminders) log({ ...appt, blocks, overdue });
+  return new Response(JSON.stringify({ ...appt, blocks, overdue }), { status: 200, headers: { "Content-Type": "application/json" } });
 });
