@@ -5,6 +5,15 @@ import type { Professional } from "@/lib/hive/schedule";
 import { cn } from "@/lib/utils";
 import { layoutOverlaps } from "@/components/agenda/week-view";
 import { MARK_STEP_MIN, isFullHour, markLabel, timeMarks } from "@/lib/hive/timeline-marks";
+import {
+  appliesToLane,
+  blockLabel,
+  blockWhenText,
+  blocksOnDay,
+  clipToDay,
+  type BlockedTime,
+} from "@/lib/hive/blocked-times";
+import { CalendarOff } from "lucide-react";
 
 export type TimelineAppointment = {
   id: string;
@@ -33,12 +42,17 @@ function minutesSinceMidnight(iso: string) {
   return d.getHours() * 60 + d.getMinutes();
 }
 
-function computeRange(appts: TimelineAppointment[]) {
+function computeRange(appts: TimelineAppointment[], extra: { startMin: number; endMin: number }[] = []) {
   let start = 8 * 60;
   let end = 20 * 60;
   for (const a of appts) {
     start = Math.min(start, Math.floor(minutesSinceMidnight(a.scheduled_start) / 60) * 60);
     end = Math.max(end, Math.ceil(minutesSinceMidnight(a.scheduled_end) / 60) * 60);
+  }
+  // bloqueios com horário (almoço, consulta) ampliam o dia se caírem fora do padrão
+  for (const r of extra) {
+    start = Math.min(start, Math.floor(r.startMin / 60) * 60);
+    end = Math.max(end, Math.ceil(r.endMin / 60) * 60);
   }
   return { start, end };
 }
@@ -48,15 +62,22 @@ export function DayTimeline({
   appointments,
   professionals,
   laneFilter,
+  blocks = [],
 }: {
   date: Date;
   appointments: TimelineAppointment[];
   professionals: Professional[];
   laneFilter: "all" | string;
+  /** Bloqueios de horário (folga, almoço...) que podem tocar este dia. */
+  blocks?: BlockedTime[];
 }) {
   const visible = appointments.filter((a) => !HIDDEN_STATUSES.includes(a.status));
   const hidden = appointments.filter((a) => HIDDEN_STATUSES.includes(a.status));
-  const { start, end } = computeRange(visible);
+  const dayBlocks = blocksOnDay(blocks, date);
+  const blockRanges = dayBlocks
+    .map((b) => clipToDay(b, date))
+    .filter((c): c is { startMin: number; endMin: number } => !!c && c.startMin > 0 && c.endMin < 1440);
+  const { start, end } = computeRange(visible, blockRanges);
   const totalMin = end - start;
   // Eixo de meia em meia hora (08:00, 08:30, 09:00...). O início e o fim do dia
   // continuam em hora cheia (computeRange), então a última marca é sempre :00.
@@ -121,6 +142,39 @@ export function DayTimeline({
                     </div>
                   )}
 
+                  {/* Bloqueios (folga, almoço...): por baixo dos atendimentos, com a observação escrita. */}
+                  {dayBlocks
+                    .filter((b) => appliesToLane(b, lane?.id ?? null))
+                    .map((b) => {
+                      const c = clipToDay(b, date);
+                      if (!c) return null;
+                      const from = Math.max(c.startMin, start);
+                      const to = Math.min(c.endMin, end);
+                      if (to <= from) return null;
+                      const height = (to - from) * PX_PER_MIN;
+                      return (
+                        <Link
+                          key={b.id}
+                          href={`/agenda/bloquear/${b.id}`}
+                          data-testid="agenda-block"
+                          title={`${blockLabel(b)} · ${blockWhenText(b)}`}
+                          className="absolute inset-x-0.5 overflow-hidden rounded-md border-l-2 border-ink-400 bg-ink-100/80 px-2 py-1 text-left text-ink-600 transition-opacity hover:opacity-80"
+                          style={{
+                            top: (from - start) * PX_PER_MIN,
+                            height,
+                            backgroundImage:
+                              "repeating-linear-gradient(135deg, transparent 0 6px, rgb(var(--c-ink-300) / 0.28) 6px 7px)",
+                          }}
+                        >
+                          <p className="flex items-center gap-1 text-xs font-semibold leading-tight">
+                            <CalendarOff className="size-3 shrink-0" aria-hidden="true" />
+                            <span className="truncate">{blockLabel(b)}</span>
+                          </p>
+                          {height > 34 && <p className="truncate text-[11px] leading-tight opacity-80">{blockWhenText(b)}</p>}
+                        </Link>
+                      );
+                    })}
+
                   {layoutOverlaps(laneAppts).map(({ a, lane: col, lanes: cols }) => {
                     const top = (minutesSinceMidnight(a.scheduled_start) - start) * PX_PER_MIN;
                     const height = Math.max(
@@ -153,6 +207,33 @@ export function DayTimeline({
           })}
         </div>
       </div>
+
+      {dayBlocks.length > 0 && (
+        <div className="mt-3 space-y-1.5" data-testid="agenda-block-list">
+          {dayBlocks.map((b) => {
+            const who =
+              professionals.length > 1
+                ? ` · ${b.professional_member_id ? professionals.find((p) => p.id === b.professional_member_id)?.name ?? "Profissional" : "Toda a equipe"}`
+                : "";
+            return (
+              <Link
+                key={b.id}
+                href={`/agenda/bloquear/${b.id}`}
+                className="flex items-start gap-2.5 rounded-lg border border-ink-100 bg-ink-50/60 px-3 py-2 transition-colors hover:bg-ink-50"
+              >
+                <CalendarOff className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden="true" />
+                <span className="min-w-0">
+                  <span className="block break-words text-sm font-medium text-ink-700">{blockLabel(b)}</span>
+                  <span className="block text-xs text-ink-400">
+                    {blockWhenText(b)}
+                    {who}
+                  </span>
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       {hidden.length > 0 && (
         <p className="mt-3 text-xs text-ink-300">

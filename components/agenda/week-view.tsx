@@ -7,7 +7,8 @@ import { isSameDay, type Professional } from "@/lib/hive/schedule";
 import { formatDuration } from "@/lib/hive/format";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { BLOCK_TONE, HIDDEN_STATUSES } from "./day-timeline";
-import { Plus } from "lucide-react";
+import { blockLabel, blockWhenText, blocksOnDay, clipToDay, type BlockedTime } from "@/lib/hive/blocked-times";
+import { CalendarOff, Plus } from "lucide-react";
 
 export type WeekAppointment = {
   id: string;
@@ -76,12 +77,15 @@ export function WeekView({
   professionals,
   showProfessional,
   onSelectDay,
+  blocks = [],
 }: {
   days: Date[];
   appointments: WeekAppointment[];
   professionals: Professional[];
   showProfessional: boolean;
   onSelectDay: (d: Date) => void;
+  /** Bloqueios de horário (folga, almoço...) que podem tocar a semana. */
+  blocks?: BlockedTime[];
 }) {
   const now = new Date();
   const profName = new Map(professionals.map((p) => [p.id, p.name.split(" ")[0]]));
@@ -101,6 +105,23 @@ export function WeekView({
     rangeStart = Math.min(rangeStart, Math.floor(minutesOfDay(a.scheduled_start) / 60) * 60);
     rangeEnd = Math.max(rangeEnd, Math.ceil(minutesOfDay(a.scheduled_end) / 60) * 60);
   }
+  // bloqueios com horário (almoço, consulta) ampliam a faixa se caírem fora do padrão
+  const blocksByDay = days.map((d) => blocksOnDay(blocks, d));
+  days.forEach((d, i) => {
+    for (const b of blocksByDay[i]) {
+      const c = clipToDay(b, d);
+      if (c && c.startMin > 0 && c.endMin < 1440) {
+        rangeStart = Math.min(rangeStart, Math.floor(c.startMin / 60) * 60);
+        rangeEnd = Math.max(rangeEnd, Math.ceil(c.endMin / 60) * 60);
+      }
+    }
+  });
+  const isFullDay = (b: BlockedTime, d: Date) => {
+    const c = clipToDay(b, d);
+    return !!c && c.startMin === 0 && c.endMin === 1440;
+  };
+  const blockWho = (b: BlockedTime) =>
+    showProfessional ? ` · ${b.professional_member_id ? profName.get(b.professional_member_id) ?? "Profissional" : "Toda a equipe"}` : "";
   const totalMin = rangeEnd - rangeStart;
   const hourMarks = Array.from({ length: Math.floor(totalMin / 60) + 1 }, (_, i) => rangeStart + i * 60);
   const nowMin = now.getHours() * 60 + now.getMinutes();
@@ -118,6 +139,7 @@ export function WeekView({
             {days.map((d, i) => {
               const isToday = isSameDay(d, now);
               const count = byDay.get(localDayKey(d))?.length ?? 0;
+              const fullDayBlocked = blocksByDay[i].some((b) => isFullDay(b, d));
               return (
                 <button
                   key={i}
@@ -133,7 +155,10 @@ export function WeekView({
                   >
                     {d.getDate()}
                   </span>
-                  <span className="text-[10px] text-ink-300">{count > 0 ? `${count} atend.` : "livre"}</span>
+                  <span className="flex items-center gap-0.5 text-[10px] text-ink-300" title={fullDayBlocked ? "Dia bloqueado" : undefined}>
+                    {fullDayBlocked && <CalendarOff className="size-2.5" aria-hidden="true" />}
+                    {count > 0 ? `${count} atend.` : fullDayBlocked ? "bloqueado" : "livre"}
+                  </span>
                 </button>
               );
             })}
@@ -175,6 +200,36 @@ export function WeekView({
                       <div className="h-px flex-1 bg-danger/60" />
                     </div>
                   )}
+
+                  {blocksByDay[i].map((b) => {
+                    const c = clipToDay(b, d);
+                    if (!c) return null;
+                    const from = Math.max(c.startMin, rangeStart);
+                    const to = Math.min(c.endMin, rangeEnd);
+                    if (to <= from) return null;
+                    const height = (to - from) * PX_PER_MIN;
+                    return (
+                      <Link
+                        key={b.id}
+                        href={`/agenda/bloquear/${b.id}`}
+                        data-testid="agenda-block"
+                        title={`${blockLabel(b)} · ${blockWhenText(b)}${blockWho(b)}`}
+                        className="absolute inset-x-px overflow-hidden rounded border-l-2 border-ink-400 bg-ink-100/80 px-1.5 py-0.5 text-left text-ink-600 transition-opacity hover:opacity-80"
+                        style={{
+                          top: (from - rangeStart) * PX_PER_MIN,
+                          height,
+                          backgroundImage:
+                            "repeating-linear-gradient(135deg, transparent 0 6px, rgb(var(--c-ink-300) / 0.28) 6px 7px)",
+                        }}
+                      >
+                        <p className="flex items-center gap-1 text-[11px] font-semibold leading-tight">
+                          <CalendarOff className="size-3 shrink-0" aria-hidden="true" />
+                          <span className="truncate">{blockLabel(b)}</span>
+                        </p>
+                        {height > 30 && <p className="truncate text-[10px] leading-tight opacity-80">{blockWhenText(b)}</p>}
+                      </Link>
+                    );
+                  })}
 
                   {placed.map(({ a, lane, lanes }) => {
                     const top = (minutesOfDay(a.scheduled_start) - rangeStart) * PX_PER_MIN;
@@ -223,6 +278,8 @@ export function WeekView({
             a.scheduled_start.localeCompare(b.scheduled_start)
           );
           const nowIndex = isToday ? list.findIndex((a) => new Date(a.scheduled_start) > now) : -1;
+          const dayBlk = blocksByDay[i];
+          const fullDayBlocked = dayBlk.some((b) => isFullDay(b, d));
           const nowDivider = (
             <div className="flex items-center gap-1.5 py-1" aria-label="Agora">
               <div className="size-1.5 rounded-full bg-danger" />
@@ -258,7 +315,31 @@ export function WeekView({
                 </span>
               </button>
 
-              {list.length === 0 ? (
+              {dayBlk.length > 0 && (
+                <div className="mb-1.5 space-y-1.5">
+                  {dayBlk.map((b) => (
+                    <Link
+                      key={b.id}
+                      href={`/agenda/bloquear/${b.id}`}
+                      data-testid="agenda-block"
+                      className="flex items-start gap-3 rounded-lg border border-ink-100 bg-ink-50/60 px-3 py-2.5 transition-colors active:bg-ink-50"
+                    >
+                      <div className="flex w-12 shrink-0 justify-start pt-0.5">
+                        <CalendarOff className="size-4 text-ink-400" aria-hidden="true" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-medium text-ink-700">{blockLabel(b)}</p>
+                        <p className="text-xs text-ink-400">
+                          {blockWhenText(b)}
+                          {blockWho(b)}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {list.length === 0 && fullDayBlocked ? null : list.length === 0 ? (
                 <div className="flex items-center justify-between rounded-lg border border-dashed border-ink-200 px-3 py-2.5">
                   <span className="text-sm text-ink-300">Sem atendimentos</span>
                   <Link

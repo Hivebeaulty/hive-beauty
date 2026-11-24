@@ -738,13 +738,13 @@ function agendaRows(big = false) {
     a("12-02", "10:00", "agendado", 300),  // na grade de novembro, fora do mês
   ];
 }
-async function openAgenda({ role = "owner", width = 390, height = 900, theme = "", big = false, forecastDelay = 20, failForecast = false } = {}) {
+async function openAgenda({ role = "owner", width = 390, height = 900, theme = "", big = false, forecastDelay = 20, failForecast = false, blocks = [], failBlocks = false } = {}) {
   const page = await browser.newPage();
   await page.setViewport({ width, height, deviceScaleFactor: 1 });
   await page.emulateTimezone("America/Sao_Paulo");
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.evaluateOnNewDocument((rows, forecastDelay, failForecast) => {
+  await page.evaluateOnNewDocument((rows, forecastDelay, failForecast, blocks, failBlocks) => {
     // relógio parado em 05/11/2026 13h (Brasília), andando a partir daí
     const R = Date, fixed = R.parse("2026-11-05T13:00:00-03:00"), t0 = R.now();
     class D extends R { constructor(...a) { if (a.length === 0) super(fixed + (R.now() - t0)); else super(...a); } static now() { return fixed + (R.now() - t0); } }
@@ -753,6 +753,7 @@ async function openAgenda({ role = "owner", width = 390, height = 900, theme = "
     window.__db = {
       tables: {
         appointments: rows,
+        blocked_times: blocks,
         company_members: [
           { id: "m1", role: "owner", active: true, company_id: "00000000-0000-0000-0000-000000000001" },
           { id: "m2", role: "professional", active: true, company_id: "00000000-0000-0000-0000-000000000001" },
@@ -761,9 +762,9 @@ async function openAgenda({ role = "owner", width = 390, height = 900, theme = "
       rpc: { get_company_member_names: [{ member_id: "m1", full_name: "Ana Lima" }, { member_id: "m2", full_name: "Bia Rocha" }] },
       calls: [],
       delay: (c) => (isForecast(c) ? forecastDelay : 20),
-      fail: (c) => failForecast && isForecast(c),
+      fail: (c) => (failForecast && isForecast(c)) || (failBlocks && c.table === "blocked_times"),
     };
-  }, agendaRows(big), forecastDelay, failForecast);
+  }, agendaRows(big), forecastDelay, failForecast, blocks, failBlocks);
   await page.goto(`${PAGE}?view=agenda&role=${role}${theme ? `&theme=${theme}` : ""}`);
   // fonte real do app (Noto Serif de public/fonts), para medir larguras de verdade
   await page.addStyleTag({ content: `@font-face{font-family:"Noto Serif";src:url(data:font/woff2;base64,${NOTO}) format("woff2");font-weight:400 700}:root{--font-sans:"Noto Serif",Georgia,serif;--font-serif:"Noto Serif",Georgia,serif}` });
@@ -984,6 +985,295 @@ test("U40 Agenda: o dia consultado fica na URL; ao remontar a tela (Voltar) ela 
   assert.match(await agendaLabel(page), /05 De Novembro/);
   assert.deepEqual(page.errors, []);
   await page.close();
+});
+
+// ============================================================ Agenda: bloqueio de horário (folga, almoço, dia todo)
+const CO = "00000000-0000-0000-0000-000000000001";
+const BLK = (id, member, d1, h1, d2, h2, reason) => ({
+  id, company_id: CO, professional_member_id: member, start_at: brt(d1, h1), end_at: brt(d2, h2), reason,
+});
+const AGENDA_BLOCKS = [
+  BLK("b1", "m1", "11-05", "12:00", "11-05", "13:00", "Almoço"),
+  BLK("b4", null, "11-05", "17:00", "11-05", "18:00", "Reunião da equipe"),
+  BLK("b5", null, "11-04", "00:00", "11-05", "00:00", "Feriado"),
+  BLK("b2", "m2", "11-07", "00:00", "11-08", "00:00", "Consulta médica da Bia"),
+  BLK("b3", "m1", "11-20", "00:00", "11-21", "00:00", null),
+];
+const visibleCount = (page, sel) =>
+  page.evaluate((sel) => [...document.querySelectorAll(sel)].filter((e) => e.offsetParent !== null).length, sel);
+const waitCount = (page, sel, n) =>
+  page.waitForFunction((sel, n) => [...document.querySelectorAll(sel)].filter((e) => e.offsetParent !== null).length === n, { timeout: 6000 }, sel, n);
+
+test("U41 Agenda: o bloqueio aparece no Dia (na coluna certa, com a observação), na Semana e no Mês", async () => {
+  const page = await openAgenda({ blocks: AGENDA_BLOCKS });
+  await waitForecast(page);
+  // Dia 05/11: almoço da Ana (1 coluna) + reunião da equipe toda (2 colunas); "Feriado" terminou à meia-noite
+  await waitCount(page, '[data-testid="agenda-block"]', 3);
+  const geo = await page.evaluate(() => {
+    const first = [...document.querySelectorAll('[data-testid="agenda-block"]')].find((e) => e.innerText.includes("Almoço"));
+    const lane = first.parentElement;
+    const r = first.getBoundingClientRect(), l = lane.getBoundingClientRect();
+    return { h: r.height, top: r.top - l.top };
+  });
+  assert.ok(Math.abs(geo.h - 69) < 2, `1h = 69 px; veio ${geo.h}`);
+  assert.ok(Math.abs(geo.top - 276) < 2, `12:00 fica 4h depois das 08:00 (276 px); veio ${geo.top}`);
+  const list = await page.$eval('[data-testid="agenda-block-list"]', (e) => e.innerText).then(norm);
+  assert.match(list, /Almoço 12:00–13:00 · Ana Lima/);
+  assert.match(list, /Reunião da equipe 17:00–18:00 · Toda a equipe/);
+  assert.equal(await page.$$eval('[data-testid="agenda-block-list"] a', (a) => a.length), 2);
+  assert.equal(await page.$eval('[data-testid="agenda-block"]', (a) => a.getAttribute("href")), "/agenda/bloquear/b1");
+  // a previsão de faturamento não muda por causa de bloqueio
+  assert.equal(await forecastText(page), "Previsto R$ 250,50 R$ 100,00 realizado · R$ 150,50 agendado");
+  // filtro da Bia: a consulta pede "ela ou a equipe toda"; só a reunião fica
+  await page.select("select", "m2");
+  await waitCount(page, '[data-testid="agenda-block"]', 1);
+  const q = await page.evaluate(() => window.__db.calls.filter((c) => c.table === "blocked_times").map((c) => c.filters.find((f) => f[0] === "or")?.[2]));
+  assert.ok(q.includes("professional_member_id.eq.m2,professional_member_id.is.null"));
+  // dia 04/11 não tem atendimento, mas tem "Feriado" (dia todo): a agenda mostra o bloqueio, não o "nenhum atendimento"
+  await pressNav(page, "Anterior");
+  await waitCount(page, '[data-testid="agenda-block"]', 1);
+  assert.match(await text(page), /Feriado/);
+  assert.match(await text(page), /Dia todo/);
+  assert.ok(!(await text(page)).includes("Nenhum atendimento neste dia"));
+  await page.select("select", "all");
+  // Semana (celular): lista os bloqueios de cada dia
+  await pickView(page, "Semana");
+  await page.waitForFunction(() => document.body.innerText.includes("Consulta médica da Bia"), { timeout: 6000 });
+  const week = norm(await text(page));
+  assert.match(week, /Almoço 12:00–13:00 · Ana/);
+  assert.match(week, /Consulta médica da Bia Dia todo · Bia/);
+  assert.match(week, /Feriado Dia todo · Toda a equipe/);
+  // Mês: só dia inteiro marca o dia (04/11, 07/11, 20/11); almoço não
+  await pickView(page, "Mês");
+  await waitCount(page, '[data-testid="month-blocked"]', 3);
+  assert.match(await text(page), /Bloqueado/);
+  assert.ok(await noHorizontalScroll(page));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("U42 Agenda: bloqueio na Semana em tela larga; sem bloqueios nada muda; falha na consulta não derruba a agenda", async () => {
+  let page = await openAgenda({ blocks: AGENDA_BLOCKS, width: 1200 });
+  await waitForecast(page);
+  await pickView(page, "Semana");
+  await waitCount(page, '[data-testid="agenda-block"]', 4);
+  // cabeçalho da coluna: os dois dias inteiros bloqueados são marcados (04/11 sem atendimento diz "bloqueado"; 07/11 mantém "1 atend.")
+  assert.equal(await visibleCount(page, 'button span[title="Dia bloqueado"]'), 2);
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll('button span[title="Dia bloqueado"]')].filter((e) => e.offsetParent).map((e) => e.innerText.trim()).sort().join("|")), "1 atend.|bloqueado");
+  await page.close();
+  // sem bloqueios: nenhum marcador, nenhum botão a mais além de "Bloquear horário"
+  page = await openAgenda();
+  await waitForecast(page);
+  assert.equal(await page.$$eval('[data-testid="agenda-block"], [data-testid="agenda-block-list"]', (e) => e.length), 0);
+  assert.ok((await page.$$eval("a", (a) => a.map((x) => x.getAttribute("href")))).some((h) => h.startsWith("/agenda/bloquear?data=2026-11-05")));
+  await page.close();
+  // a consulta de bloqueios falha: a agenda aparece normalmente, só sem os bloqueios
+  page = await openAgenda({ blocks: AGENDA_BLOCKS, failBlocks: true });
+  await waitForecast(page);
+  assert.match(await text(page), /Ana Paula/);
+  assert.equal(await page.$$eval('[data-testid="agenda-block"]', (e) => e.length), 0);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+async function openBlockForm({ role = "owner", member = "m1", query = "", blocks = AGENDA_BLOCKS, failWrites = false, width = 390 } = {}) {
+  const page = await browser.newPage();
+  await page.setViewport({ width, height: 900, deviceScaleFactor: 1 });
+  await page.emulateTimezone("America/Sao_Paulo");
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.evaluateOnNewDocument((rows, blocks, failWrites) => {
+    const R = Date, fixed = R.parse("2026-11-05T13:00:00-03:00"), t0 = R.now();
+    class D extends R { constructor(...a) { if (a.length === 0) super(fixed + (R.now() - t0)); else super(...a); } static now() { return fixed + (R.now() - t0); } }
+    window.Date = D;
+    window.__db = {
+      tables: {
+        appointments: rows,
+        blocked_times: blocks.map((b) => ({ ...b })),
+        company_members: [
+          { id: "m1", role: "owner", active: true, company_id: "00000000-0000-0000-0000-000000000001" },
+          { id: "m2", role: "professional", active: true, company_id: "00000000-0000-0000-0000-000000000001" },
+        ],
+      },
+      rpc: { get_company_member_names: [{ member_id: "m1", full_name: "Ana Lima" }, { member_id: "m2", full_name: "Bia Rocha" }] },
+      calls: [],
+      fail: (c) => failWrites && !!c.op,
+    };
+  }, agendaRows(), blocks, failWrites);
+  await page.goto(`${PAGE}?view=bloquear&role=${role}&member=${member}${query}`);
+  await page.waitForFunction(() => document.querySelector('[data-testid="block-form"]') || document.body.innerText.includes("Bloqueio não encontrado"), { timeout: 6000 });
+  page.errors = errors;
+  return page;
+}
+const fieldEl = (label) => `(() => { const l = [...document.querySelectorAll("label")].find((x) => x.innerText.trim() === ${JSON.stringify(label)}); return l ? document.getElementById(l.htmlFor) : null; })()`;
+const fieldValue = (page, label) => page.evaluate(`${fieldEl(label)}?.value ?? null`);
+const fillField = (page, label, value) =>
+  page.evaluate(`(() => {
+    const el = ${fieldEl(label)};
+    if (!el) throw new Error("campo não encontrado: ${label}");
+    const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : el.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, "value").set.call(el, ${JSON.stringify(value)});
+    el.dispatchEvent(new Event(el.tagName === "SELECT" ? "change" : "input", { bubbles: true }));
+  })()`);
+const writes = (page) => page.evaluate(() => window.__db.calls.filter((c) => c.op).map((c) => ({ table: c.table, op: c.op, payload: c.payload, filters: c.filters })));
+const navs = (page) => page.evaluate(() => window.__nav ?? []);
+const toggleAllDay = (page) => page.$eval('button[role="switch"]', (b) => b.click());
+const waitNav = (page) => page.waitForFunction(() => (window.__nav ?? []).length > 0, { timeout: 6000 });
+
+test("U43 Bloquear horário: cria bloqueio com horário e observação; vale para a profissional escolhida", async () => {
+  const page = await openBlockForm({ query: "&data=2026-11-10" });
+  assert.equal(await fieldValue(page, "Para quem"), "m1", "começa na própria agenda");
+  assert.equal(await fieldValue(page, "Data"), "2026-11-10");
+  assert.deepEqual([await fieldValue(page, "Das"), await fieldValue(page, "Até")], ["12:00", "13:00"]);
+  assert.equal(await page.$$eval('[data-testid="block-conflicts"]', (e) => e.length), 0);
+  await fillField(page, "Observação (aparece na agenda)", "  Folga   da Ana ");
+  await clickButton(page, "Bloquear");
+  await waitNav(page);
+  const w = await writes(page);
+  assert.equal(w.length, 1);
+  assert.equal(w[0].table, "blocked_times");
+  assert.equal(w[0].op, "insert");
+  assert.deepEqual(w[0].payload, {
+    company_id: CO, professional_member_id: "m1",
+    start_at: brt("11-10", "12:00"), end_at: brt("11-10", "13:00"), reason: "Folga da Ana",
+  });
+  assert.deepEqual(await navs(page), [["push", "/agenda?data=2026-11-10"]]);
+  assert.match(await text(page), /Horário bloqueado\./);
+  await page.close();
+});
+
+test("U44 Bloquear horário: dia todo, vários dias, toda a equipe e observação vazia", async () => {
+  const page = await openBlockForm({ query: "&data=2026-11-10" });
+  await fillField(page, "Para quem", "all");
+  await toggleAllDay(page);
+  // com "Dia todo" somem os horários e entra a data final
+  assert.equal(await fieldValue(page, "Das"), null);
+  await fillField(page, "Até", "2026-11-12");
+  assert.equal(await fieldValue(page, "De"), "2026-11-10");
+  await clickButton(page, "Bloquear");
+  await waitNav(page);
+  const w = await writes(page);
+  assert.deepEqual(w[0].payload, {
+    company_id: CO, professional_member_id: null,
+    start_at: brt("11-10", "00:00"), end_at: brt("11-13", "00:00"), reason: null,
+  });
+  assert.match(await text(page), /Dia bloqueado\./);
+  await page.close();
+});
+
+test("U45 Bloquear horário: avisa dos atendimentos já marcados no período, sem impedir o bloqueio", async () => {
+  const page = await openBlockForm({ query: "&data=2026-11-05" });
+  await fillField(page, "Das", "15:00");
+  await fillField(page, "Até", "17:00");
+  await page.waitForFunction(() => document.querySelector('[data-testid="block-conflicts"]'), { timeout: 4000 });
+  assert.match(norm(await page.$eval('[data-testid="block-conflicts"]', (e) => e.innerText)), /Já existe 1 atendimento marcado nesse período para Ana Lima\. Eles continuam na agenda/);
+  await fillField(page, "Para quem", "all");
+  await page.waitForFunction(() => document.querySelector('[data-testid="block-conflicts"]')?.innerText.includes("2 atendimentos"), { timeout: 4000 });
+  await fillField(page, "Para quem", "m2");
+  await page.waitForFunction(() => document.querySelector('[data-testid="block-conflicts"]')?.innerText.includes("1 atendimento"), { timeout: 4000 });
+  // 12:00–13:00 não tem atendimento aberto: o aviso some
+  await fillField(page, "Das", "12:00");
+  await fillField(page, "Até", "13:00");
+  await page.waitForFunction(() => !document.querySelector('[data-testid="block-conflicts"]'), { timeout: 4000 });
+  // e salvar com aviso continua possível
+  await fillField(page, "Das", "15:00");
+  await fillField(page, "Até", "17:00");
+  await page.waitForFunction(() => document.querySelector('[data-testid="block-conflicts"]'), { timeout: 4000 });
+  await clickButton(page, "Bloquear");
+  await waitNav(page);
+  assert.equal((await writes(page)).length, 1);
+  await page.close();
+});
+
+test("U46 Bloquear horário: horário final antes do inicial e falha ao gravar mostram o erro e não navegam", async () => {
+  let page = await openBlockForm();
+  await fillField(page, "Das", "14:00");
+  await fillField(page, "Até", "13:00");
+  await clickButton(page, "Bloquear");
+  await page.waitForFunction(() => document.body.innerText.includes("O horário final precisa ser depois do inicial."), { timeout: 4000 });
+  assert.equal((await writes(page)).length, 0);
+  assert.deepEqual(await navs(page), []);
+  await page.close();
+  page = await openBlockForm({ failWrites: true });
+  await clickButton(page, "Bloquear");
+  await page.waitForFunction(() => document.body.innerText.includes("Não foi possível salvar o bloqueio."), { timeout: 4000 });
+  assert.deepEqual(await navs(page), []);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("U47 Bloquear horário: profissional só bloqueia a própria agenda; recepção escolhe qualquer uma", async () => {
+  let page = await openBlockForm({ role: "professional", member: "m2" });
+  assert.equal(await fieldValue(page, "Para quem"), null, "sem escolha de profissional");
+  await clickButton(page, "Bloquear");
+  await waitNav(page);
+  assert.equal((await writes(page))[0].payload.professional_member_id, "m2");
+  await page.close();
+  page = await openBlockForm({ role: "professional", member: "m2", query: "&id=b1" });
+  assert.match(await text(page), /Este bloqueio não é da sua agenda/);
+  assert.ok(!(await buttons(page)).includes("Salvar"));
+  assert.ok(!(await buttons(page)).includes("Remover bloqueio"));
+  await page.close();
+  page = await openBlockForm({ role: "reception", member: "m3" });
+  assert.equal(await fieldValue(page, "Para quem"), "all", "recepção não é uma profissional: começa em toda a equipe");
+  assert.deepEqual(await page.evaluate(`[...${fieldEl("Para quem")}.options].map((o) => o.text)`), ["Toda a equipe", "Ana Lima", "Bia Rocha"]);
+  await page.close();
+});
+
+test("U48 Bloquear horário: editar, remover e bloqueio que não existe mais", async () => {
+  let page = await openBlockForm({ query: "&id=b1" });
+  assert.equal(await fieldValue(page, "Para quem"), "m1");
+  assert.equal(await fieldValue(page, "Data"), "2026-11-05");
+  assert.deepEqual([await fieldValue(page, "Das"), await fieldValue(page, "Até")], ["12:00", "13:00"]);
+  assert.equal(await fieldValue(page, "Observação (aparece na agenda)"), "Almoço");
+  await fillField(page, "Das", "12:30");
+  await fillField(page, "Observação (aparece na agenda)", "Almoço longo");
+  await clickButton(page, "Salvar");
+  await waitNav(page);
+  let w = await writes(page);
+  assert.equal(w[0].op, "update");
+  assert.deepEqual(w[0].filters.filter((f) => f[0] === "eq"), [["eq", "id", "b1"]]);
+  assert.deepEqual(w[0].payload, { professional_member_id: "m1", start_at: brt("11-05", "12:30"), end_at: brt("11-05", "13:00"), reason: "Almoço longo" });
+  assert.deepEqual(await navs(page), [["push", "/agenda?data=2026-11-05"]]);
+  await page.close();
+  // dia todo carregado como dia todo
+  page = await openBlockForm({ query: "&id=b2" });
+  assert.equal(await fieldValue(page, "De"), "2026-11-07");
+  assert.equal(await fieldValue(page, "Até"), "2026-11-07");
+  assert.equal(await fieldValue(page, "Das"), null);
+  await page.close();
+  // remover: pede confirmação e apaga só esse bloqueio
+  page = await openBlockForm({ query: "&id=b1" });
+  await clickButton(page, "Remover bloqueio");
+  await page.waitForFunction(() => document.body.innerText.includes("voltam a ficar livres"), { timeout: 4000 });
+  assert.equal((await writes(page)).length, 0, "só abrir o aviso não apaga");
+  await clickButton(page, "Remover");
+  await waitNav(page);
+  w = await writes(page);
+  assert.deepEqual([w[0].op, w[0].filters], ["delete", [["eq", "id", "b1"]]]);
+  assert.equal(await page.evaluate(() => window.__db.tables.blocked_times.length), AGENDA_BLOCKS.length - 1);
+  assert.deepEqual(await navs(page), [["push", "/agenda?data=2026-11-05"]]);
+  await page.close();
+  // id que não existe
+  page = await openBlockForm({ query: "&id=nao-existe" });
+  assert.match(await text(page), /Bloqueio não encontrado/);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("U49 Bloquear horário: capturas a 390 px (formulário e agenda com bloqueios) nos dois temas", async () => {
+  const page = await openBlockForm({ query: "&data=2026-11-10" });
+  await toggleAllDay(page);
+  assert.ok(await noHorizontalScroll(page));
+  await page.screenshot({ path: join(SHOTS, "bloquear-form-390.png"), fullPage: true });
+  await page.close();
+  for (const theme of ["", "dark"]) {
+    const ag = await openAgenda({ blocks: AGENDA_BLOCKS, theme });
+    await waitForecast(ag);
+    await waitCount(ag, '[data-testid="agenda-block"]', 3);
+    await ag.screenshot({ path: join(SHOTS, `agenda-bloqueio-dia-390-${theme || "claro"}.png`), fullPage: true });
+    await ag.close();
+  }
 });
 
 // ============================================================ Mais > Assinatura (0051)

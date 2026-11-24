@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { isSameDay, isSameMonth } from "@/lib/hive/schedule";
 
@@ -10,11 +11,14 @@ export function MonthGrid({
   reference,
   countByDay,
   onSelectDay,
+  blockedDays,
 }: {
   days: Date[];
   reference: Date;
   countByDay: Map<string, { total: number; hasPending: boolean }>;
   onSelectDay: (d: Date) => void;
+  /** Dias inteiros bloqueados (folga, férias), em yyyy-MM-dd local. */
+  blockedDays?: Set<string>;
 }) {
   const today = new Date();
 
@@ -33,6 +37,7 @@ export function MonthGrid({
           const info = countByDay.get(key);
           const inMonth = isSameMonth(d, reference);
           const isToday = isSameDay(d, today);
+          const blocked = blockedDays?.has(format(d, "yyyy-MM-dd")) ?? false;
 
           return (
             <button
@@ -48,12 +53,15 @@ export function MonthGrid({
               >
                 {d.getDate()}
               </span>
-              <span
-                className={cn(
-                  "size-1.5 rounded-full",
-                  info && info.total > 0 ? (info.hasPending ? "bg-gold-500" : "bg-success") : "bg-transparent"
-                )}
-              />
+              <span className="flex h-1.5 items-center gap-0.5">
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    info && info.total > 0 ? (info.hasPending ? "bg-gold-500" : "bg-success") : "bg-transparent"
+                  )}
+                />
+                {blocked && <span data-testid="month-blocked" title="Dia bloqueado" className="size-1.5 rounded-full bg-ink-400" />}
+              </span>
             </button>
           );
         })}
@@ -67,6 +75,12 @@ export function MonthGrid({
           <span className="size-1.5 rounded-full bg-success" />
           Concluído
         </span>
+        {blockedDays && blockedDays.size > 0 && (
+          <span className="flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-ink-400" />
+            Bloqueado
+          </span>
+        )}
       </div>
     </div>
   );
