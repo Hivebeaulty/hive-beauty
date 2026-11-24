@@ -30,6 +30,9 @@ import { WhatsappAutoMessages } from "@/components/settings/whatsapp-auto-messag
 import { Rankings } from "@/components/reports/rankings";
 import { buildRankings } from "@/lib/hive/rankings";
 import AgendaPage from "@/app/(app)/agenda/page";
+import { BlockForm } from "@/components/agenda/block-form";
+// roteador de mentira: registra a navegação em window.__nav (o Next real não existe no palco)
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import AssinaturaPage from "@/app/(app)/mais/assinatura/page";
 import CadastroPage from "@/app/(auth)/cadastro/page";
 import { CompanyProvider } from "@/components/company-provider";
@@ -74,6 +77,26 @@ if (view === "agenda") {
         </main>
       </div>
     </CompanyProvider>
+  );
+} else if (view === "bloquear") {
+  // Bloquear horário: formulário REAL (criar e editar), banco simulado em window.__db e navegação em window.__nav.
+  const q = new URLSearchParams(location.search);
+  const nav = (...a: unknown[]) => ((window as unknown as { __nav: unknown[][] }).__nav ??= []).push(a);
+  const router = { push: (u: string) => nav("push", u), replace: (u: string) => nav("replace", u), back: () => nav("back"), forward() {}, refresh() {}, prefetch() {} };
+  createRoot(document.getElementById("root")!).render(
+    <ToastProvider>
+      <AppRouterContext.Provider value={router as never}>
+        <CompanyProvider membership={{ companyId: "00000000-0000-0000-0000-000000000001", memberId: q.get("member") || "m1", role: role as "owner", companyName: "Studio Bella" }}>
+          <div className="min-h-screen bg-cream">
+            <main className="mx-auto max-w-3xl px-4 py-6 md:px-8">
+              <SearchParamsContext.Provider value={q}>
+                <BlockForm blockId={q.get("id") || undefined} />
+              </SearchParamsContext.Provider>
+            </main>
+          </div>
+        </CompanyProvider>
+      </AppRouterContext.Provider>
+    </ToastProvider>
   );
 } else if (view === "cadastro") {
   // Cadastro do teste sem cartão (0052): página REAL, função e login simulados em window.__db.

@@ -26,7 +26,8 @@ import { MonthGrid } from "@/components/agenda/month-grid";
 import { FORECAST_STATUSES, agendaPeriod, forecastFor, type AgendaView, type Forecast, type ForecastRow } from "@/lib/hive/forecast";
 import { formatMoney } from "@/lib/hive/format";
 import { readAgendaState, writeAgendaSearch } from "@/lib/hive/agenda-url";
-import { CalendarPlus, ChevronLeft, ChevronRight, ChevronDown, CalendarX } from "lucide-react";
+import { BLOCK_SELECT, allDayKeys, blocksOnDay, type BlockedTime } from "@/lib/hive/blocked-times";
+import { CalendarOff, CalendarPlus, ChevronLeft, ChevronRight, ChevronDown, CalendarX } from "lucide-react";
 
 type View = AgendaView;
 
@@ -80,6 +81,8 @@ export default function AgendaPage() {
   );
   const [weekAppointments, setWeekAppointments] = useState<WeekAppointment[]>([]);
   const [monthByDay, setMonthByDay] = useState<Map<string, { total: number; hasPending: boolean }>>(new Map());
+  // Bloqueios de horário (folga, almoço...) que tocam o período exibido.
+  const [blocks, setBlocks] = useState<BlockedTime[]>([]);
   // Previsão do período exibido: null = carregando; "erro" = consulta falhou.
   const [forecast, setForecast] = useState<Forecast | "erro" | null>(null);
 
@@ -188,6 +191,34 @@ export default function AgendaPage() {
     load();
   }, [load]);
 
+  // Bloqueios do período exibido. Consulta própria e leve: se falhar, a agenda
+  // aparece normalmente, só sem os bloqueios. Sem cache de propósito: depois de
+  // criar ou remover um bloqueio a tela tem que mostrar o que está no banco.
+  useEffect(() => {
+    let current = true;
+    const days = view === "semana" ? getWeekDays(refDate) : view === "mes" ? getMonthGrid(refDate) : [refDate];
+    const from = days[0];
+    const to = addDays(days[days.length - 1], 1);
+    let query = createClient()
+      .from("blocked_times")
+      .select(BLOCK_SELECT)
+      .eq("company_id", companyId)
+      .lt("start_at", to.toISOString())
+      .gt("end_at", from.toISOString())
+      .order("start_at");
+    // só a profissional escolhida (e os da equipe toda); o id já foi validado ao ler a URL
+    if (selectedProfessional !== "all") {
+      query = query.or(`professional_member_id.eq.${selectedProfessional},professional_member_id.is.null`);
+    }
+    query.then(({ data, error }: { data: unknown; error: unknown }) => {
+      if (!current) return;
+      setBlocks(error || !Array.isArray(data) ? [] : (data as BlockedTime[]));
+    });
+    return () => {
+      current = false;
+    };
+  }, [companyId, view, refDate, selectedProfessional]);
+
   // Previsão do período exibido (mesma regra do Início e do Financeiro:
   // lib/hive/forecast.ts). Consulta própria e leve (3 colunas, só os status que
   // entram na conta, limites no dia de Brasília), em paralelo com a da visão:
@@ -222,6 +253,10 @@ export default function AgendaPage() {
   const weekDays = useMemo(() => getWeekDays(refDate), [refDate]);
   const monthDays = useMemo(() => getMonthGrid(refDate), [refDate]);
   const activeDayAppointments = dayAppointments.filter((a) => a.status !== "cancelado" && a.status !== "nao_compareceu");
+  const dayBlockCount = view === "dia" ? blocksOnDay(blocks, refDate).length : 0;
+  const blockedDays = useMemo(() => allDayKeys(blocks), [blocks]);
+  const dateParam = format(refDate, "yyyy-MM-dd");
+  const profParam = selectedProfessional !== "all" ? `&prof=${selectedProfessional}` : "";
 
   function goPrev() {
     setRefDate((d) => (view === "dia" ? addDays(d, -1) : view === "semana" ? addWeeks(d, -1) : addMonths(d, -1)));
@@ -248,13 +283,22 @@ export default function AgendaPage() {
     <div className="space-y-4 pb-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="page-title">Agenda</h1>
-        <Link href={`/agenda/novo?data=${format(refDate, "yyyy-MM-dd")}`}>
-          <Button size="sm">
-            <CalendarPlus className="size-4" />
-            <span className="hidden sm:inline">Novo atendimento</span>
-            <span className="sm:hidden">Novo</span>
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href={`/agenda/bloquear?data=${dateParam}${profParam}`}>
+            <Button size="sm" variant="secondary">
+              <CalendarOff className="size-4" />
+              <span className="hidden sm:inline">Bloquear horário</span>
+              <span className="sm:hidden">Bloquear</span>
+            </Button>
+          </Link>
+          <Link href={`/agenda/novo?data=${dateParam}`}>
+            <Button size="sm">
+              <CalendarPlus className="size-4" />
+              <span className="hidden sm:inline">Novo atendimento</span>
+              <span className="sm:hidden">Novo</span>
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -322,7 +366,7 @@ export default function AgendaPage() {
             <Skeleton className="h-10 w-2/3" />
           </div>
         ) : view === "dia" ? (
-          activeDayAppointments.length === 0 ? (
+          activeDayAppointments.length === 0 && dayBlockCount === 0 ? (
             <EmptyState
               art="perfil"
               icon={CalendarX}
@@ -342,6 +386,7 @@ export default function AgendaPage() {
               appointments={dayAppointments}
               professionals={professionals}
               laneFilter={selectedProfessional}
+              blocks={blocks}
             />
           )
         ) : view === "semana" ? (
@@ -351,9 +396,16 @@ export default function AgendaPage() {
             professionals={professionals}
             showProfessional={selectedProfessional === "all" && professionals.length > 1}
             onSelectDay={selectDay}
+            blocks={blocks}
           />
         ) : (
-          <MonthGrid days={monthDays} reference={refDate} countByDay={monthByDay} onSelectDay={selectDay} />
+          <MonthGrid
+            days={monthDays}
+            reference={refDate}
+            countByDay={monthByDay}
+            onSelectDay={selectDay}
+            blockedDays={blockedDays}
+          />
         )}
       </Card>
     </div>

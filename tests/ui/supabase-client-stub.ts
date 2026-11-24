@@ -4,12 +4,14 @@
 // isso, qualquer uso continua sendo erro (nunca há Supabase de verdade aqui).
 //
 // Agenda: o teste instala window.__db (tabelas em memória). Aí o cliente também
-// tem .from(tabela) com os filtros que a Agenda usa (select, eq, in, gte, gt,
-// lt, lte, order), registra cada consulta em __db.calls e responde depois de
-// __db.delay(consulta) ms. Também simula rpc e functions.invoke (Assinatura).
+// tem .from(tabela) com os filtros que a Agenda usa (select, eq, in, is, or, gte,
+// gt, lt, lte, order), registra cada consulta em __db.calls e responde depois de
+// __db.delay(consulta) ms. Também grava (insert, update, delete — ex.: bloqueio de
+// horário), com single()/maybeSingle(); cada gravação aparece em __db.calls com
+// op e payload. Também simula rpc e functions.invoke (Assinatura).
 type Rpc = (fn: string, args: unknown) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
 type Filter = [op: string, column: string, value: unknown];
-type Call = { table: string; select: string; filters: Filter[] };
+type Call = { table: string; select: string; filters: Filter[]; op?: "insert" | "update" | "delete"; payload?: unknown };
 type Db = {
   tables: Record<string, Record<string, unknown>[]>;
   rpc?: Record<string, unknown>;
@@ -25,6 +27,17 @@ function matches(row: Record<string, unknown>, [op, col, value]: Filter) {
   const a = asTime(row[col]) as number | string;
   const b = asTime(value) as number | string;
   if (op === "eq") return row[col] === value;
+  if (op === "is") return value === null ? row[col] == null : row[col] === value;
+  if (op === "or") {
+    // "professional_member_id.eq.m2,professional_member_id.is.null"
+    return String(value)
+      .split(",")
+      .some((cond) => {
+        const [c, o, ...rest] = cond.split(".");
+        const v = rest.join(".");
+        return o === "is" ? (v === "null" ? row[c] == null : row[c] === v) : row[c] === v;
+      });
+  }
   if (op === "in") return (value as unknown[]).includes(row[col]);
   if (op === "gte") return a >= b;
   if (op === "gt") return a > b;
@@ -35,6 +48,8 @@ function matches(row: Record<string, unknown>, [op, col, value]: Filter) {
 
 function from(db: Db, table: string) {
   const call: Call = { table, select: "", filters: [] };
+  let one: "single" | "maybe" | null = null;
+  let seq = 0;
   const add = (op: string) => (column: string, value: unknown) => {
     call.filters.push([op, column, value]);
     return builder;
@@ -42,6 +57,33 @@ function from(db: Db, table: string) {
   const builder = {
     select(cols: string) {
       call.select = cols;
+      return builder;
+    },
+    insert(payload: unknown) {
+      call.op = "insert";
+      call.payload = payload;
+      return builder;
+    },
+    update(payload: unknown) {
+      call.op = "update";
+      call.payload = payload;
+      return builder;
+    },
+    delete() {
+      call.op = "delete";
+      return builder;
+    },
+    single() {
+      one = "single";
+      return builder;
+    },
+    maybeSingle() {
+      one = "maybe";
+      return builder;
+    },
+    is: add("is"),
+    or(expr: string) {
+      call.filters.push(["or", "", expr]);
       return builder;
     },
     eq: add("eq"),
@@ -59,8 +101,23 @@ function from(db: Db, table: string) {
       return new Promise((r) => setTimeout(r, ms))
         .then(() => {
           if (db.fail?.(call)) return { data: null, error: { message: "falha simulada" } };
-          const rows = (db.tables[table] ?? []).filter((row) => call.filters.every((f) => matches(row, f)));
-          return { data: rows.map((r) => ({ ...r })), error: null };
+          const all = (db.tables[table] ??= []);
+          let rows: Record<string, unknown>[];
+          if (call.op === "insert") {
+            const list = Array.isArray(call.payload) ? call.payload : [call.payload];
+            rows = list.map((r) => ({ id: `novo-${++seq}`, ...(r as object) }));
+            all.push(...rows);
+          } else {
+            rows = all.filter((row) => call.filters.every((f) => matches(row, f)));
+            if (call.op === "update") rows.forEach((r) => Object.assign(r, call.payload));
+            if (call.op === "delete") db.tables[table] = all.filter((r) => !rows.includes(r));
+          }
+          const out = rows.map((r) => ({ ...r }));
+          if (one) {
+            if (!out.length && one === "single") return { data: null, error: { code: "PGRST116", message: "nenhuma linha" } };
+            return { data: out[0] ?? null, error: null };
+          }
+          return { data: out, error: null };
         })
         .then(resolve, reject);
     },
